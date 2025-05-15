@@ -17,17 +17,17 @@ import (
 	"strings"
 
 	"github.com/oapi-codegen/runtime"
-	externalRef0 "github.com/render-oss/cli/pkg/client/autoscaling"
-	externalRef1 "github.com/render-oss/cli/pkg/client/blueprints"
-	externalRef2 "github.com/render-oss/cli/pkg/client/disks"
-	externalRef3 "github.com/render-oss/cli/pkg/client/events"
-	externalRef5 "github.com/render-oss/cli/pkg/client/jobs"
-	externalRef6 "github.com/render-oss/cli/pkg/client/logs"
-	externalRef7 "github.com/render-oss/cli/pkg/client/maintenance"
-	externalRef8 "github.com/render-oss/cli/pkg/client/metrics"
-	externalRef9 "github.com/render-oss/cli/pkg/client/notifications"
-	externalRef10 "github.com/render-oss/cli/pkg/client/postgres"
-	externalRef11 "github.com/render-oss/cli/pkg/client/webhooks"
+	externalRef0 "github.com/render-oss/render-mcp-server/pkg/client/autoscaling"
+	externalRef1 "github.com/render-oss/render-mcp-server/pkg/client/blueprints"
+	externalRef2 "github.com/render-oss/render-mcp-server/pkg/client/disks"
+	externalRef3 "github.com/render-oss/render-mcp-server/pkg/client/events"
+	externalRef5 "github.com/render-oss/render-mcp-server/pkg/client/jobs"
+	externalRef6 "github.com/render-oss/render-mcp-server/pkg/client/logs"
+	externalRef7 "github.com/render-oss/render-mcp-server/pkg/client/maintenance"
+	externalRef8 "github.com/render-oss/render-mcp-server/pkg/client/metrics"
+	externalRef9 "github.com/render-oss/render-mcp-server/pkg/client/notifications"
+	externalRef10 "github.com/render-oss/render-mcp-server/pkg/client/postgres"
+	externalRef11 "github.com/render-oss/render-mcp-server/pkg/client/webhooks"
 )
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
@@ -12747,9 +12747,9 @@ func NewListEventsRequest(server string, serviceId ServiceIdParam, params *ListE
 	if params != nil {
 		queryValues := queryURL.Query()
 
-		if params.EventType != nil {
+		if params.Type != nil {
 
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "eventType", runtime.ParamLocationQuery, *params.EventType); err != nil {
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "type", runtime.ParamLocationQuery, *params.Type); err != nil {
 				return nil, err
 			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
 				return nil, err

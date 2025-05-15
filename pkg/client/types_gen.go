@@ -11,18 +11,18 @@ import (
 	"time"
 
 	"github.com/oapi-codegen/runtime"
-	externalRef0 "github.com/render-oss/cli/pkg/client/autoscaling"
-	externalRef1 "github.com/render-oss/cli/pkg/client/blueprints"
-	externalRef2 "github.com/render-oss/cli/pkg/client/disks"
-	externalRef3 "github.com/render-oss/cli/pkg/client/events"
-	externalRef4 "github.com/render-oss/cli/pkg/client/eventtypes"
-	externalRef5 "github.com/render-oss/cli/pkg/client/jobs"
-	externalRef6 "github.com/render-oss/cli/pkg/client/logs"
-	externalRef7 "github.com/render-oss/cli/pkg/client/maintenance"
-	externalRef8 "github.com/render-oss/cli/pkg/client/metrics"
-	externalRef9 "github.com/render-oss/cli/pkg/client/notifications"
-	externalRef10 "github.com/render-oss/cli/pkg/client/postgres"
-	externalRef11 "github.com/render-oss/cli/pkg/client/webhooks"
+	externalRef0 "github.com/render-oss/render-mcp-server/pkg/client/autoscaling"
+	externalRef1 "github.com/render-oss/render-mcp-server/pkg/client/blueprints"
+	externalRef2 "github.com/render-oss/render-mcp-server/pkg/client/disks"
+	externalRef3 "github.com/render-oss/render-mcp-server/pkg/client/events"
+	externalRef4 "github.com/render-oss/render-mcp-server/pkg/client/eventtypes"
+	externalRef5 "github.com/render-oss/render-mcp-server/pkg/client/jobs"
+	externalRef6 "github.com/render-oss/render-mcp-server/pkg/client/logs"
+	externalRef7 "github.com/render-oss/render-mcp-server/pkg/client/maintenance"
+	externalRef8 "github.com/render-oss/render-mcp-server/pkg/client/metrics"
+	externalRef9 "github.com/render-oss/render-mcp-server/pkg/client/notifications"
+	externalRef10 "github.com/render-oss/render-mcp-server/pkg/client/postgres"
+	externalRef11 "github.com/render-oss/render-mcp-server/pkg/client/webhooks"
 )
 
 const (
@@ -33,6 +33,13 @@ const (
 const (
 	AutoDeployNo  AutoDeploy = "no"
 	AutoDeployYes AutoDeploy = "yes"
+)
+
+// Defines values for AutoDeployTrigger.
+const (
+	AutoDeployTriggerChecksPass AutoDeployTrigger = "checksPass"
+	AutoDeployTriggerCommit     AutoDeployTrigger = "commit"
+	AutoDeployTriggerOff        AutoDeployTrigger = "off"
 )
 
 // Defines values for BuildPlan.
@@ -84,16 +91,16 @@ const (
 
 // Defines values for DeployTrigger.
 const (
-	DeployTriggerApi              DeployTrigger = "api"
-	DeployTriggerBlueprintSync    DeployTrigger = "blueprint_sync"
-	DeployTriggerDeployHook       DeployTrigger = "deploy_hook"
-	DeployTriggerDeployedByRender DeployTrigger = "deployed_by_render"
-	DeployTriggerManual           DeployTrigger = "manual"
-	DeployTriggerNewCommit        DeployTrigger = "new_commit"
-	DeployTriggerOther            DeployTrigger = "other"
-	DeployTriggerRollback         DeployTrigger = "rollback"
-	DeployTriggerServiceResumed   DeployTrigger = "service_resumed"
-	DeployTriggerServiceUpdated   DeployTrigger = "service_updated"
+	Api              DeployTrigger = "api"
+	BlueprintSync    DeployTrigger = "blueprint_sync"
+	DeployHook       DeployTrigger = "deploy_hook"
+	DeployedByRender DeployTrigger = "deployed_by_render"
+	Manual           DeployTrigger = "manual"
+	NewCommit        DeployTrigger = "new_commit"
+	Other            DeployTrigger = "other"
+	Rollback         DeployTrigger = "rollback"
+	ServiceResumed   DeployTrigger = "service_resumed"
+	ServiceUpdated   DeployTrigger = "service_updated"
 )
 
 // Defines values for DeployStatus.
@@ -106,7 +113,6 @@ const (
 	DeployStatusLive                DeployStatus = "live"
 	DeployStatusPreDeployFailed     DeployStatus = "pre_deploy_failed"
 	DeployStatusPreDeployInProgress DeployStatus = "pre_deploy_in_progress"
-	DeployStatusQueued              DeployStatus = "queued"
 	DeployStatusUpdateFailed        DeployStatus = "update_failed"
 	DeployStatusUpdateInProgress    DeployStatus = "update_in_progress"
 )
@@ -368,6 +374,9 @@ type AddUpdateEnvVarInput struct {
 // AutoDeploy defines model for autoDeploy.
 type AutoDeploy string
 
+// AutoDeployTrigger Controls autodeploy behavior. commit deploys when a commit is pushed to a branch. checksPass waits for the branch to be green.
+type AutoDeployTrigger string
+
 // BackgroundWorkerDetails defines model for backgroundWorkerDetails.
 type BackgroundWorkerDetails struct {
 	Autoscaling *externalRef0.AutoscalingConfig `json:"autoscaling,omitempty"`
@@ -606,7 +615,6 @@ type Deploy struct {
 		// Sha SHA that the image reference was resolved to when creating the deploy
 		Sha *string `json:"sha,omitempty"`
 	} `json:"image,omitempty"`
-	StartedAt *time.Time     `json:"startedAt,omitempty"`
 	Status    *DeployStatus  `json:"status,omitempty"`
 	Trigger   *DeployTrigger `json:"trigger,omitempty"`
 	UpdatedAt *time.Time     `json:"updatedAt,omitempty"`
@@ -1060,7 +1068,7 @@ type Owner struct {
 	Id    string `json:"id"`
 	Name  string `json:"name"`
 
-	// TwoFactorAuthEnabled Whether two-factor authentication is enabled for the owner. Only present for user owners.
+	// TwoFactorAuthEnabled Whether two-factor authentication is enabled for the owner. Only present if `type` is `user`.
 	TwoFactorAuthEnabled *bool     `json:"twoFactorAuthEnabled,omitempty"`
 	Type                 OwnerType `json:"type"`
 }
@@ -1165,7 +1173,11 @@ type PostgresDetailSuspended string
 
 // PostgresPATCHInput defines model for postgresPATCHInput.
 type PostgresPATCHInput struct {
+	// DatadogAPIKey The Datadog API key for the Datadog agent to monitor the database. Pass empty string to remove. Restarts Postgres on change.
 	DatadogAPIKey *string `json:"datadogAPIKey,omitempty"`
+
+	// DatadogSite Datadog region to use for monitoring the new database. Defaults to 'US1'.
+	DatadogSite *string `json:"datadogSite,omitempty"`
 
 	// DiskSizeGB The number of gigabytes of disk space to allocate for the database
 	DiskSizeGB             *int                         `json:"diskSizeGB,omitempty"`
@@ -1178,9 +1190,14 @@ type PostgresPATCHInput struct {
 
 // PostgresPOSTInput Input for creating a database
 type PostgresPOSTInput struct {
-	DatabaseName  *string `json:"databaseName,omitempty"`
-	DatabaseUser  *string `json:"databaseUser,omitempty"`
+	DatabaseName *string `json:"databaseName,omitempty"`
+	DatabaseUser *string `json:"databaseUser,omitempty"`
+
+	// DatadogAPIKey The Datadog API key for the Datadog agent to monitor the new database.
 	DatadogAPIKey *string `json:"datadogAPIKey,omitempty"`
+
+	// DatadogSite Datadog region to use for monitoring the new database. Defaults to 'US1'.
+	DatadogSite *string `json:"datadogSite,omitempty"`
 
 	// DiskSizeGB The number of gigabytes of disk space to allocate for the database
 	DiskSizeGB             *int                       `json:"diskSizeGB,omitempty"`
@@ -1191,7 +1208,7 @@ type PostgresPOSTInput struct {
 	// Name The name of the database as it will appear in the Render Dashboard
 	Name string `json:"name"`
 
-	// OwnerId The ID of the owner (team or personal user) whose resources should be returned
+	// OwnerId The ID of the workspace to create the database for
 	OwnerId      string                      `json:"ownerId"`
 	Plan         externalRef10.PostgresPlans `json:"plan"`
 	ReadReplicas *ReadReplicasInput          `json:"readReplicas,omitempty"`
@@ -1637,10 +1654,13 @@ type ServerPortProtocol string
 
 // Service defines model for service.
 type Service struct {
-	AutoDeploy  AutoDeploy   `json:"autoDeploy"`
-	Branch      *string      `json:"branch,omitempty"`
-	BuildFilter *BuildFilter `json:"buildFilter,omitempty"`
-	CreatedAt   time.Time    `json:"createdAt"`
+	AutoDeploy AutoDeploy `json:"autoDeploy"`
+
+	// AutoDeployTrigger Controls autodeploy behavior. commit deploys when a commit is pushed to a branch. checksPass waits for the branch to be green.
+	AutoDeployTrigger *AutoDeployTrigger `json:"autoDeployTrigger,omitempty"`
+	Branch            *string            `json:"branch,omitempty"`
+	BuildFilter       *BuildFilter       `json:"buildFilter,omitempty"`
+	CreatedAt         time.Time          `json:"createdAt"`
 
 	// DashboardUrl The URL to view the service in the Render Dashboard
 	DashboardUrl       string                     `json:"dashboardUrl"`
@@ -1697,14 +1717,17 @@ type ServiceList = []ServiceWithCursor
 
 // ServicePATCH defines model for servicePATCH.
 type ServicePATCH struct {
-	AutoDeploy     *AutoDeploy                  `json:"autoDeploy,omitempty"`
-	Branch         *string                      `json:"branch,omitempty"`
-	BuildFilter    *BuildFilter                 `json:"buildFilter,omitempty"`
-	Image          *Image                       `json:"image,omitempty"`
-	Name           *string                      `json:"name,omitempty"`
-	Repo           *string                      `json:"repo,omitempty"`
-	RootDir        *string                      `json:"rootDir,omitempty"`
-	ServiceDetails *ServicePATCH_ServiceDetails `json:"serviceDetails,omitempty"`
+	AutoDeploy *AutoDeploy `json:"autoDeploy,omitempty"`
+
+	// AutoDeployTrigger Controls autodeploy behavior. commit deploys when a commit is pushed to a branch. checksPass waits for the branch to be green.
+	AutoDeployTrigger *AutoDeployTrigger           `json:"autoDeployTrigger,omitempty"`
+	Branch            *string                      `json:"branch,omitempty"`
+	BuildFilter       *BuildFilter                 `json:"buildFilter,omitempty"`
+	Image             *Image                       `json:"image,omitempty"`
+	Name              *string                      `json:"name,omitempty"`
+	Repo              *string                      `json:"repo,omitempty"`
+	RootDir           *string                      `json:"rootDir,omitempty"`
+	ServiceDetails    *ServicePATCH_ServiceDetails `json:"serviceDetails,omitempty"`
 }
 
 // ServicePATCH_ServiceDetails defines model for ServicePATCH.ServiceDetails.
@@ -1715,6 +1738,9 @@ type ServicePATCH_ServiceDetails struct {
 // ServicePOST defines model for servicePOST.
 type ServicePOST struct {
 	AutoDeploy *AutoDeploy `json:"autoDeploy,omitempty"`
+
+	// AutoDeployTrigger Controls autodeploy behavior. commit deploys when a commit is pushed to a branch. checksPass waits for the branch to be green.
+	AutoDeployTrigger *AutoDeployTrigger `json:"autoDeployTrigger,omitempty"`
 
 	// Branch If left empty, this will fall back to the default branch of the repository
 	Branch      *string           `json:"branch,omitempty"`
@@ -2081,7 +2107,7 @@ type LogsValues200Response = []string
 
 // ListBlueprintsParams defines parameters for ListBlueprints.
 type ListBlueprintsParams struct {
-	// OwnerId The ID of the owner (team or personal user) whose resources should be returned
+	// OwnerId The ID of the workspaces to return resources for
 	OwnerId *OwnerIdParam `form:"ownerId,omitempty" json:"ownerId,omitempty"`
 
 	// Cursor The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination).
@@ -2102,7 +2128,7 @@ type ListBlueprintSyncsParams struct {
 
 // ListDisksParams defines parameters for ListDisks.
 type ListDisksParams struct {
-	// OwnerId The ID of the owner (team or personal user) whose resources should be returned
+	// OwnerId The ID of the workspaces to return resources for
 	OwnerId *OwnerIdParam `form:"ownerId,omitempty" json:"ownerId,omitempty"`
 
 	// DiskId Filter by disk IDs
@@ -2150,7 +2176,7 @@ type ListEnvGroupsParams struct {
 	// UpdatedAfter Filter for resources updated after a certain time (specified as an ISO 8601 timestamp)
 	UpdatedAfter *UpdatedAfterParam `form:"updatedAfter,omitempty" json:"updatedAfter,omitempty"`
 
-	// OwnerId The ID of the owner (team or personal user) whose resources should be returned
+	// OwnerId The ID of the workspaces to return resources for
 	OwnerId *OwnerIdParam `form:"ownerId,omitempty" json:"ownerId,omitempty"`
 
 	// EnvironmentId Filter for resources that belong to an environment
@@ -2188,7 +2214,7 @@ type ListEnvironmentsParams struct {
 	// UpdatedAfter Filter for resources updated after a certain time (specified as an ISO 8601 timestamp)
 	UpdatedAfter *UpdatedAfterParam `form:"updatedAfter,omitempty" json:"updatedAfter,omitempty"`
 
-	// OwnerId The ID of the owner (team or personal user) whose resources should be returned
+	// OwnerId The ID of the workspaces to return resources for
 	OwnerId *OwnerIdParam `form:"ownerId,omitempty" json:"ownerId,omitempty"`
 
 	// EnvironmentId Filter for resources that belong to an environment
@@ -2226,7 +2252,7 @@ type ListKeyValueParams struct {
 	// UpdatedAfter Filter for resources updated after a certain time (specified as an ISO 8601 timestamp)
 	UpdatedAfter *UpdatedAfterParam `form:"updatedAfter,omitempty" json:"updatedAfter,omitempty"`
 
-	// OwnerId The ID of the owner (team or personal user) whose resources should be returned
+	// OwnerId The ID of the workspaces to return resources for
 	OwnerId *OwnerIdParam `form:"ownerId,omitempty" json:"ownerId,omitempty"`
 
 	// EnvironmentId Filter for resources that belong to an environment
@@ -2241,7 +2267,7 @@ type ListKeyValueParams struct {
 
 // ListLogsParams defines parameters for ListLogs.
 type ListLogsParams struct {
-	// OwnerId The ID of the owner (team or personal user) whose resources should be returned
+	// OwnerId The ID of the workspace to return logs for
 	OwnerId string `form:"ownerId" json:"ownerId"`
 
 	// StartTime Epoch/Unix timestamp of start of time range to return. Defaults to `now() - 1 hour`.
@@ -2287,7 +2313,7 @@ type ListLogsParams struct {
 
 // ListResourceLogStreamsParams defines parameters for ListResourceLogStreams.
 type ListResourceLogStreamsParams struct {
-	// OwnerId The ID of the owner (team or personal user) whose resources should be returned
+	// OwnerId The ID of the workspaces to return resources for
 	OwnerId *OwnerIdParam `form:"ownerId,omitempty" json:"ownerId,omitempty"`
 
 	// LogStreamId Filter log streams by their id.
@@ -2308,7 +2334,7 @@ type ListResourceLogStreamsParams struct {
 
 // SubscribeLogsParams defines parameters for SubscribeLogs.
 type SubscribeLogsParams struct {
-	// OwnerId The ID of the owner (team or personal user) whose resources should be returned
+	// OwnerId The ID of the workspace to return logs for
 	OwnerId string `form:"ownerId" json:"ownerId"`
 
 	// StartTime Epoch/Unix timestamp of start of time range to return. Defaults to `now() - 1 hour`.
@@ -2354,7 +2380,7 @@ type SubscribeLogsParams struct {
 
 // ListLogsValuesParams defines parameters for ListLogsValues.
 type ListLogsValuesParams struct {
-	// OwnerId The ID of the owner (team or personal user) whose resources should be returned
+	// OwnerId The ID of the workspace to return log label values for
 	OwnerId string `form:"ownerId" json:"ownerId"`
 
 	// Label The label to query logs for
@@ -2408,7 +2434,7 @@ type ListLogsValuesParamsLabel string
 type ListMaintenanceParams struct {
 	ResourceId *externalRef7.MaintenanceResourcesParam `form:"resourceId,omitempty" json:"resourceId,omitempty"`
 
-	// OwnerId The ID of the owner (team or personal user) whose resources should be returned
+	// OwnerId The ID of the workspaces to return resources for
 	OwnerId *OwnerIdParam                       `form:"ownerId,omitempty" json:"ownerId,omitempty"`
 	State   *externalRef7.MaintenanceStateParam `form:"state,omitempty" json:"state,omitempty"`
 }
@@ -2766,7 +2792,7 @@ type GetReplicationLagParams struct {
 
 // ListNotificationOverridesParams defines parameters for ListNotificationOverrides.
 type ListNotificationOverridesParams struct {
-	// OwnerId The ID of the owner (team or personal user) whose resources should be returned
+	// OwnerId The ID of the workspaces to return resources for
 	OwnerId *OwnerIdParam `form:"ownerId,omitempty" json:"ownerId,omitempty"`
 
 	// ServiceId Filter for resources by service ID
@@ -2781,7 +2807,10 @@ type ListNotificationOverridesParams struct {
 
 // ListOwnersParams defines parameters for ListOwners.
 type ListOwnersParams struct {
-	Name  *[]string `form:"name,omitempty" json:"name,omitempty"`
+	// Name Only return workspaces with one of the provided names. Only exact matches are returned.
+	Name *[]string `form:"name,omitempty" json:"name,omitempty"`
+
+	// Email Only return workspaces owned by one of the provided email addresses.
 	Email *[]string `form:"email,omitempty" json:"email,omitempty"`
 
 	// Cursor The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination).
@@ -2814,7 +2843,7 @@ type ListPostgresParams struct {
 	// UpdatedAfter Filter for resources updated after a certain time (specified as an ISO 8601 timestamp)
 	UpdatedAfter *UpdatedAfterParam `form:"updatedAfter,omitempty" json:"updatedAfter,omitempty"`
 
-	// OwnerId The ID of the owner (team or personal user) whose resources should be returned
+	// OwnerId The ID of the workspaces to return resources for
 	OwnerId *OwnerIdParam `form:"ownerId,omitempty" json:"ownerId,omitempty"`
 
 	// EnvironmentId Filter for resources that belong to an environment
@@ -2850,7 +2879,7 @@ type ListProjectsParams struct {
 	// UpdatedAfter Filter for resources updated after a certain time (specified as an ISO 8601 timestamp)
 	UpdatedAfter *UpdatedAfterParam `form:"updatedAfter,omitempty" json:"updatedAfter,omitempty"`
 
-	// OwnerId The ID of the owner (team or personal user) whose resources should be returned
+	// OwnerId The ID of the workspaces to return resources for
 	OwnerId *OwnerIdParam `form:"ownerId,omitempty" json:"ownerId,omitempty"`
 
 	// Cursor The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination).
@@ -2880,7 +2909,7 @@ type ListRedisParams struct {
 	// UpdatedAfter Filter for resources updated after a certain time (specified as an ISO 8601 timestamp)
 	UpdatedAfter *UpdatedAfterParam `form:"updatedAfter,omitempty" json:"updatedAfter,omitempty"`
 
-	// OwnerId The ID of the owner (team or personal user) whose resources should be returned
+	// OwnerId The ID of the workspaces to return resources for
 	OwnerId *OwnerIdParam `form:"ownerId,omitempty" json:"ownerId,omitempty"`
 
 	// EnvironmentId Filter for resources that belong to an environment
@@ -2916,7 +2945,7 @@ type ListRegistryCredentialsParams struct {
 	// UpdatedAfter Filter for services updated after a certain time (specified as an ISO 8601 timestamp)
 	UpdatedAfter *time.Time `form:"updatedAfter,omitempty" json:"updatedAfter,omitempty"`
 
-	// OwnerId The ID of the owner (team or personal user) whose resources should be returned
+	// OwnerId The ID of the workspaces to return resources for
 	OwnerId *OwnerIdParam `form:"ownerId,omitempty" json:"ownerId,omitempty"`
 
 	// Cursor The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination).
@@ -2979,7 +3008,7 @@ type ListServicesParams struct {
 	// UpdatedAfter Filter for resources updated after a certain time (specified as an ISO 8601 timestamp)
 	UpdatedAfter *UpdatedAfterParam `form:"updatedAfter,omitempty" json:"updatedAfter,omitempty"`
 
-	// OwnerId The ID of the owner (team or personal user) whose resources should be returned
+	// OwnerId The ID of the workspaces to return resources for
 	OwnerId *OwnerIdParam `form:"ownerId,omitempty" json:"ownerId,omitempty"`
 
 	// IncludePreviews Include previews in the response
@@ -3094,8 +3123,8 @@ type GetEnvVarsForServiceParams struct {
 
 // ListEventsParams defines parameters for ListEvents.
 type ListEventsParams struct {
-	// EventType The type of event to filter to
-	EventType *EventTypeParam `form:"eventType,omitempty" json:"eventType,omitempty"`
+	// Type The type of event to filter to
+	Type *EventTypeParam `form:"type,omitempty" json:"type,omitempty"`
 
 	// StartTime Epoch/Unix timestamp of start of time range to return. Defaults to `now() - 1 hour`.
 	StartTime *StartTimeParam `form:"startTime,omitempty" json:"startTime,omitempty"`
@@ -3227,7 +3256,7 @@ type ListWebhooksParams struct {
 	// Limit The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).
 	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
 
-	// OwnerId The ID of the owner (team or personal user) whose resources should be returned
+	// OwnerId The ID of the workspaces to return resources for
 	OwnerId *OwnerIdParam `form:"ownerId,omitempty" json:"ownerId,omitempty"`
 }
 

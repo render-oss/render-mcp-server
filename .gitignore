@@ -1,0 +1,7 @@
+.env
+
+.DS_Store
+.vscode/
+
+# Avoid accidentally committing a locally built binary
+render-mcp-server

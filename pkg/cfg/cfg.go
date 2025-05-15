@@ -6,9 +6,6 @@ import (
 	"os"
 )
 
-const RepoURL = "https://api.github.com/repos/render-oss/cli"
-const InstallationInstructionsURL = "https://render.com/docs/cli#1-install"
-
 var Version = "dev"
 var osInfo string
 
@@ -25,7 +22,7 @@ func GetAPIKey() string {
 }
 
 func AddUserAgent(header http.Header) http.Header {
-	header.Add("user-agent", fmt.Sprintf("render-cli/%s (%s)", Version, getOSInfoOnce()))
+	header.Add("user-agent", fmt.Sprintf("render-mcp-server/%s (%s)", Version, getOSInfoOnce()))
 	return header
 }
 

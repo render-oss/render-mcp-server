@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/render-oss/cli/pkg/client"
-	"github.com/render-oss/cli/pkg/pointers"
+	"github.com/render-oss/render-mcp-server/pkg/client"
+	"github.com/render-oss/render-mcp-server/pkg/pointers"
 )
 
 type ListInput struct {

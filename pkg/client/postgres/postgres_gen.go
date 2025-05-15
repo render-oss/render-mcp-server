@@ -76,6 +76,9 @@ type RecoveryInput struct {
 	// DatadogApiKey Datadog API key to use for monitoring the new database. Defaults to the API key of the original database. Use an empty string to prevent copying of the API key to the new database.
 	DatadogApiKey *string `json:"datadogApiKey,omitempty"`
 
+	// DatadogSite Datadog region code to use for monitoring the new database. Defaults to the region code of the original database. Use an empty string to prevent copying of the region code to the new database.
+	DatadogSite *string `json:"datadogSite,omitempty"`
+
 	// EnvironmentId The environment to create the new database in. Defaults to the environment of the original database.
 	EnvironmentId *string `json:"environmentId,omitempty"`
 
