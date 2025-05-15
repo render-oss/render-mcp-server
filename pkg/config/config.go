@@ -8,7 +8,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/render-oss/cli/pkg/cfg"
+	"github.com/render-oss/render-mcp-server/pkg/cfg"
 )
 
 const currentVersion = 1
@@ -16,18 +16,15 @@ const defaultDashboardURL = "https://dashboard.render.com"
 
 var defaultConfigPath string
 
-const configPathEnvKey = "RENDER_CLI_CONFIG_PATH"
+const configPathEnvKey = "RENDER_CONFIG_PATH"
 const workspaceEnvKey = "RENDER_WORKSPACE"
 
-var ErrNoWorkspace = errors.New("no workspace set. Use `render workspace set` to set a workspace")
-var ErrLogin = errors.New("run `render login` to authenticate")
+var ErrNoWorkspace = errors.New("no workspace set. Prompt the user to select a workspace. Do NOT try to select a workspace for them, as it may be destructive")
+var ErrLogin = errors.New("not authenticated; either set RENDER_API_KEY or ask your MCP host to authenticate")
 
 type Config struct {
-	Version       int    `yaml:"version"`
-	Workspace     string `yaml:"workspace"`
-	WorkspaceName string `yaml:"workspace_name"`
-	ProjectFilter string `yaml:"project_filter,omitempty"` // Project ID for filtering
-	ProjectName   string `yaml:"project_name,omitempty"`   // Project name for display
+	Version   int    `yaml:"version"`
+	Workspace string `yaml:"workspace"`
 
 	APIConfig    `yaml:"api"`
 	DashboardURL string `yaml:"dashboard_url,omitempty"`
@@ -40,12 +37,28 @@ type APIConfig struct {
 	RefreshToken string `json:"refresh_token,omitempty"`
 }
 
+// This is used to store the workspace ID in memory if we can't access the config file.
+// This has the downside of not persisting across sessions, but at least it's better than nothing.
+var inMemoryWorkspaceID string
+
 func init() {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		panic(err)
+	if workspaceID := os.Getenv(workspaceEnvKey); workspaceID != "" {
+		inMemoryWorkspaceID = workspaceID
 	}
-	defaultConfigPath = filepath.Join(home, ".render", "cli.yaml")
+
+	var defaultConfigBaseDir string
+	defaultConfigBaseDir, err := os.UserHomeDir()
+	// When launching an MCP server, we may not have a home directory. Try to find a good fallback.
+	if err != nil {
+		execPath, err := os.Executable()
+		if err != nil {
+			// We don't have a good fallback to write to, just try a temp dir
+			defaultConfigBaseDir = os.TempDir()
+		} else {
+			defaultConfigBaseDir = filepath.Dir(execPath)
+		}
+	}
+	defaultConfigPath = filepath.Join(defaultConfigBaseDir, ".render", "cli.yaml")
 }
 
 func DefaultAPIConfig() (APIConfig, error) {
@@ -112,67 +125,50 @@ func expandPath(path string) (string, error) {
 	return path, nil
 }
 
-func WorkspaceID() (string, error) {
-	if workspaceID := os.Getenv(workspaceEnvKey); workspaceID != "" {
-		return workspaceID, nil
+func SelectWorkspace(workspaceID string) error {
+	// First, try to load the config from disk and update the workspace.
+	// This may fail if we're operating in an environment where we don't have disk access.
+	conf, err := Load()
+	if err == nil {
+		conf.Workspace = workspaceID
+		err = conf.Persist()
+		if err == nil {
+			return nil
+		}
 	}
 
+	// If that fails, we'll fall back to the in memory workspace ID.
+	inMemoryWorkspaceID = workspaceID
+
+	return nil
+}
+
+func WorkspaceID() (string, error) {
+	// First, try to load the config from disk.
+	// If that fails, we'll fall back to the in memory workspace ID.
+	//
+	// We don't use the environment variable here because that's just considered the starting workspace.
+	// The user may have changed workspaces since then, which would be reflected in the config file
+	// and/or the in memory workspace ID.
+	var workspaceID string
+
 	cfg, err := Load()
-	if err != nil {
-		return "", err
+	if err == nil && cfg.Workspace != "" {
+		workspaceID = cfg.Workspace
+	} else {
+		workspaceID = inMemoryWorkspaceID
 	}
-	if cfg.Workspace == "" {
+
+	if workspaceID == "" {
 		return "", ErrNoWorkspace
 	}
-	return cfg.Workspace, nil
+
+	return workspaceID, nil
 }
 
 func IsWorkspaceSet() bool {
 	id, _ := WorkspaceID()
 	return id != ""
-}
-
-func WorkspaceName() (string, error) {
-	if workspaceID := os.Getenv(workspaceEnvKey); workspaceID != "" {
-		return workspaceID, nil
-	}
-
-	cfg, err := Load()
-	if err != nil {
-		return "", err
-	}
-	if cfg.WorkspaceName == "" {
-		return "", ErrNoWorkspace
-	}
-	return cfg.WorkspaceName, nil
-}
-
-func GetProjectFilter() (projectID string, projectName string, err error) {
-	cfg, err := Load()
-	if err != nil {
-		return "", "", err
-	}
-	return cfg.ProjectFilter, cfg.ProjectName, nil
-}
-
-func SetProjectFilter(projectID string, projectName string) error {
-	cfg, err := Load()
-	if err != nil {
-		return err
-	}
-	cfg.ProjectFilter = projectID
-	cfg.ProjectName = projectName
-	return cfg.Persist()
-}
-
-func ClearProjectFilter() error {
-	cfg, err := Load()
-	if err != nil {
-		return err
-	}
-	cfg.ProjectFilter = ""
-	cfg.ProjectName = ""
-	return cfg.Persist()
 }
 
 func getAPIConfig() (APIConfig, error) {

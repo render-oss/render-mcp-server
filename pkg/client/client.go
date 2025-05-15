@@ -7,11 +7,9 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"time"
 
-	"github.com/render-oss/cli/pkg/cfg"
-	"github.com/render-oss/cli/pkg/client/oauth"
-	"github.com/render-oss/cli/pkg/config"
+	"github.com/render-oss/render-mcp-server/pkg/cfg"
+	"github.com/render-oss/render-mcp-server/pkg/config"
 )
 
 var ErrUnauthorized = errors.New("unauthorized")
@@ -22,41 +20,7 @@ func NewDefaultClient() (*ClientWithResponses, error) {
 	if err != nil {
 		return nil, err
 	}
-	apiCfg = maybeRefreshAPIToken(apiCfg)
 	return clientWithAuth(&http.Client{}, apiCfg)
-}
-
-func maybeRefreshAPIToken(apiCfg config.APIConfig) config.APIConfig {
-	expiresSoonThreshold := time.Now().Add(24 * time.Hour).Unix()
-
-	if apiCfg.ExpiresAt > 0 && apiCfg.ExpiresAt < expiresSoonThreshold && apiCfg.RefreshToken != "" {
-		updatedConfig, err := refreshAPIKey(apiCfg)
-		if err != nil {
-			// failed to refresh the token, clear the refresh token so we fall back
-			// to the standard login flow
-			apiCfg.RefreshToken = ""
-			_ = config.SetAPIConfig(apiCfg)
-			return apiCfg
-		}
-
-		apiCfg = updatedConfig
-	}
-	return apiCfg
-}
-
-func refreshAPIKey(apiCfg config.APIConfig) (config.APIConfig, error) {
-	token, err := oauth.NewClient(apiCfg.Host).RefreshToken(
-		context.Background(),
-		apiCfg.RefreshToken,
-	)
-	if err != nil {
-		return config.APIConfig{}, err
-	}
-
-	apiCfg.Key = token.AccessToken
-	apiCfg.RefreshToken = token.RefreshToken
-	apiCfg.ExpiresAt = time.Now().Add(time.Second * time.Duration(token.ExpiresIn)).Unix()
-	return apiCfg, config.SetAPIConfig(apiCfg)
 }
 
 func AddHeaders(header http.Header, token string) http.Header {

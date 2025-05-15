@@ -3,8 +3,9 @@ package postgres
 import (
 	"context"
 
-	"github.com/render-oss/cli/pkg/client"
-	"github.com/render-oss/cli/pkg/config"
+	"github.com/render-oss/render-mcp-server/pkg/client"
+	"github.com/render-oss/render-mcp-server/pkg/config"
+	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
 type Repo struct {
@@ -74,6 +75,23 @@ func (r *Repo) GetPostgresConnectionInfo(ctx context.Context, id string) (*clien
 	}
 
 	return resp.JSON200, nil
+}
+
+func (r *Repo) CreatePostgres(ctx context.Context, input client.PostgresPOSTInput) (*client.PostgresDetail, error) {
+	if err := validate.WorkspaceMatches(input.OwnerId); err != nil {
+		return nil, err
+	}
+
+	resp, err := r.client.CreatePostgresWithResponse(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := client.ErrorFromResponse(resp); err != nil {
+		return nil, err
+	}
+
+	return resp.JSON201, nil
 }
 
 func (r *Repo) RestartPostgresDatabase(ctx context.Context, id string) error {

@@ -4,7 +4,7 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 2.x     | :white_check_mark: |
+| 0.x     | :white_check_mark: |
 
 ## Reporting a Vulnerability
 
@@ -23,4 +23,4 @@ We prefer all communications to be in English.
 
 ## Comments on this policy
 
-If you have suggestions on how this process could be improved please [file an issue](https://github.com/render-oss/cli/issues/new) to discuss.
+If you have suggestions on how this process could be improved please [file an issue](https://github.com/render-oss/render-mcp-version/issues/new) to discuss.

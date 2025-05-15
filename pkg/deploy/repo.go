@@ -3,7 +3,7 @@ package deploy
 import (
 	"context"
 
-	"github.com/render-oss/cli/pkg/client"
+	"github.com/render-oss/render-mcp-server/pkg/client"
 )
 
 type Repo struct {
@@ -11,69 +11,48 @@ type Repo struct {
 }
 
 func NewRepo(c *client.ClientWithResponses) *Repo {
-	return &Repo{client: c}
+	return &Repo{
+		client: c,
+	}
 }
 
-func (d *Repo) ListDeploysForService(ctx context.Context, serviceID string, params *client.ListDeploysParams) ([]*client.Deploy, error) {
-	resp, err := d.client.ListDeploysWithResponse(ctx, serviceID, params)
+type ListDeploysParams struct {
+	*client.ListDeploysParams
+	serviceId string
+}
+
+func (r *Repo) ListDeploys(ctx context.Context, serviceId string, params *client.ListDeploysParams) ([]*client.Deploy, error) {
+	listDeploysParams := &ListDeploysParams{
+		ListDeploysParams: params,
+		serviceId:         serviceId,
+	}
+	return client.ListAll(ctx, listDeploysParams, r.listDeploysPage)
+}
+
+func (r *Repo) listDeploysPage(ctx context.Context, params *ListDeploysParams) ([]*client.Deploy, *client.Cursor, error) {
+	resp, err := r.client.ListDeploysWithResponse(ctx, params.serviceId, params.ListDeploysParams)
 	if err != nil {
-		return nil, err
-	}
-	if err := client.ErrorFromResponse(resp); err != nil {
-		return nil, err
-	}
-
-	result := make([]*client.Deploy, 0, len(*resp.JSON200))
-	for _, deploy := range *resp.JSON200 {
-		result = append(result, deploy.Deploy)
-	}
-
-	return result, nil
-}
-
-type TriggerDeployInput struct {
-	ClearCache *bool
-	CommitId   *string
-	ImageUrl   *string
-}
-
-func (d *Repo) TriggerDeploy(ctx context.Context, serviceID string, input TriggerDeployInput) (*client.Deploy, error) {
-	clearCache := client.DoNotClear
-	if input.ClearCache != nil && *input.ClearCache {
-		clearCache = client.Clear
-	}
-
-	resp, err := d.client.CreateDeployWithResponse(ctx, serviceID, client.CreateDeployJSONRequestBody{
-		ClearCache: &clearCache,
-		CommitId:   input.CommitId,
-		ImageUrl:   input.ImageUrl,
-	})
-	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if err := client.ErrorFromResponse(resp); err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+	if resp.JSON200 == nil || len(*resp.JSON200) == 0 {
+		return nil, nil, nil
 	}
 
-	return resp.JSON201, nil
+	res := *resp.JSON200
+	deploys := make([]*client.Deploy, 0, len(res))
+	for _, deployWithCursor := range res {
+		deploys = append(deploys, deployWithCursor.Deploy)
+	}
+
+	return deploys, res[len(res)-1].Cursor, nil
 }
 
-func (d *Repo) GetDeploy(ctx context.Context, serviceID, deployID string) (*client.Deploy, error) {
-	resp, err := d.client.RetrieveDeployWithResponse(ctx, serviceID, deployID)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := client.ErrorFromResponse(resp); err != nil {
-		return nil, err
-	}
-
-	return resp.JSON200, nil
-}
-
-func (d *Repo) CancelDeploy(ctx context.Context, serviceID, deployID string) (*client.Deploy, error) {
-	resp, err := d.client.CancelDeployWithResponse(ctx, serviceID, deployID)
+func (r *Repo) GetDeploy(ctx context.Context, serviceId string, deployId string) (*client.Deploy, error) {
+	resp, err := r.client.RetrieveDeployWithResponse(ctx, client.ServiceIdParam(serviceId), client.DeployIdParam(deployId))
 	if err != nil {
 		return nil, err
 	}

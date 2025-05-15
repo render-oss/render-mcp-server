@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/oapi-codegen/runtime"
-	externalRef0 "github.com/render-oss/cli/pkg/client/autoscaling"
-	externalRef2 "github.com/render-oss/cli/pkg/client/disks"
-	externalRef4 "github.com/render-oss/cli/pkg/client/eventtypes"
-	externalRef5 "github.com/render-oss/cli/pkg/client/jobs"
+	externalRef0 "github.com/render-oss/render-mcp-server/pkg/client/autoscaling"
+	externalRef2 "github.com/render-oss/render-mcp-server/pkg/client/disks"
+	externalRef4 "github.com/render-oss/render-mcp-server/pkg/client/eventtypes"
+	externalRef5 "github.com/render-oss/render-mcp-server/pkg/client/jobs"
 )
 
 // Defines values for CronJobRunStatus.
@@ -311,6 +311,9 @@ type PostgresAvailableEvent = map[string]interface{}
 // PostgresBackupCompletedEvent defines model for postgresBackupCompletedEvent.
 type PostgresBackupCompletedEvent = map[string]interface{}
 
+// PostgresBackupFailedEvent defines model for postgresBackupFailedEvent.
+type PostgresBackupFailedEvent = map[string]interface{}
+
 // PostgresBackupStartedEvent defines model for postgresBackupStartedEvent.
 type PostgresBackupStartedEvent = map[string]interface{}
 
@@ -344,6 +347,15 @@ type PostgresHaStatusChangedEvent struct {
 	FromStatus string `json:"fromStatus"`
 	ToStatus   string `json:"toStatus"`
 }
+
+// PostgresPITRCheckpointCompletedEvent defines model for postgresPITRCheckpointCompletedEvent.
+type PostgresPITRCheckpointCompletedEvent = map[string]interface{}
+
+// PostgresPITRCheckpointFailedEvent defines model for postgresPITRCheckpointFailedEvent.
+type PostgresPITRCheckpointFailedEvent = map[string]interface{}
+
+// PostgresPITRCheckpointStartedEvent defines model for postgresPITRCheckpointStartedEvent.
+type PostgresPITRCheckpointStartedEvent = map[string]interface{}
 
 // PostgresReadReplicasChangedEvent defines model for postgresReadReplicasChangedEvent.
 type PostgresReadReplicasChangedEvent struct {
@@ -694,6 +706,32 @@ func (t *PostgresEventDetails) MergePostgresBackupCompletedEvent(v PostgresBacku
 	return err
 }
 
+// AsPostgresBackupFailedEvent returns the union data inside the PostgresEventDetails as a PostgresBackupFailedEvent
+func (t PostgresEventDetails) AsPostgresBackupFailedEvent() (PostgresBackupFailedEvent, error) {
+	var body PostgresBackupFailedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPostgresBackupFailedEvent overwrites any union data inside the PostgresEventDetails as the provided PostgresBackupFailedEvent
+func (t *PostgresEventDetails) FromPostgresBackupFailedEvent(v PostgresBackupFailedEvent) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePostgresBackupFailedEvent performs a merge with any union data inside the PostgresEventDetails, using the provided PostgresBackupFailedEvent
+func (t *PostgresEventDetails) MergePostgresBackupFailedEvent(v PostgresBackupFailedEvent) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 // AsPostgresBackupStartedEvent returns the union data inside the PostgresEventDetails as a PostgresBackupStartedEvent
 func (t PostgresEventDetails) AsPostgresBackupStartedEvent() (PostgresBackupStartedEvent, error) {
 	var body PostgresBackupStartedEvent
@@ -970,6 +1008,84 @@ func (t *PostgresEventDetails) FromPostgresUpgradeSucceededEvent(v PostgresUpgra
 
 // MergePostgresUpgradeSucceededEvent performs a merge with any union data inside the PostgresEventDetails, using the provided PostgresUpgradeSucceededEvent
 func (t *PostgresEventDetails) MergePostgresUpgradeSucceededEvent(v PostgresUpgradeSucceededEvent) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsPostgresPITRCheckpointStartedEvent returns the union data inside the PostgresEventDetails as a PostgresPITRCheckpointStartedEvent
+func (t PostgresEventDetails) AsPostgresPITRCheckpointStartedEvent() (PostgresPITRCheckpointStartedEvent, error) {
+	var body PostgresPITRCheckpointStartedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPostgresPITRCheckpointStartedEvent overwrites any union data inside the PostgresEventDetails as the provided PostgresPITRCheckpointStartedEvent
+func (t *PostgresEventDetails) FromPostgresPITRCheckpointStartedEvent(v PostgresPITRCheckpointStartedEvent) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePostgresPITRCheckpointStartedEvent performs a merge with any union data inside the PostgresEventDetails, using the provided PostgresPITRCheckpointStartedEvent
+func (t *PostgresEventDetails) MergePostgresPITRCheckpointStartedEvent(v PostgresPITRCheckpointStartedEvent) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsPostgresPITRCheckpointFailedEvent returns the union data inside the PostgresEventDetails as a PostgresPITRCheckpointFailedEvent
+func (t PostgresEventDetails) AsPostgresPITRCheckpointFailedEvent() (PostgresPITRCheckpointFailedEvent, error) {
+	var body PostgresPITRCheckpointFailedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPostgresPITRCheckpointFailedEvent overwrites any union data inside the PostgresEventDetails as the provided PostgresPITRCheckpointFailedEvent
+func (t *PostgresEventDetails) FromPostgresPITRCheckpointFailedEvent(v PostgresPITRCheckpointFailedEvent) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePostgresPITRCheckpointFailedEvent performs a merge with any union data inside the PostgresEventDetails, using the provided PostgresPITRCheckpointFailedEvent
+func (t *PostgresEventDetails) MergePostgresPITRCheckpointFailedEvent(v PostgresPITRCheckpointFailedEvent) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsPostgresPITRCheckpointCompletedEvent returns the union data inside the PostgresEventDetails as a PostgresPITRCheckpointCompletedEvent
+func (t PostgresEventDetails) AsPostgresPITRCheckpointCompletedEvent() (PostgresPITRCheckpointCompletedEvent, error) {
+	var body PostgresPITRCheckpointCompletedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPostgresPITRCheckpointCompletedEvent overwrites any union data inside the PostgresEventDetails as the provided PostgresPITRCheckpointCompletedEvent
+func (t *PostgresEventDetails) FromPostgresPITRCheckpointCompletedEvent(v PostgresPITRCheckpointCompletedEvent) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePostgresPITRCheckpointCompletedEvent performs a merge with any union data inside the PostgresEventDetails, using the provided PostgresPITRCheckpointCompletedEvent
+func (t *PostgresEventDetails) MergePostgresPITRCheckpointCompletedEvent(v PostgresPITRCheckpointCompletedEvent) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err

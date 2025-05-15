@@ -3,8 +3,9 @@ package keyvalue
 import (
 	"context"
 
-	"github.com/render-oss/cli/pkg/client"
-	"github.com/render-oss/cli/pkg/config"
+	"github.com/render-oss/render-mcp-server/pkg/client"
+	"github.com/render-oss/render-mcp-server/pkg/config"
+	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
 type Repo struct {
@@ -66,4 +67,21 @@ func (r *Repo) GetKeyValueConnectionInfo(ctx context.Context, id string) (*clien
 	}
 
 	return resp.JSON200, nil
+}
+
+func (r *Repo) CreateKeyValue(ctx context.Context, input client.KeyValuePOSTInput) (*client.KeyValueDetail, error) {
+	if err := validate.WorkspaceMatches(input.OwnerId); err != nil {
+		return nil, err
+	}
+
+	resp, err := r.client.CreateKeyValueWithResponse(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := client.ErrorFromResponse(resp); err != nil {
+		return nil, err
+	}
+
+	return resp.JSON201, nil
 }

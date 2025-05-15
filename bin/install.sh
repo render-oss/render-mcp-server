@@ -1,7 +1,7 @@
 #!/bin/sh
-# This script installs the latest version of the Render CLI
+# This script installs the latest version of the Render MCP Server
 # You can run it directly:
-#   curl -fsSL https://raw.githubusercontent.com/render-oss/cli/bin/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/render-oss/render-mcp-server/refs/heads/main/bin/install.sh | sh
 
 set -e
 
@@ -10,7 +10,7 @@ set -e
 
 # Function to get latest release info using GitHub API
 get_latest_release() {
-    curl --silent "https://api.github.com/repos/render-oss/cli/releases/latest" |
+    curl --silent "https://api.github.com/repos/render-oss/render-mcp-server/releases/latest" |
         sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p'
 }
 
@@ -51,11 +51,11 @@ fi
 # Remove 'v' prefix from version if present
 VERSION_NUM="${VERSION#v}"
 
-echo "Installing Render CLI version ${VERSION}..."
+echo "Installing Render MCP server version ${VERSION}..."
 
 # Construct download URL
-BINARY_NAME="cli_${VERSION_NUM}_${OS_NAME}_${ARCH_NAME}.zip"
-DOWNLOAD_URL="https://github.com/render-oss/cli/releases/download/${VERSION}/${BINARY_NAME}"
+BINARY_NAME="render-mcp-server_${VERSION_NUM}_${OS_NAME}_${ARCH_NAME}.zip"
+DOWNLOAD_URL="https://github.com/render-oss/render-mcp-server/releases/download/${VERSION}/${BINARY_NAME}"
 
 # Create temporary directory
 TMP_DIR=$(mktemp -d)
@@ -77,30 +77,30 @@ fi
 unzip -o "${TMP_DIR}/${BINARY_NAME}" -d "${TMP_DIR}" >/dev/null 2>&1
 
 # Find and move the binary
-RENDER_BINARY=$(find "${TMP_DIR}" -type f -name "cli_v*" | head -n 1)
+RENDER_BINARY=$(find "${TMP_DIR}" -type f -name "render-mcp-server_v*" | head -n 1)
 if [ -z "$RENDER_BINARY" ]; then
-    error "Could not find CLI binary in the archive"
+    error "Could not find render-mcp-server binary in the archive"
 fi
 
-mv "${RENDER_BINARY}" "${INSTALL_DIR}/render"
-chmod +x "${INSTALL_DIR}/render"
+mv "${RENDER_BINARY}" "${INSTALL_DIR}/render-mcp-server"
+chmod +x "${INSTALL_DIR}/render-mcp-server"
 
 # Verify installation by checking the binary directly
-if [ -x "${INSTALL_DIR}/render" ]; then
-    echo "✨ Successfully installed Render CLI to ${INSTALL_DIR}/render"
+if [ -x "${INSTALL_DIR}/render-mcp-server" ]; then
+    echo "✨ Successfully installed Render MCP Server to ${INSTALL_DIR}/render-mcp-server"
     echo
-    if ! command -v render >/dev/null 2>&1; then
+    if ! command -v render-mcp-server >/dev/null 2>&1; then
         echo "NOTE: Make sure ${INSTALL_DIR} is in your PATH by adding this to your shell's rc file:"
         echo "  export PATH=\$PATH:${INSTALL_DIR}"
         echo
-        echo "To use render CLI immediately, run:"
+        echo "To use render-mcp-server immediately, run:"
         echo "  export PATH=\$PATH:${INSTALL_DIR}"
-        echo "  ${INSTALL_DIR}/render --version"
+        echo "  ${INSTALL_DIR}/render-mcp-server --version"
     else
-        "${INSTALL_DIR}/render" --version
+        "${INSTALL_DIR}/render-mcp-server" --version
     fi
 else
-    error "Installation failed: Could not install binary to ${INSTALL_DIR}/render"
+    error "Installation failed: Could not install binary to ${INSTALL_DIR}/render-mcp-server"
 fi
 
 }

@@ -3,10 +3,10 @@ package service
 import (
 	"context"
 
-	"github.com/render-oss/cli/pkg/client"
-	"github.com/render-oss/cli/pkg/config"
-	"github.com/render-oss/cli/pkg/pointers"
-	"github.com/render-oss/cli/pkg/validate"
+	"github.com/render-oss/render-mcp-server/pkg/client"
+	"github.com/render-oss/render-mcp-server/pkg/config"
+	"github.com/render-oss/render-mcp-server/pkg/pointers"
+	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
 type Repo struct {
@@ -53,12 +53,64 @@ func (s *Repo) listPage(ctx context.Context, params *client.ListServicesParams) 
 	return services, &res[len(res)-1].Cursor, nil
 }
 
-func (s *Repo) DeployService(ctx context.Context, svc *client.Service) (*client.Deploy, error) {
-	if err := validate.WorkspaceMatches(svc.OwnerId); err != nil {
+type ListEnvParams struct {
+	*client.GetEnvVarsForServiceParams
+	serviceId string
+}
+
+func (s *Repo) ListEnvVars(ctx context.Context, serviceId string, params *client.GetEnvVarsForServiceParams) ([]*client.EnvVar, error) {
+	listEnvParams := &ListEnvParams{
+		GetEnvVarsForServiceParams: params,
+		serviceId:                  serviceId,
+	}
+	return client.ListAll(ctx, listEnvParams, s.listEnvVarsPage)
+}
+
+func (s *Repo) listEnvVarsPage(ctx context.Context, params *ListEnvParams) ([]*client.EnvVar, *client.Cursor, error) {
+	resp, err := s.client.GetEnvVarsForServiceWithResponse(ctx, params.serviceId, params.GetEnvVarsForServiceParams)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err := client.ErrorFromResponse(resp); err != nil {
+		return nil, nil, err
+	}
+	if resp.JSON200 == nil || len(*resp.JSON200) == 0 {
+		return nil, nil, nil
+	}
+
+	res := *resp.JSON200
+	envVars := make([]*client.EnvVar, 0, len(res))
+	for _, envVarsWithCursor := range res {
+		envVars = append(envVars, &envVarsWithCursor.EnvVar)
+	}
+
+	return envVars, &res[len(res)-1].Cursor, nil
+}
+
+func (s *Repo) UpdateEnvVars(ctx context.Context, serviceId string, envVars []client.EnvVarInput) (*client.UpdateEnvVarsForServiceResponse, error) {
+	// validate that the service belongs to the workspace
+	_, err := s.GetService(ctx, serviceId)
+	if err != nil {
 		return nil, err
 	}
 
-	resp, err := s.client.CreateDeployWithResponse(ctx, svc.Id, client.CreateDeployJSONRequestBody{
+	resp, err := s.client.UpdateEnvVarsForServiceWithResponse(ctx, serviceId, envVars)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := client.ErrorFromResponse(resp); err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+func (s *Repo) DeployService(ctx context.Context, serviceId string) (*client.CreateDeployResponse, error) {
+	// Skip validation of the service belongs to the workspace because it should be done before the
+	// call to DeployService.
+	resp, err := s.client.CreateDeployWithResponse(ctx, serviceId, client.CreateDeployJSONRequestBody{
 		ClearCache: nil,
 		CommitId:   nil,
 		ImageUrl:   nil,
@@ -71,10 +123,10 @@ func (s *Repo) DeployService(ctx context.Context, svc *client.Service) (*client.
 		return nil, err
 	}
 
-	return resp.JSON201, nil
+	return resp, nil
 }
 
-func (s *Repo) CreateService(ctx context.Context, data client.CreateServiceJSONRequestBody) (*client.Service, error) {
+func (s *Repo) CreateService(ctx context.Context, data client.CreateServiceJSONRequestBody) (*client.ServiceAndDeploy, error) {
 	if err := validate.WorkspaceMatches(data.OwnerId); err != nil {
 		return nil, err
 	}
@@ -88,26 +140,7 @@ func (s *Repo) CreateService(ctx context.Context, data client.CreateServiceJSONR
 		return nil, err
 	}
 
-	return resp.JSON201.Service, nil
-}
-
-func (s *Repo) UpdateService(ctx context.Context, id string, data client.UpdateServiceJSONRequestBody) (*client.Service, error) {
-	// we get the Service to ensure the workspace matches. Since GetService checks the workspace, we just check
-	// if an error was returned
-	if _, err := s.GetService(ctx, id); err != nil {
-		return nil, err
-	}
-
-	resp, err := s.client.UpdateServiceWithResponse(ctx, id, data)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := client.ErrorFromResponse(resp); err != nil {
-		return nil, err
-	}
-
-	return resp.JSON200, nil
+	return resp.JSON201, nil
 }
 
 func (s *Repo) GetService(ctx context.Context, id string) (*client.Service, error) {
@@ -120,22 +153,5 @@ func (s *Repo) GetService(ctx context.Context, id string) (*client.Service, erro
 		return nil, err
 	}
 
-	if err := validate.WorkspaceMatches(resp.JSON200.OwnerId); err != nil {
-		return nil, err
-	}
-
 	return resp.JSON200, nil
-}
-
-func (s *Repo) RestartService(ctx context.Context, id string) error {
-	resp, err := s.client.RestartServiceWithResponse(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	if err := client.ErrorFromResponse(resp); err != nil {
-		return err
-	}
-
-	return nil
 }
