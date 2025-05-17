@@ -1,0 +1,29 @@
+name: Mirror to Public Repository
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    env:
+      ENABLE_MIRROR: ${{ secrets.ENABLE_MIRROR }}
+
+    steps:
+      - name: Checkout private repository
+        uses: actions/checkout@v4
+        if: ${{ env.ENABLE_MIRROR == 'true' }}
+        with:
+          # Must be set to avoid conflicting with the subsequent push
+          # https://github.com/ad-m/github-push-action/issues/44#issuecomment-581706892
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Push to public repository
+        uses: ad-m/github-push-action@v0.8.0
+        if: ${{ env.ENABLE_MIRROR == 'true' }}
+        with:
+          github_token: ${{ secrets.PUBLIC_REPO_TOKEN }}
+          repository: render-oss/render-mcp-server
+          branch: main
+          force: true
