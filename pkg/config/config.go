@@ -58,7 +58,7 @@ func init() {
 			defaultConfigBaseDir = filepath.Dir(execPath)
 		}
 	}
-	defaultConfigPath = filepath.Join(defaultConfigBaseDir, ".render", "cli.yaml")
+	defaultConfigPath = filepath.Join(defaultConfigBaseDir, ".render", "mcp-server.yaml")
 }
 
 func DefaultAPIConfig() (APIConfig, error) {

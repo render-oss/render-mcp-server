@@ -24,7 +24,36 @@ You must create a Render API key from your [Render Dashboard → Account Setting
 
 Select one of the following methods to install and run the Render MCP Server.
 
-#### Method A: Direct Download
+#### Method A: Using Docker (Recommended)
+This is the simplest way to get started if you have [Docker](https://www.docker.com) installed and running.
+
+**Steps:**
+1. Ensure Docker is installed and operational on your system.
+2. Configure your MCP client with the following settings, replacing `<YOUR_API_KEY>` with the API key you obtained in Step 1:
+   ```json
+   {
+     "mcpServers": {
+       "render": {
+         "command": "docker",
+         "args": [
+           "run",
+           "-i",
+           "--rm",
+           "-e",
+           "RENDER_API_KEY",
+           "-v",
+           "render-mcp-server-config:/config",
+           "ghcr.io/render-oss/render-mcp-server"
+         ],
+         "env": {
+           "RENDER_API_KEY": "<YOUR_API_KEY>"
+         }
+       }
+     }
+   }
+   ```
+
+#### Method B: Direct Download
 Use this method if you prefer not to use Docker and a pre-compiled binary is available for your system.
 
 **Steps:**
@@ -46,7 +75,7 @@ Use this method if you prefer not to use Docker and a pre-compiled binary is ava
    ```
    > **macOS Users**: If you run the binary directly on macOS, you may need to grant an exception for it to run. See the [Limitations](#limitations) section for more details and a link to Apple's support page.
 
-#### Method B: Build from Source
+#### Method C: Build from Source
 Choose this method if no pre-compiled binary suits your system, you want to build from the latest code, or you are a developer modifying the server. You will need [Go (Golang)](https://go.dev/doc/install) installed.
 
 **Steps:**
