@@ -10,6 +10,12 @@ server that allows you to interact with your Render resources via LLMs.
 - Monitoring application logs and deployment status to help troubleshoot issues
 - Querying your Postgres databases directly inside an LLM
 
+## Feedback
+
+The official Render MCP server is currently in Beta. Please leave feedback via 
+[filing a Github issue](https://github.com/render-oss/render-mcp-server/issues) if you have any 
+feature requests, bug reports, suggestions, comments, or concerns.
+
 ## Getting Started
 
 This guide will help you set up the Render MCP Server. To use the server, you will need a desktop application that can act as an MCP client (e.g., Claude Desktop, Cursor IDE, VS Code). All installation methods require a Render API Key, and you will configure your chosen MCP client with the server details.
@@ -106,13 +112,13 @@ Choose this method if no pre-compiled binary suits your system, you want to buil
 
 > [!NOTE]
 > The MCP server is currently in beta, and there are several limitations. If you have specific
-feedback or would like to report a bug or feature request, please create a GitHub Issue. 
+feedback or would like to report a bug or feature request, please [create a GitHub Issue](https://github.com/render-oss/render-mcp-server/issues). 
 
 1. **macOS Users**: If you download and run the binary directly on macOS, you may need to grant an exception to run it as it's from an "unknown developer". You can find instructions on how to do this [here](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac). This issue might not present a pop-up if the binary is launched from within another application like Claude or Cursor. This is not an issue if you are launching the MCP server via Docker.
 
 2. The Render MCP server currently only allows you to create the following service types: web services and static sites. Other service types, including cronjobs, private services, and background workers are not currently supported.
 
-3. The Render MCP server does not currently support all configuration options when creating services. For example, you cannot create image-backed services or set up IP address restrictions. If there are options that you would like to see supported and aren't today, please let us know.
+3. The Render MCP server does not currently support all configuration options when creating services. For example, you cannot create image-backed services or set up IP address restrictions. If there are options that you would like to see supported and aren't today, please [let us know](https://github.com/render-oss/render-mcp-server/issues).
 
 4. You cannot perform service mutations (updates) or deletions using this MCP server. Please use the Render dashboard or the REST API for these operations.
 
