@@ -8,11 +8,19 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
-type Repo struct {
-	client *client.ClientWithResponses
+//go:generate go tool counterfeiter -o ../fakes/fakekeyvaluerepoclient_gen.go . keyValueRepoClient
+type keyValueRepoClient interface {
+	ListKeyValueWithResponse(ctx context.Context, params *client.ListKeyValueParams, reqEditors ...client.RequestEditorFn) (*client.ListKeyValueResponse, error)
+	RetrieveKeyValueWithResponse(ctx context.Context, id string, reqEditors ...client.RequestEditorFn) (*client.RetrieveKeyValueResponse, error)
+	RetrieveKeyValueConnectionInfoWithResponse(ctx context.Context, id string, reqEditors ...client.RequestEditorFn) (*client.RetrieveKeyValueConnectionInfoResponse, error)
+	CreateKeyValueWithResponse(ctx context.Context, body client.KeyValuePOSTInput, reqEditors ...client.RequestEditorFn) (*client.CreateKeyValueResponse, error)
 }
 
-func NewRepo(c *client.ClientWithResponses) *Repo {
+type Repo struct {
+	client keyValueRepoClient
+}
+
+func NewRepo(c keyValueRepoClient) *Repo {
 	return &Repo{
 		client: c,
 	}

@@ -2,17 +2,27 @@ package postgres
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
-type Repo struct {
-	client *client.ClientWithResponses
+//go:generate go tool counterfeiter -o ../fakes/fakepostgresrepoclient_gen.go . postgresRepoClient
+type postgresRepoClient interface {
+	ListPostgresWithResponse(ctx context.Context, params *client.ListPostgresParams, reqEditors ...client.RequestEditorFn) (*client.ListPostgresResponse, error)
+	RetrievePostgresWithResponse(ctx context.Context, id string, reqEditors ...client.RequestEditorFn) (*client.RetrievePostgresResponse, error)
+	RetrievePostgresConnectionInfoWithResponse(ctx context.Context, id string, reqEditors ...client.RequestEditorFn) (*client.RetrievePostgresConnectionInfoResponse, error)
+	CreatePostgresWithResponse(ctx context.Context, body client.PostgresPOSTInput, reqEditors ...client.RequestEditorFn) (*client.CreatePostgresResponse, error)
+	RestartPostgres(ctx context.Context, id string, reqEditors ...client.RequestEditorFn) (*http.Response, error)
 }
 
-func NewRepo(c *client.ClientWithResponses) *Repo {
+type Repo struct {
+	client postgresRepoClient
+}
+
+func NewRepo(c postgresRepoClient) *Repo {
 	return &Repo{
 		client: c,
 	}

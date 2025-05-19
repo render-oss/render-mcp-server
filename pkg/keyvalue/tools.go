@@ -111,6 +111,10 @@ func getKeyValueConnectionInfo(keyValueRepo *Repo) server.ServerTool {
 			),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			if !config.IncludeSensitiveInfo() {
+				return mcpserver.UnavailableDueToSensitiveInfoToolResult, nil
+			}
+
 			keyValueId, err := validate.RequiredToolParam[string](request, "keyValueId")
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil

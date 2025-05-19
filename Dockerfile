@@ -24,5 +24,6 @@ WORKDIR /server
 COPY --from=build /bin/render-mcp-server .
 # Set default config path (inside container)
 ENV RENDER_CONFIG_PATH=/config/mcp-server.yaml
-# Command to run the server
-CMD ["./render-mcp-server"]
+# Use ENTRYPOINT instead of CMD so that additional user-provided args are passed to the server
+ENTRYPOINT ["./render-mcp-server"]
+CMD []

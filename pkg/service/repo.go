@@ -9,11 +9,21 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
-type Repo struct {
-	client *client.ClientWithResponses
+//go:generate go tool counterfeiter -o ../fakes/fakeservicerepoclient_gen.go . serviceRepoClient
+type serviceRepoClient interface {
+	ListServicesWithResponse(ctx context.Context, params *client.ListServicesParams, reqEditors ...client.RequestEditorFn) (*client.ListServicesResponse, error)
+	GetEnvVarsForServiceWithResponse(ctx context.Context, serviceId string, params *client.GetEnvVarsForServiceParams, reqEditors ...client.RequestEditorFn) (*client.GetEnvVarsForServiceResponse, error)
+	UpdateEnvVarsForServiceWithResponse(ctx context.Context, serviceId string, body []client.EnvVarInput, reqEditors ...client.RequestEditorFn) (*client.UpdateEnvVarsForServiceResponse, error)
+	CreateDeployWithResponse(ctx context.Context, serviceId string, body client.CreateDeployJSONRequestBody, reqEditors ...client.RequestEditorFn) (*client.CreateDeployResponse, error)
+	CreateServiceWithResponse(ctx context.Context, data client.CreateServiceJSONRequestBody, reqEditors ...client.RequestEditorFn) (*client.CreateServiceResponse, error)
+	RetrieveServiceWithResponse(ctx context.Context, id string, reqEditors ...client.RequestEditorFn) (*client.RetrieveServiceResponse, error)
 }
 
-func NewRepo(c *client.ClientWithResponses) *Repo {
+type Repo struct {
+	client serviceRepoClient
+}
+
+func NewRepo(c serviceRepoClient) *Repo {
 	return &Repo{
 		client: c,
 	}

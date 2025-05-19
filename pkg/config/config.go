@@ -22,6 +22,27 @@ const workspaceEnvKey = "RENDER_WORKSPACE"
 var ErrNoWorkspace = errors.New("no workspace set. Prompt the user to select a workspace. Do NOT try to select a workspace for them, as it may be destructive")
 var ErrLogin = errors.New("not authenticated; either set RENDER_API_KEY or ask your MCP host to authenticate")
 
+// RuntimeConfig holds application runtime configuration settings. It should not be persisted to disk.
+type RuntimeConfig struct {
+	includeSensitiveInfo bool
+}
+
+var runtimeConfig *RuntimeConfig
+
+func InitRuntimeConfig(includeSensitiveInfo bool) {
+	runtimeConfig = &RuntimeConfig{
+		includeSensitiveInfo: includeSensitiveInfo,
+	}
+}
+
+// IncludeSensitiveInfo returns whether sensitive info should be included in tool reponse to the MCP host.
+func IncludeSensitiveInfo() bool {
+	if runtimeConfig == nil {
+		return false
+	}
+	return runtimeConfig.includeSensitiveInfo
+}
+
 type Config struct {
 	Version   int    `yaml:"version"`
 	Workspace string `yaml:"workspace"`

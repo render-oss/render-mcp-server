@@ -23,7 +23,7 @@ func Tools(c *client.ClientWithResponses) []server.ServerTool {
 		createStaticSite(serviceRepo),
 		updateWebService(),
 		updateStaticSite(),
-		updateEnvironmentVariables(serviceRepo),
+		updateEnvVars(serviceRepo),
 	}
 }
 
@@ -117,6 +117,10 @@ func listEnvVars(serviceRepo *Repo) server.ServerTool {
 			),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			if !config.IncludeSensitiveInfo() {
+				return mcpserver.UnavailableDueToSensitiveInfoToolResult, nil
+			}
+
 			serviceId, ok := request.Params.Arguments["serviceId"].(string)
 			if !ok {
 				return mcp.NewToolResultError("serviceId must be a string"), nil
@@ -492,10 +496,14 @@ func updateStaticSite() server.ServerTool {
 	}
 }
 
-func updateEnvironmentVariables(serviceRepo *Repo) server.ServerTool {
+func updateEnvVars(serviceRepo *Repo) server.ServerTool {
 	return server.ServerTool{
 		Tool: mcp.NewTool("update_environment_variables",
-			mcp.WithDescription("Update all environment variables for a service. This will replace all existing environment variables with the provided list. Any variables not included in the list will be removed."),
+			mcp.WithDescription("Update environment variables for a service. "+
+				"By default, environment variables passed in will be merged with the service's "+
+				"existing environment variables. This makes it safe to update environment variables"+
+				"without pulling the existing ones into the MCP host's context. "+
+				"To replace all existing environment variables, set the 'replace' parameter to 'true'."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:           "Update environment variables",
 				DestructiveHint: true,
@@ -505,9 +513,14 @@ func updateEnvironmentVariables(serviceRepo *Repo) server.ServerTool {
 				mcp.Required(),
 				mcp.Description("The ID of the service to update"),
 			),
+			mcp.WithBoolean("replace",
+				mcp.Description("Whether to replace all existing environment variables with the "+
+					"provided list, or merge with the existing ones. Defaults to false."),
+				mcp.DefaultBool(false),
+			),
 			mcp.WithArray("envVars",
 				mcp.Required(),
-				mcp.Description("The complete list of environment variables to set for the service. Any existing variables not in this list will be removed."),
+				mcp.Description("The list of environment variables to update or set for the service."),
 				mcp.Items(
 					map[string]interface{}{
 						"type":                 "object",
@@ -541,7 +554,27 @@ func updateEnvironmentVariables(serviceRepo *Repo) server.ServerTool {
 				return mcp.NewToolResultError("Environment variables are required"), nil
 			}
 
-			updateEnvVarsResponse, err := serviceRepo.UpdateEnvVars(ctx, serviceId, envVars)
+			var envVarsToSet []client.EnvVarInput
+
+			replace, _, err := validate.OptionalToolParam[bool](request, "replace")
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			if replace {
+				envVarsToSet = envVars
+			} else {
+				oldEnvVars, err := serviceRepo.ListEnvVars(ctx, serviceId, &client.GetEnvVarsForServiceParams{})
+				if err != nil {
+					return mcp.NewToolResultError(err.Error()), nil
+				}
+				envVarsToSet, err = mergeEnvVars(oldEnvVars, envVars)
+				if err != nil {
+					return mcp.NewToolResultError(err.Error()), nil
+				}
+			}
+
+			updateEnvVarsResponse, err := serviceRepo.UpdateEnvVars(ctx, serviceId, envVarsToSet)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
@@ -553,10 +586,43 @@ func updateEnvironmentVariables(serviceRepo *Repo) server.ServerTool {
 			}
 
 			responseText := "Environment variables updated. A new deploy has been triggered to pick up the changes.\n\n"
-			responseText += "Response from updating environment variables: " + string(updateEnvVarsResponse.Body) + "\n\n"
+			if config.IncludeSensitiveInfo() {
+				responseText += "Response from updating environment variables: " + string(updateEnvVarsResponse.Body) + "\n\n"
+			}
 			responseText += "Response from deploying service: " + string(deployResponse.Body)
 
 			return mcp.NewToolResultText(responseText), nil
 		},
 	}
+}
+
+func mergeEnvVars(oldEnvVars []*client.EnvVar, envVarInputs []client.EnvVarInput) ([]client.EnvVarInput, error) {
+	envVarMap := make(map[string]string)
+	for _, envVar := range oldEnvVars {
+		envVarMap[envVar.Key] = envVar.Value
+	}
+
+	for _, envVarInput := range envVarInputs {
+		envVar, err := envVarInput.AsEnvVarKeyValue()
+		if err != nil {
+			return nil, err
+		}
+		envVarMap[envVar.Key] = envVar.Value
+	}
+
+	// Convert map back to list
+	var mergedEnvVars []client.EnvVarInput
+	for k, v := range envVarMap {
+		var envVarInput client.EnvVarInput
+		err := envVarInput.FromEnvVarKeyValue(client.EnvVarKeyValue{
+			Key:   k,
+			Value: v,
+		})
+		if err != nil {
+			return nil, err
+		}
+		mergedEnvVars = append(mergedEnvVars, envVarInput)
+	}
+
+	return mergedEnvVars, nil
 }

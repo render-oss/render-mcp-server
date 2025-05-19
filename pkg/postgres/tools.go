@@ -114,6 +114,10 @@ func getPostgresConnectionInfo(postgresRepo *Repo) server.ServerTool {
 			),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			if !config.IncludeSensitiveInfo() {
+				return mcpserver.UnavailableDueToSensitiveInfoToolResult, nil
+			}
+
 			postgresId, err := validate.RequiredToolParam[string](request, "postgresId")
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil

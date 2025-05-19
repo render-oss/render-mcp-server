@@ -18,7 +18,7 @@ This guide will help you set up the Render MCP Server. To use the server, you wi
 You must create a Render API key from your [Render Dashboard → Account Settings → API Keys](https://dashboard.render.com/settings#api-keys).
 
 > [!IMPORTANT]
-> Render API keys are currently broadly scoped, giving your AI tools the same permissions that you would have access to. This MCP server does not have any destructive operations, but please make sure you're comfortable granting your AI tools these permissions. 
+> Render API keys are currently broadly scoped, giving your AI tools the same permissions that you would have access to. This MCP server avoids destructive operations, but please make sure you're comfortable granting your AI tools these permissions. 
 
 ### 2. Choose an Installation Method
 
@@ -120,6 +120,8 @@ feedback or would like to report a bug or feature request, please create a GitHu
 
 6. The Render MCP server does not allow creating free services.
 
+7. The Render MCP server attempts to minimize exposing sensitive information (like connection strings) to the MCP host's context. However, we make no guarantees about this behavior, and users should remain vigilant when discussing sensitive data.
+
 ## Tools
 
 ### Workspaces
@@ -141,7 +143,8 @@ feedback or would like to report a bug or feature request, please create a GitHu
 - **get_service** - Get details about a specific service
   - `serviceId`: The ID of the service to retrieve (string, required)
 
-- **list_environment_variables** - List all environment variables for a service
+- **list_environment_variables** - List all environment variables for a service.
+  (only if the `--include-sensitive-info` flag is enabled).
   - `serviceId`: The ID of the service to retrieve variables for (string, required)
 
 - **create_web_service** - Create a new web service in your Render account
@@ -222,7 +225,8 @@ feedback or would like to report a bug or feature request, please create a GitHu
 - **get_postgres** - Get details about a specific PostgreSQL database
   - `postgresId`: The ID of the PostgreSQL database to retrieve (string, required)
 
-- **get_postgres_connection_info** - Get connection information for a PostgreSQL database
+- **get_postgres_connection_info** - Get connection information for a PostgreSQL database.
+    (only if the `--include-sensitive-info` flag is enabled).
   - `postgresId`: The ID of the PostgreSQL database to retrieve (string, required)
 
 - **create_postgres** - Create a new PostgreSQL database
@@ -240,7 +244,8 @@ feedback or would like to report a bug or feature request, please create a GitHu
 - **get_key_value** - Get details about a specific Key Value instance
   - `keyValueId`: The ID of the Key Value instance to retrieve (string, required)
 
-- **get_key_value_connection_info** - Get connection information for a Key Value instance
+- **get_key_value_connection_info** - Get connection information for a Key Value instance.
+    (only if the `--include-sensitive-info` flag is enabled).
   - `keyValueId`: The ID of the Key Value instance to retrieve (string, required)
 
 - **create_key_value** - Create a new Key Value instance
