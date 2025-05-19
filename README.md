@@ -283,8 +283,8 @@ feedback or would like to report a bug or feature request, please create a GitHu
    - Verify Render.com API status
 
 2. **Authorization Errors**
-   - Ensure your API key has the necessary permissions
    - Check if your API key has expired
+   - Ensure your API key is still valid and has not been revoked
 
 3. **Service Creation Failures**
    - Verify repository URLs are accessible

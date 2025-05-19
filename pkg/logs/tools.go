@@ -233,9 +233,6 @@ func listLogLabelValues(logRepo *LogRepo) server.ServerTool {
 		Tool: mcp.NewTool("list_log_label_values",
 			mcp.WithDescription("List all values for a given log label in the logs matching the provided filters. "+
 				"This can be used to discover what values are available for filtering logs using the list_logs tool. "+
-				"Logs are paginated by start and end timestamps. "+
-				"There are more logs to fetch if hasMore is true in the response. "+
-				"Provide the nextStartTime and nextEndTime timestamps as the startTime and endTime query parameters to fetch the next page of logs. "+
 				"You can query for logs across multiple resources, but all resources must be in the same region and belong to the same owner.",
 			),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{

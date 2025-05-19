@@ -16,21 +16,8 @@ func NewRepo(c *client.ClientWithResponses) *Repo {
 	}
 }
 
-type ListDeploysParams struct {
-	*client.ListDeploysParams
-	serviceId string
-}
-
-func (r *Repo) ListDeploys(ctx context.Context, serviceId string, params *client.ListDeploysParams) ([]*client.Deploy, error) {
-	listDeploysParams := &ListDeploysParams{
-		ListDeploysParams: params,
-		serviceId:         serviceId,
-	}
-	return client.ListAll(ctx, listDeploysParams, r.listDeploysPage)
-}
-
-func (r *Repo) listDeploysPage(ctx context.Context, params *ListDeploysParams) ([]*client.Deploy, *client.Cursor, error) {
-	resp, err := r.client.ListDeploysWithResponse(ctx, params.serviceId, params.ListDeploysParams)
+func (r *Repo) ListDeploys(ctx context.Context, serviceId string, params *client.ListDeploysParams) ([]*client.Deploy, *client.Cursor, error) {
+	resp, err := r.client.ListDeploysWithResponse(ctx, serviceId, params)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/render-oss/render-mcp-server/pkg/client"
+	"github.com/render-oss/render-mcp-server/pkg/pointers"
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
@@ -33,6 +34,20 @@ func listDeploys(deployRepo *Repo) server.ServerTool {
 				mcp.Required(),
 				mcp.Description("The ID of the service to get deployments for"),
 			),
+			mcp.WithNumber("limit",
+				mcp.Description("The maximum number of deploys to return in a single page. To fetch "+
+					"additional pages of results, set the cursor to the last deploy in the previous page. "+
+					"It should be rare to need to set this value greater than 20."),
+				mcp.DefaultNumber(10),
+				mcp.Min(1),
+				mcp.Max(100),
+			),
+			mcp.WithString("cursor",
+				mcp.Description("A unique string that corresponds to a position in the result list. "+
+					"If provided, the endpoint returns results that appear after the corresponding position. "+
+					"To fetch the first page of results, set to the empty string."),
+				mcp.DefaultString(""),
+			),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			serviceId, err := validate.RequiredToolParam[string](request, "serviceId")
@@ -40,7 +55,20 @@ func listDeploys(deployRepo *Repo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			deploys, err := deployRepo.ListDeploys(ctx, serviceId, &client.ListDeploysParams{})
+			params := &client.ListDeploysParams{}
+			if limit, ok, err := validate.OptionalToolParam[float64](request, "limit"); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			} else if ok {
+				params.Limit = pointers.From(int(limit))
+			}
+
+			if cursor, ok, err := validate.OptionalToolParam[string](request, "cursor"); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			} else if ok {
+				params.Cursor = &cursor
+			}
+
+			deploys, cursor, err := deployRepo.ListDeploys(ctx, serviceId, params)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
@@ -49,8 +77,15 @@ func listDeploys(deployRepo *Repo) server.ServerTool {
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
+			respText := string(respJSON) + "\n\n cursor: "
 
-			return mcp.NewToolResultText(string(respJSON)), nil
+			if cursor == nil {
+				respText += `""`
+			} else {
+				respText += *cursor
+			}
+
+			return mcp.NewToolResultText(respText), nil
 		},
 	}
 }
