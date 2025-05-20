@@ -13,7 +13,7 @@ server that allows you to interact with your Render resources via LLMs.
 ## Feedback
 
 The official Render MCP server is currently in Beta. Please leave feedback via 
-[filing a Github issue](https://github.com/render-oss/render-mcp-server/issues) if you have any 
+[filing a GitHub issue](https://github.com/render-oss/render-mcp-server/issues) if you have any 
 feature requests, bug reports, suggestions, comments, or concerns.
 
 ## Getting Started
