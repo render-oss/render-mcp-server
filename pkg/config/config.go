@@ -2,7 +2,6 @@ package config
 
 import (
 	"errors"
-	"net/url"
 	"os"
 	"path/filepath"
 
@@ -47,8 +46,7 @@ type Config struct {
 	Version   int    `yaml:"version"`
 	Workspace string `yaml:"workspace"`
 
-	APIConfig    `yaml:"api"`
-	DashboardURL string `yaml:"dashboard_url,omitempty"`
+	APIConfig `yaml:"api"`
 }
 
 type APIConfig struct {
@@ -104,28 +102,7 @@ func DefaultAPIConfig() (APIConfig, error) {
 }
 
 func DashboardURL() string {
-	cfg, err := Load()
-	if err != nil {
-		return defaultDashboardURL
-	}
-	return cfg.DashboardURL
-}
-
-func SetDashboardURL(u string) error {
-	cfg, err := Load()
-	if err != nil {
-		return err
-	}
-
-	fullURL, err := url.Parse(u)
-	if err != nil {
-		return err
-	}
-
-	fullURL.Path = ""
-
-	cfg.DashboardURL = fullURL.String()
-	return cfg.Persist()
+	return defaultDashboardURL
 }
 
 func getConfigPath() string {
