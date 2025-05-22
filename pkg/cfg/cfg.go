@@ -10,10 +10,6 @@ var Version = "dev"
 var osInfo string
 
 func GetHost() string {
-	if host := os.Getenv("RENDER_HOST"); host != "" {
-		return host
-	}
-
 	return "https://api.render.com/v1/"
 }
 
