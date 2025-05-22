@@ -8,7 +8,6 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/render-oss/render-mcp-server/pkg/client"
-	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/fakes"
 	"github.com/render-oss/render-mcp-server/pkg/pointers"
 	"github.com/stretchr/testify/assert"
@@ -29,10 +28,9 @@ func TestUpdateEnvVarsTool(t *testing.T) {
 	sensitiveInfo := "sensitive information"
 
 	tests := []struct {
-		name                 string
-		replace              bool
-		includeSensitiveInfo bool
-		expectedEnvVars      []client.EnvVarInput
+		name            string
+		replace         bool
+		expectedEnvVars []client.EnvVarInput
 	}{
 		{
 			name:            "Replace existing env vars, does not include sensitive info",
@@ -48,27 +46,10 @@ func TestUpdateEnvVarsTool(t *testing.T) {
 				envVarInput("KEY3", "new_value3"),
 			},
 		},
-		{
-			name:                 "Replace existing env vars, includes sensitive info",
-			replace:              true,
-			includeSensitiveInfo: true,
-			expectedEnvVars:      newEnvVars,
-		},
-		{
-			name:                 "Merge with existing env vars, includes sensitive info",
-			replace:              false,
-			includeSensitiveInfo: true,
-			expectedEnvVars: []client.EnvVarInput{
-				envVarInput("KEY1", "new_value1"),
-				envVarInput("KEY2", "old_value2"),
-				envVarInput("KEY3", "new_value3"),
-			},
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config.InitRuntimeConfig(tt.includeSensitiveInfo)
 			fakeClient := &fakes.FakeServiceRepoClient{}
 			repo := NewRepo(fakeClient)
 
@@ -119,12 +100,8 @@ func TestUpdateEnvVarsTool(t *testing.T) {
 				if textContent, ok := content.(mcp.TextContent); ok {
 					assert.Contains(t, textContent.Text, expectedResponseIncludes)
 					assert.Contains(t, textContent.Text, expectedDeployResponse)
-					// Verify that we only include sensitive info if we're supposed to
-					if tt.includeSensitiveInfo {
-						assert.Contains(t, textContent.Text, sensitiveInfo)
-					} else {
-						assert.NotContains(t, textContent.Text, sensitiveInfo)
-					}
+					// Verify that we don't include sensitive info
+					assert.NotContains(t, textContent.Text, sensitiveInfo)
 				}
 			}
 
@@ -173,80 +150,6 @@ func envVarInputsAsParams(envVars []client.EnvVarInput) []interface{} {
 		})
 	}
 	return envVarsAsParams
-}
-
-func TestListEnvVarsTool(t *testing.T) {
-	serviceId := "srv-123456"
-	sensitiveValue := "sensitive_value"
-	toolIsNotAvailable := "tool is not available when sensitive info is disabled"
-	existingEnvVars := []*client.EnvVar{
-		{Key: "KEY1", Value: "old_value1"},
-		{Key: "KEY2", Value: "old_value2"},
-		{Key: "SENSITIVE_KEY", Value: "sensitive_value"},
-	}
-
-	tests := []struct {
-		name                     string
-		includeSensitiveInfo     bool
-		expectedResponseContains string
-	}{
-		{
-			name:                     "List env vars without sensitive info",
-			includeSensitiveInfo:     false,
-			expectedResponseContains: "tool is not available when sensitive info is disabled",
-		},
-		{
-			name:                     "List env vars with sensitive info",
-			includeSensitiveInfo:     true,
-			expectedResponseContains: `key":"KEY1","value":"old_value1`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			config.InitRuntimeConfig(tt.includeSensitiveInfo)
-			fakeClient := &fakes.FakeServiceRepoClient{}
-			repo := NewRepo(fakeClient)
-
-			fakeClient.RetrieveServiceWithResponseReturns(&client.RetrieveServiceResponse{
-				JSON200: &client.Service{},
-				HTTPResponse: &http.Response{
-					StatusCode: 200,
-				},
-			}, nil)
-
-			fakeClient.GetEnvVarsForServiceWithResponseReturns(&client.GetEnvVarsForServiceResponse{
-				JSON200: pointers.From(envVarsWithCursor(existingEnvVars)),
-				HTTPResponse: &http.Response{
-					StatusCode: 200,
-				},
-			}, nil)
-
-			request := mcp.CallToolRequest{}
-			request.Params.Arguments = map[string]interface{}{
-				"serviceId": serviceId,
-			}
-
-			tool := listEnvVars(repo)
-			result, err := tool.Handler(context.Background(), request)
-
-			assert.NoError(t, err)
-			assert.NotNil(t, result)
-
-			for _, content := range result.Content {
-				if textContent, ok := content.(mcp.TextContent); ok {
-					assert.Contains(t, textContent.Text, tt.expectedResponseContains)
-					if tt.includeSensitiveInfo {
-						assert.Contains(t, textContent.Text, sensitiveValue)
-						assert.NotContains(t, textContent.Text, toolIsNotAvailable)
-					} else {
-						assert.Contains(t, textContent.Text, toolIsNotAvailable)
-						assert.NotContains(t, textContent.Text, sensitiveValue)
-					}
-				}
-			}
-		})
-	}
 }
 
 func TestMergeEnvVars(t *testing.T) {

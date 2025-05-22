@@ -21,7 +21,6 @@ func Tools(c *client.ClientWithResponses) []server.ServerTool {
 	return []server.ServerTool{
 		listPostgresInstances(postgresRepo),
 		getPostgres(postgresRepo),
-		getPostgresConnectionInfo(postgresRepo),
 		createPostgres(postgresRepo),
 		queryPostgres(postgresRepo),
 	}
@@ -90,53 +89,6 @@ func getPostgres(postgresRepo *Repo) server.ServerTool {
 			}
 
 			return mcp.NewToolResultText(string(respJSON)), nil
-		},
-	}
-}
-
-func getPostgresConnectionInfo(postgresRepo *Repo) server.ServerTool {
-	return server.ServerTool{
-		Tool: mcp.NewTool("get_postgres_connection_info",
-			mcp.WithDescription("Retrieve connection info for a Postgres instance by ID. "+
-				"Connection info includes sensitive information. \n\n"+
-				"The returned internalConnectionString should be used as a connection string by "+
-				"services within Render to connect to the Postgres instance. "+
-				"The externalConnectionString should be outside of Render (e.g., in a local environment) to connect to the Postgres instance."),
-			mcp.WithToolAnnotation(mcp.ToolAnnotation{
-				Title:          "Get Postgres connection info",
-				ReadOnlyHint:   true,
-				IdempotentHint: true,
-				OpenWorldHint:  true,
-			}),
-			mcp.WithString("postgresId",
-				mcp.Required(),
-				mcp.Description("The ID of the Postgres instance to retrieve"),
-			),
-		),
-		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			if !config.IncludeSensitiveInfo() {
-				return mcpserver.UnavailableDueToSensitiveInfoToolResult, nil
-			}
-
-			postgresId, err := validate.RequiredToolParam[string](request, "postgresId")
-			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
-			}
-
-			connectionInfo, err := postgresRepo.GetPostgresConnectionInfo(ctx, postgresId)
-			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
-			}
-
-			respJSON, err := json.Marshal(connectionInfo)
-			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
-			}
-			responseText := "Connection info: " + string(respJSON) + "\n\n"
-			responseText += "Note: the psql command and externalConnectionString will not work "
-			responseText += "correctly unless you have configured access controls to allow IP ranges "
-			responseText += "from the machines you are using to connect. "
-			return mcp.NewToolResultText(responseText), nil
 		},
 	}
 }

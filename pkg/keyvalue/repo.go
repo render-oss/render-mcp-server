@@ -64,19 +64,6 @@ func (r *Repo) GetKeyValue(ctx context.Context, id string) (*client.KeyValueDeta
 	return resp.JSON200, nil
 }
 
-func (r *Repo) GetKeyValueConnectionInfo(ctx context.Context, id string) (*client.KeyValueConnectionInfo, error) {
-	resp, err := r.client.RetrieveKeyValueConnectionInfoWithResponse(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := client.ErrorFromResponse(resp); err != nil {
-		return nil, err
-	}
-
-	return resp.JSON200, nil
-}
-
 func (r *Repo) CreateKeyValue(ctx context.Context, input client.KeyValuePOSTInput) (*client.KeyValueDetail, error) {
 	if err := validate.WorkspaceMatches(input.OwnerId); err != nil {
 		return nil, err

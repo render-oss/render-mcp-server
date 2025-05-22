@@ -145,10 +145,6 @@ feedback or would like to report a bug or feature request, please [create a GitH
 - **get_service** - Get details about a specific service
   - `serviceId`: The ID of the service to retrieve (string, required)
 
-- **list_environment_variables** - List all environment variables for a service.
-  (only if the `--include-sensitive-info` flag is enabled).
-  - `serviceId`: The ID of the service to retrieve variables for (string, required)
-
 - **create_web_service** - Create a new web service in your Render account
   - `name`: A unique name for your service (string, required)
   - `runtime`: Runtime environment for your service. Accepted values: 'node', 'python', 'go', 'rust', 'ruby', 'elixir', 'docker' (string, required)
@@ -227,10 +223,6 @@ feedback or would like to report a bug or feature request, please [create a GitH
 - **get_postgres** - Get details about a specific PostgreSQL database
   - `postgresId`: The ID of the PostgreSQL database to retrieve (string, required)
 
-- **get_postgres_connection_info** - Get connection information for a PostgreSQL database.
-    (only if the `--include-sensitive-info` flag is enabled).
-  - `postgresId`: The ID of the PostgreSQL database to retrieve (string, required)
-
 - **create_postgres** - Create a new PostgreSQL database
   - `name`: Name of the PostgreSQL database (string, required)
   - `plan`: Pricing plan for the database. Accepted values: 'free', 'basic_256mb', 'basic_1gb', 'basic_4gb', 'pro_4gb', 'pro_8gb', 'pro_16gb', 'pro_32gb', 'pro_64gb', 'pro_128gb', 'pro_192gb', 'pro_256gb', 'pro_384gb', 'pro_512gb', 'accelerated_16gb', 'accelerated_32gb', 'accelerated_64gb', 'accelerated_128gb', 'accelerated_256gb', 'accelerated_384gb', 'accelerated_512gb', 'accelerated_768gb', 'accelerated_1024gb' (string, required)
@@ -244,10 +236,6 @@ feedback or would like to report a bug or feature request, please [create a GitH
   - No parameters required
 
 - **get_key_value** - Get details about a specific Key Value instance
-  - `keyValueId`: The ID of the Key Value instance to retrieve (string, required)
-
-- **get_key_value_connection_info** - Get connection information for a Key Value instance.
-    (only if the `--include-sensitive-info` flag is enabled).
   - `keyValueId`: The ID of the Key Value instance to retrieve (string, required)
 
 - **create_key_value** - Create a new Key Value instance

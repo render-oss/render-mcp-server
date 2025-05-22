@@ -19,7 +19,6 @@ func Tools(c *client.ClientWithResponses) []server.ServerTool {
 	return []server.ServerTool{
 		listKeyValue(keyValueRepo),
 		getKeyValue(keyValueRepo),
-		getKeyValueConnectionInfo(keyValueRepo),
 		createKeyValue(keyValueRepo),
 	}
 }
@@ -87,55 +86,6 @@ func getKeyValue(keyValueRepo *Repo) server.ServerTool {
 			}
 
 			return mcp.NewToolResultText(string(respJSON)), nil
-		},
-	}
-}
-
-func getKeyValueConnectionInfo(keyValueRepo *Repo) server.ServerTool {
-	return server.ServerTool{
-		Tool: mcp.NewTool("get_key_value_connection_info",
-			mcp.WithDescription("Retrieve connection info for a Key Value instance by ID. "+
-				"Connection info includes sensitive information. \n\n"+
-				"The returned internalConnectionString should be used as a connection string by "+
-				"services within Render to connect to the Key Value instance. "+
-				"The externalConnectionString should be outside of Render (e.g., in a local environment) to connect to the Key Value instance."),
-			mcp.WithToolAnnotation(mcp.ToolAnnotation{
-				Title:          "Get Key Value connection info",
-				ReadOnlyHint:   true,
-				IdempotentHint: true,
-				OpenWorldHint:  true,
-			}),
-			mcp.WithString("keyValueId",
-				mcp.Required(),
-				mcp.Description("The ID of the Key Value store to retrieve"),
-			),
-		),
-		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			if !config.IncludeSensitiveInfo() {
-				return mcpserver.UnavailableDueToSensitiveInfoToolResult, nil
-			}
-
-			keyValueId, err := validate.RequiredToolParam[string](request, "keyValueId")
-			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
-			}
-
-			connectionInfo, err := keyValueRepo.GetKeyValueConnectionInfo(ctx, keyValueId)
-			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
-			}
-
-			respJSON, err := json.Marshal(connectionInfo)
-			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
-			}
-
-			responseText := "Connection info: " + string(respJSON) + "\n\n"
-			responseText += "Note: the cliCommand and externalConnectionString will not work "
-			responseText += "correctly unless you have configured access controls to allow IP ranges "
-			responseText += "from the machines you are using to connect. "
-
-			return mcp.NewToolResultText(responseText), nil
 		},
 	}
 }

@@ -18,7 +18,6 @@ func Tools(c *client.ClientWithResponses) []server.ServerTool {
 	return []server.ServerTool{
 		listServices(serviceRepo),
 		getService(serviceRepo),
-		listEnvVars(serviceRepo),
 		createWebService(serviceRepo),
 		createStaticSite(serviceRepo),
 		updateWebService(),
@@ -86,47 +85,6 @@ func getService(serviceRepo *Repo) server.ServerTool {
 			}
 
 			response, err := serviceRepo.GetService(ctx, serviceId)
-			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
-			}
-
-			respJSON, err := json.Marshal(response)
-			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
-			}
-
-			return mcp.NewToolResultText(string(respJSON)), nil
-		},
-	}
-}
-
-func listEnvVars(serviceRepo *Repo) server.ServerTool {
-	return server.ServerTool{
-		Tool: mcp.NewTool("list_environment_variables",
-			mcp.WithDescription("List all environment variables for the service with the provided ID. "+
-				"This endpoint only returns environment variables that belong directly to the service. "+
-				"It does not return environment variables that belong to environment groups linked to the service."),
-			mcp.WithToolAnnotation(mcp.ToolAnnotation{
-				Title:         "List environment variables",
-				ReadOnlyHint:  true,
-				OpenWorldHint: true,
-			}),
-			mcp.WithString("serviceId",
-				mcp.Required(),
-				mcp.Description("The ID of the service to retrieve"),
-			),
-		),
-		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			if !config.IncludeSensitiveInfo() {
-				return mcpserver.UnavailableDueToSensitiveInfoToolResult, nil
-			}
-
-			serviceId, ok := request.Params.Arguments["serviceId"].(string)
-			if !ok {
-				return mcp.NewToolResultError("serviceId must be a string"), nil
-			}
-
-			response, err := serviceRepo.ListEnvVars(ctx, serviceId, &client.GetEnvVarsForServiceParams{})
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
@@ -574,7 +532,7 @@ func updateEnvVars(serviceRepo *Repo) server.ServerTool {
 				}
 			}
 
-			updateEnvVarsResponse, err := serviceRepo.UpdateEnvVars(ctx, serviceId, envVarsToSet)
+			_, err = serviceRepo.UpdateEnvVars(ctx, serviceId, envVarsToSet)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
@@ -586,9 +544,6 @@ func updateEnvVars(serviceRepo *Repo) server.ServerTool {
 			}
 
 			responseText := "Environment variables updated. A new deploy has been triggered to pick up the changes.\n\n"
-			if config.IncludeSensitiveInfo() {
-				responseText += "Response from updating environment variables: " + string(updateEnvVarsResponse.Body) + "\n\n"
-			}
 			responseText += "Response from deploying service: " + string(deployResponse.Body)
 
 			return mcp.NewToolResultText(responseText), nil

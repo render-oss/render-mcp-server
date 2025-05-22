@@ -1,7 +1,6 @@
 package mcpserver
 
 import (
-	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	pgclient "github.com/render-oss/render-mcp-server/pkg/client/postgres"
 )
@@ -51,6 +50,3 @@ func EnumValuesFromClientType[T ~string](t ...T) []string {
 	}
 	return values
 }
-
-var UnavailableDueToSensitiveInfoToolResult = mcp.NewToolResultText(
-	"This tool is not available when sensitive info is disabled.")
