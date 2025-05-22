@@ -59,14 +59,13 @@ This is the simplest way to get started if you have [Docker](https://www.docker.
    }
    ```
 
-#### Method B: Direct Download
-Use this method if you prefer not to use Docker and a pre-compiled binary is available for your system.
-
-**Steps:**
-1. Open the MCP server's [GitHub releases page](https://github.com/render-oss/render-mcp-server/releases/).
-2. Download the executable that corresponds to your system's architecture.
-3. Note the full path to where you saved the downloaded executable.
-4. Configure your MCP client with the following settings. Replace `/path/to/render-mcp-server` with the actual path to the executable and `<YOUR_API_KEY>` with your API key:
+#### Method B: Using the install script (Linux/MacOS only)
+1. Run the following command:
+```shell
+curl -fsSL https://raw.githubusercontent.com/render-oss/render-mcp-server/refs/heads/main/bin/install.sh | sh
+```
+2. Note the full path where the install script saved the downloaded executable. It should have a directory where it was installed e.g., `✨ Successfully installed Render MCP Server to /Users/example/.local/bin/render-mcp-server`
+2. Configure your MCP client with the following settings. Replace `/path/to/render-mcp-server` with the actual path to the executable and `<YOUR_API_KEY>` with your API key:
    ```json
    {
      "mcpServers": {
@@ -79,9 +78,18 @@ Use this method if you prefer not to use Docker and a pre-compiled binary is ava
      }
    }
    ```
+
+#### Method C: Direct Download
+Use this method if you prefer not to use Docker and a pre-compiled binary is available for your system.
+
+**Steps:**
+1. Open the MCP server's [GitHub releases page](https://github.com/render-oss/render-mcp-server/releases/).
+2. Download the executable that corresponds to your system's architecture.
+3. Note the full path to where you saved the downloaded executable.
+4. Configure your MCP client with the same settings as Method B.
    > **macOS Users**: If you run the binary directly on macOS, you may need to grant an exception for it to run. See the [Limitations](#limitations) section for more details and a link to Apple's support page.
 
-#### Method C: Build from Source
+#### Method D: Build from Source
 Choose this method if no pre-compiled binary suits your system, you want to build from the latest code, or you are a developer modifying the server. You will need [Go (Golang)](https://go.dev/doc/install) installed.
 
 **Steps:**
@@ -94,19 +102,7 @@ Choose this method if no pre-compiled binary suits your system, you want to buil
    ```
    This will create a `render-mcp-server` executable in the `render-mcp-server` directory.
 3. Note the full path to this newly built executable (e.g., `./render-mcp-server` if you are in the directory, or the full absolute path).
-4. Configure your MCP client with the following settings. Replace `/path/to/render-mcp-server` with the actual path to the executable and `<YOUR_API_KEY>` with your API key:
-   ```json
-   {
-     "mcpServers": {
-       "render": {
-         "command": "/path/to/render-mcp-server",
-         "env": {
-           "RENDER_API_KEY": "<YOUR_API_KEY>"
-         }
-       }
-     }
-   }
-   ```
+4. Configure your MCP client with the same settings as Method B.
 
 ## Limitations
 
