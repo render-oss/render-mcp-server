@@ -10,7 +10,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - "-s -w -X 'github.com/render-oss/mcp-server/pkg/cfg.Version={{ .Version }}'"
+      - "-s -w -X 'github.com/render-oss/render-mcp-server/pkg/cfg.Version={{ .Version }}'"
     goos:
       - freebsd
       - windows
