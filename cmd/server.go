@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/render-oss/render-mcp-server/pkg/cfg"
@@ -14,7 +15,7 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/service"
 )
 
-func Serve() *server.MCPServer {
+func Serve(transport string) *server.MCPServer {
 	// Create MCP server
 	s := server.NewMCPServer(
 		"render-mcp-server",
@@ -34,9 +35,14 @@ func Serve() *server.MCPServer {
 	s.AddTools(keyvalue.Tools(c)...)
 	s.AddTools(logs.Tools(c)...)
 
-	// Start the stdio server
-	if err := server.ServeStdio(s); err != nil {
-		fmt.Printf("Server error: %v\n", err)
+	if transport == "http" {
+		if err := server.NewStreamableHTTPServer(s).Start(":10000"); err != nil {
+			log.Fatalf("starting server: %w:", err)
+		}
+	} else {
+		if err := server.ServeStdio(s); err != nil {
+			fmt.Printf("Server error: %v\n", err)
+		}
 	}
 
 	return s

@@ -6,6 +6,7 @@ require (
 	github.com/jackc/pgx/v5 v5.7.5
 	github.com/mark3labs/mcp-go v0.32.0
 	github.com/oapi-codegen/runtime v1.1.1
+	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
 	gopkg.in/yaml.v3 v3.0.1
 )
