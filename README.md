@@ -1,7 +1,7 @@
 # Render MCP Server
 
 ## Overview
-The Render MCP Server is a beta [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction)
+The Render MCP Server is an early access [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction)
 server that allows you to interact with your Render resources via LLMs.
 
 ## Use Cases
@@ -12,7 +12,7 @@ server that allows you to interact with your Render resources via LLMs.
 
 ## Feedback
 
-The official Render MCP server is currently in Beta. Please leave feedback via 
+The official Render MCP server is currently in early access. Please leave feedback via 
 [filing a GitHub issue](https://github.com/render-oss/render-mcp-server/issues) if you have any 
 feature requests, bug reports, suggestions, comments, or concerns.
 
@@ -107,7 +107,7 @@ Choose this method if no pre-compiled binary suits your system, you want to buil
 ## Limitations
 
 > [!NOTE]
-> The MCP server is currently in beta, and there are several limitations. If you have specific
+> The MCP server is currently in early access, and there are several limitations. If you have specific
 feedback or would like to report a bug or feature request, please [create a GitHub Issue](https://github.com/render-oss/render-mcp-server/issues). 
 
 1. **macOS Users**: If you download and run the binary directly on macOS, you may need to grant an exception to run it as it's from an "unknown developer". You can find instructions on how to do this [here](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac). This issue might not present a pop-up if the binary is launched from within another application like Claude or Cursor. This is not an issue if you are launching the MCP server via Docker.
