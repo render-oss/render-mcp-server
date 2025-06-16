@@ -232,18 +232,18 @@ func queryPostgres(postgresRepo *Repo) server.ServerTool {
 
 			config, err := pgx.ParseConfig(connectionInfo.ExternalConnectionString)
 			if err != nil {
-				return mcp.NewToolResultErrorf("Error parsing connection string: %s", err.Error()), nil
+				return mcp.NewToolResultErrorFromErr("Error parsing connection string", err), nil
 			}
 			conn, err := pgx.ConnectConfig(ctx, config)
 			if err != nil {
-				return mcp.NewToolResultErrorf("Error connecting to database: %s", err.Error()), nil
+				return mcp.NewToolResultErrorFromErr("Error connecting to database", err), nil
 			}
 			defer conn.Close(ctx)
 
 			// Wrap all queries in a READ ONLY transaction
 			tx, err := conn.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
 			if err != nil {
-				return mcp.NewToolResultErrorf("Error beginning transaction: %s", err.Error()), nil
+				return mcp.NewToolResultErrorFromErr("Error beginning transaction", err), nil
 			}
 
 			// Make sure we roll back the transaction if it's not committed successfully
@@ -253,7 +253,7 @@ func queryPostgres(postgresRepo *Repo) server.ServerTool {
 
 			rows, err := tx.Query(ctx, sqlQuery)
 			if err != nil {
-				return mcp.NewToolResultErrorf("Error executing query: %s", err.Error()), nil
+				return mcp.NewToolResultErrorFromErr("Error executing query", err), nil
 			}
 			defer rows.Close()
 
@@ -269,7 +269,7 @@ func queryPostgres(postgresRepo *Repo) server.ServerTool {
 			for rows.Next() {
 				values, err := rows.Values()
 				if err != nil {
-					return mcp.NewToolResultErrorf("Error reading row values: %s", err.Error()), nil
+					return mcp.NewToolResultErrorFromErr("Error reading row values", err), nil
 				}
 
 				rowMap := make(map[string]interface{})
@@ -290,12 +290,12 @@ func queryPostgres(postgresRepo *Repo) server.ServerTool {
 
 			// Check for any errors encountered during iteration
 			if err := rows.Err(); err != nil {
-				return mcp.NewToolResultErrorf("Error iterating rows: %s", err.Error()), nil
+				return mcp.NewToolResultErrorFromErr("Error iterating rows", err), nil
 			}
 
 			respJSON, err := json.Marshal(results)
 			if err != nil {
-				return mcp.NewToolResultErrorf("Error marshaling results: %s", err.Error()), nil
+				return mcp.NewToolResultErrorFromErr("Error marshaling results", err), nil
 			}
 
 			return mcp.NewToolResultText(string(respJSON)), nil
