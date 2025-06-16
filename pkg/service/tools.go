@@ -80,9 +80,9 @@ func getService(serviceRepo *Repo) server.ServerTool {
 			),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			serviceId, ok := request.Params.Arguments["serviceId"].(string)
-			if !ok {
-				return mcp.NewToolResultError("serviceId must be a string"), nil
+			serviceId, err := request.RequireString("serviceId")
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
 			}
 
 			response, err := serviceRepo.GetService(ctx, serviceId)

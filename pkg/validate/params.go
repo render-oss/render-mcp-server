@@ -13,11 +13,11 @@ import (
 
 func RequiredToolParam[T any](request mcp.CallToolRequest, param string) (T, error) {
 	var zero T
-	if _, ok := request.Params.Arguments[param]; !ok {
+	if _, ok := request.GetArguments()[param]; !ok {
 		return zero, fmt.Errorf("required parameter not present: %s", param)
 	}
 
-	value, ok := request.Params.Arguments[param].(T)
+	value, ok := request.GetArguments()[param].(T)
 	if !ok {
 		return zero, fmt.Errorf("parameter %s is not of expected type: %T", param, zero)
 	}
@@ -30,11 +30,11 @@ func RequiredToolParam[T any](request mcp.CallToolRequest, param string) (T, err
 // If the parameter is not present or of the incorrect type, it returns the zero value and false.
 func OptionalToolParam[T any](request mcp.CallToolRequest, param string) (T, bool, error) {
 	var zero T
-	if _, ok := request.Params.Arguments[param]; !ok {
+	if _, ok := request.GetArguments()[param]; !ok {
 		return zero, false, nil
 	}
 
-	value, ok := request.Params.Arguments[param].(T)
+	value, ok := request.GetArguments()[param].(T)
 	if !ok {
 		return zero, false, fmt.Errorf("parameter %s is not of expected type: %T", param, zero)
 	}
@@ -43,7 +43,7 @@ func OptionalToolParam[T any](request mcp.CallToolRequest, param string) (T, boo
 }
 
 func RequiredToolArrayParam[T any](request mcp.CallToolRequest, param string) ([]T, error) {
-	if _, ok := request.Params.Arguments[param]; !ok {
+	if _, ok := request.GetArguments()[param]; !ok {
 		return nil, fmt.Errorf("required parameter not present: %s", param)
 	}
 
@@ -51,7 +51,7 @@ func RequiredToolArrayParam[T any](request mcp.CallToolRequest, param string) ([
 }
 
 func extractArrayParam[T any](request mcp.CallToolRequest, param string) ([]T, error) {
-	interfaceArray, ok := request.Params.Arguments[param].([]interface{})
+	interfaceArray, ok := request.GetArguments()[param].([]interface{})
 	if !ok {
 		return nil, fmt.Errorf("parameter %s is not a valid array", param)
 	}
@@ -69,7 +69,7 @@ func extractArrayParam[T any](request mcp.CallToolRequest, param string) ([]T, e
 }
 
 func OptionalToolArrayParam[T any](request mcp.CallToolRequest, param string) ([]T, bool, error) {
-	if _, ok := request.Params.Arguments[param]; !ok {
+	if _, ok := request.GetArguments()[param]; !ok {
 		return nil, false, nil
 	}
 
@@ -82,13 +82,13 @@ func OptionalToolArrayParam[T any](request mcp.CallToolRequest, param string) ([
 }
 
 func EnvVars(request mcp.CallToolRequest) ([]client.EnvVarInput, bool, error) {
-	if _, ok := request.Params.Arguments["envVars"]; !ok {
+	if _, ok := request.GetArguments()["envVars"]; !ok {
 		return nil, false, nil
 	}
 
 	var envVars client.EnvVarInputArray
 	invalidErr := errors.New("parameter envVars is not of expected type")
-	if envVarsRaw, ok := request.Params.Arguments["envVars"]; ok && envVarsRaw != nil {
+	if envVarsRaw, ok := request.GetArguments()["envVars"]; ok && envVarsRaw != nil {
 		envVarsSlice, ok := envVarsRaw.([]interface{})
 		if !ok {
 			return nil, false, invalidErr

@@ -4,7 +4,7 @@ go 1.24.1
 
 require (
 	github.com/jackc/pgx/v5 v5.7.4
-	github.com/mark3labs/mcp-go v0.27.0
+	github.com/mark3labs/mcp-go v0.29.0
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/stretchr/testify v1.10.0
 	gopkg.in/yaml.v3 v3.0.1
