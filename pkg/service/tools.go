@@ -9,6 +9,7 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/mcpserver"
+	"github.com/render-oss/render-mcp-server/pkg/pointers"
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
@@ -32,8 +33,8 @@ func listServices(serviceRepo *Repo) server.ServerTool {
 			mcp.WithDescription("List all services in your Render account"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:         "List services",
-				ReadOnlyHint:  true,
-				OpenWorldHint: true,
+				ReadOnlyHint:  pointers.From(true),
+				OpenWorldHint: pointers.From(true),
 			}),
 			mcp.WithBoolean("includePreviews",
 				mcp.Description("Whether to include preview services in the response. Defaults to false."),
@@ -70,8 +71,8 @@ func getService(serviceRepo *Repo) server.ServerTool {
 			mcp.WithDescription("Get details about a specific service"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:         "Get service details",
-				ReadOnlyHint:  true,
-				OpenWorldHint: true,
+				ReadOnlyHint:  pointers.From(true),
+				OpenWorldHint: pointers.From(true),
 			}),
 			mcp.WithString("serviceId",
 				mcp.Required(),
@@ -111,9 +112,9 @@ func createWebService(serviceRepo *Repo) server.ServerTool {
 				"To create a service without those limitations, please use the dashboard at: "+config.DashboardURL()+"/web/new"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:          "Create web service",
-				ReadOnlyHint:   false,
-				IdempotentHint: false,
-				OpenWorldHint:  true,
+				ReadOnlyHint:   pointers.From(false),
+				IdempotentHint: pointers.From(false),
+				OpenWorldHint:  pointers.From(true),
 			}),
 			mcp.WithString("name",
 				mcp.Required(),
@@ -305,9 +306,9 @@ func createStaticSite(serviceRepo *Repo) server.ServerTool {
 				"To create a static site without those limitations, please use the dashboard at: "+config.DashboardURL()+"/static/new"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:          "Create static site",
-				ReadOnlyHint:   false,
-				IdempotentHint: false,
-				OpenWorldHint:  true,
+				ReadOnlyHint:   pointers.From(false),
+				IdempotentHint: pointers.From(false),
+				OpenWorldHint:  pointers.From(true),
 			}),
 			mcp.WithString("name",
 				mcp.Required(),
@@ -404,8 +405,8 @@ func updateWebService() server.ServerTool {
 			mcp.WithDescription("Update an existing web service in your Render account."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:          "Update web service",
-				ReadOnlyHint:   true,
-				IdempotentHint: true,
+				ReadOnlyHint:   pointers.From(true),
+				IdempotentHint: pointers.From(true),
 			}),
 			mcp.WithString("serviceId",
 				mcp.Required(),
@@ -432,8 +433,8 @@ func updateStaticSite() server.ServerTool {
 			mcp.WithDescription("Update an existing static site in your Render account."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:          "Update static site",
-				ReadOnlyHint:   true,
-				IdempotentHint: true,
+				ReadOnlyHint:   pointers.From(true),
+				IdempotentHint: pointers.From(true),
 			}),
 			mcp.WithString("serviceId",
 				mcp.Required(),
@@ -464,8 +465,8 @@ func updateEnvVars(serviceRepo *Repo) server.ServerTool {
 				"To replace all existing environment variables, set the 'replace' parameter to 'true'."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:           "Update environment variables",
-				DestructiveHint: true,
-				OpenWorldHint:   true,
+				DestructiveHint: pointers.From(true),
+				OpenWorldHint:   pointers.From(true),
 			}),
 			mcp.WithString("serviceId",
 				mcp.Required(),

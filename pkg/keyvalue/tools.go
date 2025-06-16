@@ -29,9 +29,9 @@ func listKeyValue(keyValueRepo *Repo) server.ServerTool {
 			mcp.WithDescription("List all Key Value instances in your Render account"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:          "List Key Value instances",
-				ReadOnlyHint:   true,
-				IdempotentHint: true,
-				OpenWorldHint:  true,
+				ReadOnlyHint:   pointers.From(true),
+				IdempotentHint: pointers.From(true),
+				OpenWorldHint:  pointers.From(true),
 			}),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -60,9 +60,9 @@ func getKeyValue(keyValueRepo *Repo) server.ServerTool {
 			mcp.WithDescription("Retrieve a Key Value instance by ID"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:          "Get Key Value instance details",
-				ReadOnlyHint:   true,
-				IdempotentHint: true,
-				OpenWorldHint:  true,
+				ReadOnlyHint:   pointers.From(true),
+				IdempotentHint: pointers.From(true),
+				OpenWorldHint:  pointers.From(true),
 			}),
 			mcp.WithString("keyValueId",
 				mcp.Required(),
@@ -96,9 +96,9 @@ func createKeyValue(keyValueRepo *Repo) server.ServerTool {
 			mcp.WithDescription("Create a new Key Value instance in your Render account"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:          "Create Key Value instance",
-				ReadOnlyHint:   false,
-				IdempotentHint: false,
-				OpenWorldHint:  true,
+				ReadOnlyHint:   pointers.From(false),
+				IdempotentHint: pointers.From(false),
+				OpenWorldHint:  pointers.From(true),
 			}),
 			mcp.WithString("name",
 				mcp.Required(),

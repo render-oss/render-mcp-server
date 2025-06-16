@@ -11,6 +11,7 @@ import (
 	logsclient "github.com/render-oss/render-mcp-server/pkg/client/logs"
 	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/mcpserver"
+	"github.com/render-oss/render-mcp-server/pkg/pointers"
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
@@ -32,9 +33,9 @@ func listLogs(logRepo *LogRepo) server.ServerTool {
 				"You can query for logs across multiple resources, but all resources must be in the same region and belong to the same owner."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:          "List logs",
-				ReadOnlyHint:   true,
-				IdempotentHint: true,
-				OpenWorldHint:  true,
+				ReadOnlyHint:   pointers.From(true),
+				IdempotentHint: pointers.From(true),
+				OpenWorldHint:  pointers.From(true),
 			}),
 			mcp.WithArray("resource",
 				mcp.Required(),
@@ -237,9 +238,9 @@ func listLogLabelValues(logRepo *LogRepo) server.ServerTool {
 			),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:          "List log label values",
-				ReadOnlyHint:   true,
-				IdempotentHint: true,
-				OpenWorldHint:  true,
+				ReadOnlyHint:   pointers.From(true),
+				IdempotentHint: pointers.From(true),
+				OpenWorldHint:  pointers.From(true),
 			}),
 			mcp.WithString("label",
 				mcp.Required(),

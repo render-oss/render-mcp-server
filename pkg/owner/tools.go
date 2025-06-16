@@ -9,6 +9,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	"github.com/render-oss/render-mcp-server/pkg/config"
+	"github.com/render-oss/render-mcp-server/pkg/pointers"
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
@@ -28,9 +29,9 @@ func listWorkspaces(ownerRepo *Repo) server.ServerTool {
 			mcp.WithDescription("List the workspaces that you have access to"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:          "List workspaces",
-				ReadOnlyHint:   true,
-				IdempotentHint: true,
-				OpenWorldHint:  true,
+				ReadOnlyHint:   pointers.From(true),
+				IdempotentHint: pointers.From(true),
+				OpenWorldHint:  pointers.From(true),
 			}),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -69,8 +70,8 @@ func selectWorkspace() server.ServerTool {
 				"destructive actions being performed on unintended resources."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:          "Select workspace",
-				IdempotentHint: true,
-				OpenWorldHint:  true,
+				IdempotentHint: pointers.From(true),
+				OpenWorldHint:  pointers.From(true),
 			}),
 			mcp.WithString("ownerID",
 				mcp.Required(),
@@ -99,9 +100,9 @@ func getSelectedWorkspace() server.ServerTool {
 			mcp.WithDescription("Get the currently selected workspace"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:          "Get selected workspace",
-				ReadOnlyHint:   true,
-				IdempotentHint: true,
-				OpenWorldHint:  true,
+				ReadOnlyHint:   pointers.From(true),
+				IdempotentHint: pointers.From(true),
+				OpenWorldHint:  pointers.From(true),
 			}),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {

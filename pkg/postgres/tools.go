@@ -12,6 +12,7 @@ import (
 	pgclient "github.com/render-oss/render-mcp-server/pkg/client/postgres"
 	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/mcpserver"
+	"github.com/render-oss/render-mcp-server/pkg/pointers"
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
@@ -32,9 +33,9 @@ func listPostgresInstances(postgresRepo *Repo) server.ServerTool {
 			mcp.WithDescription("List all Postgres databases in your Render account"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:          "List Postgres instances",
-				ReadOnlyHint:   true,
-				IdempotentHint: true,
-				OpenWorldHint:  true,
+				ReadOnlyHint:   pointers.From(true),
+				IdempotentHint: pointers.From(true),
+				OpenWorldHint:  pointers.From(true),
 			}),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -63,9 +64,9 @@ func getPostgres(postgresRepo *Repo) server.ServerTool {
 			mcp.WithDescription("Retrieve a Postgres instance by ID"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:          "Get Postgres instance details",
-				ReadOnlyHint:   true,
-				IdempotentHint: true,
-				OpenWorldHint:  true,
+				ReadOnlyHint:   pointers.From(true),
+				IdempotentHint: pointers.From(true),
+				OpenWorldHint:  pointers.From(true),
 			}),
 			mcp.WithString("postgresId",
 				mcp.Required(),
@@ -99,9 +100,9 @@ func createPostgres(postgresRepo *Repo) server.ServerTool {
 			mcp.WithDescription("Create a new Postgres instance in your Render account"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:          "Create Postgres instance",
-				ReadOnlyHint:   false,
-				IdempotentHint: false,
-				OpenWorldHint:  true,
+				ReadOnlyHint:   pointers.From(false),
+				IdempotentHint: pointers.From(false),
+				OpenWorldHint:  pointers.From(true),
 			}),
 			mcp.WithString("name",
 				mcp.Required(),
@@ -200,9 +201,9 @@ func queryPostgres(postgresRepo *Repo) server.ServerTool {
 				"This tool creates a new connection for each query and closes it after the query completes."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:          "Query Postgres",
-				ReadOnlyHint:   true,
-				IdempotentHint: true,
-				OpenWorldHint:  true,
+				ReadOnlyHint:   pointers.From(true),
+				IdempotentHint: pointers.From(true),
+				OpenWorldHint:  pointers.From(true),
 			}),
 			mcp.WithString("postgresId",
 				mcp.Required(),
