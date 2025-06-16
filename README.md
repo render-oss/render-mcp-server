@@ -35,7 +35,7 @@ This is the simplest way to get started if you have [Docker](https://www.docker.
 
 **Steps:**
 1. Ensure Docker is installed and operational on your system.
-2. Configure your MCP client with the following settings, replacing `<YOUR_API_KEY>` with the API key you obtained in Step 1:
+2. Configure your MCP client with the following settings (or by using the one-click install buttons below), replacing `<YOUR_API_KEY>` with the API key you obtained in Step 1:
    ```json
    {
      "mcpServers": {
@@ -59,13 +59,15 @@ This is the simplest way to get started if you have [Docker](https://www.docker.
    }
    ```
 
+[![Add to Cursor](https://cursor.com/deeplink/mcp-install-light.svg)](https://cursor.com/install-mcp?name=render&config=eyJjb21tYW5kIjoiZG9ja2VyIHJ1biAtaSAtLXJtIC1lIFJFTkRFUl9BUElfS0VZIC12IHJlbmRlci1tY3Atc2VydmVyLWNvbmZpZzovY29uZmlnIGdoY3IuaW8vcmVuZGVyLW9zcy9yZW5kZXItbWNwLXNlcnZlciIsImVudiI6eyJSRU5ERVJfQVBJX0tFWSI6IllPVVJfQVBJX0tFWSJ9fQ%3D%3D)
+
 #### Method B: Using the install script (Linux/MacOS only)
 1. Run the following command:
 ```shell
 curl -fsSL https://raw.githubusercontent.com/render-oss/render-mcp-server/refs/heads/main/bin/install.sh | sh
 ```
 2. Note the full path where the install script saved the downloaded executable. It should have a directory where it was installed e.g., `✨ Successfully installed Render MCP Server to /Users/example/.local/bin/render-mcp-server`
-2. Configure your MCP client with the following settings. Replace `/path/to/render-mcp-server` with the actual path to the executable and `<YOUR_API_KEY>` with your API key:
+2. Configure your MCP client with the following settings (or by using the one-click install buttons below). Replace `/path/to/render-mcp-server` with the actual path to the executable and `<YOUR_API_KEY>` with your API key:
    ```json
    {
      "mcpServers": {
@@ -78,6 +80,8 @@ curl -fsSL https://raw.githubusercontent.com/render-oss/render-mcp-server/refs/h
      }
    }
    ```
+
+[![Add to Cursor](https://cursor.com/deeplink/mcp-install-light.svg)](https://cursor.com/install-mcp?name=render&config=eyJjb21tYW5kIjoiL3BhdGgvdG8vcmVuZGVyLW1jcC1zZXJ2ZXIiLCJlbnYiOnsiUkVOREVSX0FQSV9LRVkiOiI8WU9VUl9BUElfS0VZPiJ9fQ%3D%3D)
 
 #### Method C: Direct Download
 Use this method if you prefer not to use Docker and a pre-compiled binary is available for your system.
