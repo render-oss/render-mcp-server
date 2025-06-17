@@ -10,9 +10,11 @@ import (
 )
 
 func TestHTTPSession(t *testing.T) {
+	sessionStore := session.NewInMemoryStore()
+	contextWithHTTPSession := session.ContextWithHTTPSession(sessionStore)
 	{
 		ctxOne := (&server.MCPServer{}).WithContext(context.Background(), fakeSession{sessionID: "one"})
-		ctxOne = session.ContextWithHTTPSession(ctxOne, nil)
+		ctxOne = contextWithHTTPSession(ctxOne, nil)
 
 		sessionOne := session.FromContext(ctxOne)
 
@@ -36,7 +38,7 @@ func TestHTTPSession(t *testing.T) {
 
 	{
 		ctxOneAgain := (&server.MCPServer{}).WithContext(context.Background(), fakeSession{sessionID: "one"})
-		ctxOneAgain = session.ContextWithHTTPSession(ctxOneAgain, nil)
+		ctxOneAgain = contextWithHTTPSession(ctxOneAgain, nil)
 		sessionOneAgain := session.FromContext(ctxOneAgain)
 
 		workspace, err := sessionOneAgain.GetWorkspace()
@@ -50,7 +52,7 @@ func TestHTTPSession(t *testing.T) {
 
 	{
 		ctxTwo := (&server.MCPServer{}).WithContext(context.Background(), fakeSession{sessionID: "two"})
-		ctxTwo = session.ContextWithHTTPSession(ctxTwo, nil)
+		ctxTwo = contextWithHTTPSession(ctxTwo, nil)
 
 		sessionTwo := session.FromContext(ctxTwo)
 
@@ -67,7 +69,7 @@ func TestHTTPSession(t *testing.T) {
 	{
 
 		ctxOneFinal := (&server.MCPServer{}).WithContext(context.Background(), fakeSession{sessionID: "one"})
-		ctxOneFinal = session.ContextWithHTTPSession(ctxOneFinal, nil)
+		ctxOneFinal = contextWithHTTPSession(ctxOneFinal, nil)
 		sessionOneFinal := session.FromContext(ctxOneFinal)
 
 		workspace, err := sessionOneFinal.GetWorkspace()

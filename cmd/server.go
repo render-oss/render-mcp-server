@@ -36,7 +36,8 @@ func Serve(transport string) *server.MCPServer {
 	s.AddTools(logs.Tools(c)...)
 
 	if transport == "http" {
-		if err := server.NewStreamableHTTPServer(s, server.WithHTTPContextFunc(session.ContextWithHTTPSession)).Start(":10000"); err != nil {
+		sessionStore := session.NewInMemoryStore()
+		if err := server.NewStreamableHTTPServer(s, server.WithHTTPContextFunc(session.ContextWithHTTPSession(sessionStore))).Start(":10000"); err != nil {
 			log.Fatalf("Starting Streamable server: %v\n:", err)
 		}
 	} else {

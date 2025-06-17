@@ -12,12 +12,10 @@ type sessionCtxKeyType struct{}
 
 var sessionCtxKey sessionCtxKeyType
 
-func ContextWithHTTPSession(ctx context.Context, _ *http.Request) context.Context {
-	cs := server.ClientSessionFromContext(ctx)
-	if _, ok := inMemoryDataSingleton[cs.SessionID()]; !ok {
-		inMemoryDataSingleton[cs.SessionID()] = &HTTPSession{}
+func ContextWithHTTPSession(store Store) func(ctx context.Context, _ *http.Request) context.Context {
+	return func(ctx context.Context, _ *http.Request) context.Context {
+		return context.WithValue(ctx, sessionCtxKey, store.Get(server.ClientSessionFromContext(ctx).SessionID()))
 	}
-	return context.WithValue(ctx, sessionCtxKey, inMemoryDataSingleton[cs.SessionID()])
 }
 
 type HTTPSession struct {
@@ -38,4 +36,25 @@ func (h *HTTPSession) SetWorkspace(s string) error {
 	return nil
 }
 
-var inMemoryDataSingleton = map[string]*HTTPSession{}
+type Store interface {
+	Get(sessionID string) *HTTPSession
+}
+
+type inMemoryStore struct {
+	sessions map[string]*HTTPSession
+}
+
+var _ Store = (*inMemoryStore)(nil)
+
+func NewInMemoryStore() Store {
+	return &inMemoryStore{
+		sessions: make(map[string]*HTTPSession),
+	}
+}
+
+func (i *inMemoryStore) Get(sessionID string) *HTTPSession {
+	if _, ok := i.sessions[sessionID]; !ok {
+		i.sessions[sessionID] = &HTTPSession{}
+	}
+	return i.sessions[sessionID]
+}
