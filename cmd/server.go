@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/mark3labs/mcp-go/server"
@@ -38,11 +37,11 @@ func Serve(transport string) *server.MCPServer {
 
 	if transport == "http" {
 		if err := server.NewStreamableHTTPServer(s, server.WithHTTPContextFunc(session.ContextWithHTTPSession)).Start(":10000"); err != nil {
-			log.Fatalf("starting server: %w:", err)
+			log.Fatalf("Starting Streamable server: %v\n:", err)
 		}
 	} else {
 		if err := server.ServeStdio(s, server.WithStdioContextFunc(session.ContextWithStdioSession)); err != nil {
-			fmt.Printf("Server error: %v\n", err)
+			log.Fatalf("Starting STDIO server: %v\n", err)
 		}
 	}
 
