@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/render-oss/render-mcp-server/pkg/client"
-	"github.com/render-oss/render-mcp-server/pkg/config"
+	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
@@ -27,7 +27,7 @@ func NewRepo(c keyValueRepoClient) *Repo {
 }
 
 func (r *Repo) ListKeyValue(ctx context.Context, params *client.ListKeyValueParams) ([]*client.KeyValue, error) {
-	workspace, err := config.WorkspaceID()
+	workspace, err := session.FromContext(ctx).GetWorkspace()
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (r *Repo) GetKeyValue(ctx context.Context, id string) (*client.KeyValueDeta
 }
 
 func (r *Repo) CreateKeyValue(ctx context.Context, input client.KeyValuePOSTInput) (*client.KeyValueDetail, error) {
-	if err := validate.WorkspaceMatches(input.OwnerId); err != nil {
+	if err := validate.WorkspaceMatches(ctx, input.OwnerId); err != nil {
 		return nil, err
 	}
 

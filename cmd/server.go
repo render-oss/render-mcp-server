@@ -13,6 +13,7 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/owner"
 	"github.com/render-oss/render-mcp-server/pkg/postgres"
 	"github.com/render-oss/render-mcp-server/pkg/service"
+	"github.com/render-oss/render-mcp-server/pkg/session"
 )
 
 func Serve(transport string) *server.MCPServer {
@@ -36,11 +37,11 @@ func Serve(transport string) *server.MCPServer {
 	s.AddTools(logs.Tools(c)...)
 
 	if transport == "http" {
-		if err := server.NewStreamableHTTPServer(s).Start(":10000"); err != nil {
+		if err := server.NewStreamableHTTPServer(s, server.WithHTTPContextFunc(session.ContextWithHTTPSession)).Start(":10000"); err != nil {
 			log.Fatalf("starting server: %w:", err)
 		}
 	} else {
-		if err := server.ServeStdio(s); err != nil {
+		if err := server.ServeStdio(s, server.WithStdioContextFunc(session.ContextWithStdioSession)); err != nil {
 			fmt.Printf("Server error: %v\n", err)
 		}
 	}

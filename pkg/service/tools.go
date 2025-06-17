@@ -10,6 +10,7 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/mcpserver"
 	"github.com/render-oss/render-mcp-server/pkg/pointers"
+	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
@@ -176,7 +177,7 @@ func createWebService(serviceRepo *Repo) server.ServerTool {
 			),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			requestBody, err := createValidatedWebServiceRequest(request)
+			requestBody, err := createValidatedWebServiceRequest(ctx, request)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
@@ -196,7 +197,7 @@ func createWebService(serviceRepo *Repo) server.ServerTool {
 	}
 }
 
-func createValidatedWebServiceRequest(request mcp.CallToolRequest) (*client.CreateServiceJSONRequestBody, error) {
+func createValidatedWebServiceRequest(ctx context.Context, request mcp.CallToolRequest) (*client.CreateServiceJSONRequestBody, error) {
 	runtime, err := validate.RequiredToolParam[string](request, "runtime")
 	if err != nil {
 		return nil, err
@@ -248,15 +249,15 @@ func createValidatedWebServiceRequest(request mcp.CallToolRequest) (*client.Crea
 		return nil, err
 	}
 
-	return validatedCreateServiceRequest(request, client.WebService, &serviceDetails)
+	return validatedCreateServiceRequest(ctx, request, client.WebService, &serviceDetails)
 }
 
-func validatedCreateServiceRequest(request mcp.CallToolRequest, serviceType client.ServiceType, serviceDetails *client.ServicePOST_ServiceDetails) (*client.CreateServiceJSONRequestBody, error) {
+func validatedCreateServiceRequest(ctx context.Context, request mcp.CallToolRequest, serviceType client.ServiceType, serviceDetails *client.ServicePOST_ServiceDetails) (*client.CreateServiceJSONRequestBody, error) {
 	name, err := validate.RequiredToolParam[string](request, "name")
 	if err != nil {
 		return nil, err
 	}
-	ownerId, err := config.WorkspaceID()
+	ownerId, err := session.FromContext(ctx).GetWorkspace()
 	if err != nil {
 		return nil, err
 	}
@@ -355,7 +356,7 @@ func createStaticSite(serviceRepo *Repo) server.ServerTool {
 			),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			requestBody, err := createValidatedStaticSiteRequest(request)
+			requestBody, err := createValidatedStaticSiteRequest(ctx, request)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
@@ -375,7 +376,7 @@ func createStaticSite(serviceRepo *Repo) server.ServerTool {
 	}
 }
 
-func createValidatedStaticSiteRequest(request mcp.CallToolRequest) (*client.CreateServiceJSONRequestBody, error) {
+func createValidatedStaticSiteRequest(ctx context.Context, request mcp.CallToolRequest) (*client.CreateServiceJSONRequestBody, error) {
 	buildCommand, err := validate.RequiredToolParam[string](request, "buildCommand")
 	if err != nil {
 		return nil, err
@@ -396,7 +397,7 @@ func createValidatedStaticSiteRequest(request mcp.CallToolRequest) (*client.Crea
 		return nil, err
 	}
 
-	return validatedCreateServiceRequest(request, client.StaticSite, &serviceDetails)
+	return validatedCreateServiceRequest(ctx, request, client.StaticSite, &serviceDetails)
 }
 
 func updateWebService() server.ServerTool {

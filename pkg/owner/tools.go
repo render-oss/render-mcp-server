@@ -8,8 +8,8 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/render-oss/render-mcp-server/pkg/client"
-	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/pointers"
+	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
@@ -48,7 +48,7 @@ func listWorkspaces(ownerRepo *Repo) server.ServerTool {
 			resultText := ""
 
 			if len(workspaces) == 1 {
-				err = config.SelectWorkspace(workspaces[0].Id)
+				err = session.FromContext(ctx).SetWorkspace(workspaces[0].Id)
 				if err != nil {
 					return mcp.NewToolResultError(err.Error()), nil
 				}
@@ -84,7 +84,7 @@ func selectWorkspace() server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			err = config.SelectWorkspace(ownerID)
+			err = session.FromContext(ctx).SetWorkspace(ownerID)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
@@ -106,7 +106,7 @@ func getSelectedWorkspace() server.ServerTool {
 			}),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			workspace, err := config.WorkspaceID()
+			workspace, err := session.FromContext(ctx).GetWorkspace()
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}

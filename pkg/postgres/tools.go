@@ -10,9 +10,9 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	pgclient "github.com/render-oss/render-mcp-server/pkg/client/postgres"
-	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/mcpserver"
 	"github.com/render-oss/render-mcp-server/pkg/pointers"
+	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
@@ -133,7 +133,7 @@ func createPostgres(postgresRepo *Repo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			ownerId, err := config.WorkspaceID()
+			ownerId, err := session.FromContext(ctx).GetWorkspace()
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}

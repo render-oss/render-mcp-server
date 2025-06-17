@@ -1,15 +1,16 @@
 package validate
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/render-oss/render-mcp-server/pkg/config"
+	"github.com/render-oss/render-mcp-server/pkg/session"
 )
 
 // WorkspaceMatches gets the workspace from the config and validates that it matches the provided input. If the
 // workspace is not set, no error is returned
-func WorkspaceMatches(workspaceID string) error {
-	workspace, err := config.WorkspaceID()
+func WorkspaceMatches(ctx context.Context, workspaceID string) error {
+	workspace, err := session.FromContext(ctx).GetWorkspace()
 	if err != nil {
 		return err
 	}

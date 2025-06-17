@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/render-oss/render-mcp-server/pkg/client"
-	"github.com/render-oss/render-mcp-server/pkg/config"
+	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
@@ -29,7 +29,7 @@ func NewRepo(c postgresRepoClient) *Repo {
 }
 
 func (r *Repo) ListPostgres(ctx context.Context, params *client.ListPostgresParams) ([]*client.Postgres, error) {
-	workspace, err := config.WorkspaceID()
+	workspace, err := session.FromContext(ctx).GetWorkspace()
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func (r *Repo) GetPostgresConnectionInfo(ctx context.Context, id string) (*clien
 }
 
 func (r *Repo) CreatePostgres(ctx context.Context, input client.PostgresPOSTInput) (*client.PostgresDetail, error) {
-	if err := validate.WorkspaceMatches(input.OwnerId); err != nil {
+	if err := validate.WorkspaceMatches(ctx, input.OwnerId); err != nil {
 		return nil, err
 	}
 

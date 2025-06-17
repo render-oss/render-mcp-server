@@ -143,11 +143,6 @@ func WorkspaceID() (string, error) {
 	return workspaceID, nil
 }
 
-func IsWorkspaceSet() bool {
-	id, _ := WorkspaceID()
-	return id != ""
-}
-
 func getAPIConfig() (APIConfig, error) {
 	cfg, err := Load()
 	if err != nil {

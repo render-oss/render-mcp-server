@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/render-oss/render-mcp-server/pkg/client"
-	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/pointers"
+	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
@@ -30,7 +30,7 @@ func NewRepo(c serviceRepoClient) *Repo {
 }
 
 func (s *Repo) ListServices(ctx context.Context, params *client.ListServicesParams) ([]*client.Service, error) {
-	workspace, err := config.WorkspaceID()
+	workspace, err := session.FromContext(ctx).GetWorkspace()
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func (s *Repo) DeployService(ctx context.Context, serviceId string) (*client.Cre
 }
 
 func (s *Repo) CreateService(ctx context.Context, data client.CreateServiceJSONRequestBody) (*client.ServiceAndDeploy, error) {
-	if err := validate.WorkspaceMatches(data.OwnerId); err != nil {
+	if err := validate.WorkspaceMatches(ctx, data.OwnerId); err != nil {
 		return nil, err
 	}
 

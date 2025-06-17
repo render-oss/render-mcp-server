@@ -9,9 +9,9 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	logsclient "github.com/render-oss/render-mcp-server/pkg/client/logs"
-	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/mcpserver"
 	"github.com/render-oss/render-mcp-server/pkg/pointers"
+	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
@@ -114,7 +114,7 @@ func listLogs(logRepo *LogRepo) server.ServerTool {
 			),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			ownerId, err := config.WorkspaceID()
+			ownerId, err := session.FromContext(ctx).GetWorkspace()
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
@@ -324,7 +324,7 @@ func listLogLabelValues(logRepo *LogRepo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			ownerId, err := config.WorkspaceID()
+			ownerId, err := session.FromContext(ctx).GetWorkspace()
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
