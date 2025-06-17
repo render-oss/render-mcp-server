@@ -114,7 +114,7 @@ func listLogs(logRepo *LogRepo) server.ServerTool {
 			),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			ownerId, err := session.FromContext(ctx).GetWorkspace()
+			ownerId, err := session.FromContext(ctx).GetWorkspace(ctx)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
@@ -324,7 +324,7 @@ func listLogLabelValues(logRepo *LogRepo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			ownerId, err := session.FromContext(ctx).GetWorkspace()
+			ownerId, err := session.FromContext(ctx).GetWorkspace(ctx)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}

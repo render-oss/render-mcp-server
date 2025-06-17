@@ -18,12 +18,12 @@ func TestStdioSession(t *testing.T) {
 
 	sessionOne := session.FromContext(ctxOne)
 
-	_, err := sessionOne.GetWorkspace()
+	_, err := sessionOne.GetWorkspace(ctxOne)
 	if err == nil {
 		t.Error("Expected error, got nil")
 	}
 
-	if err := sessionOne.SetWorkspace("workspace-one"); err != nil {
+	if err := sessionOne.SetWorkspace(ctxOne, "workspace-one"); err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
@@ -31,7 +31,7 @@ func TestStdioSession(t *testing.T) {
 	ctxOneAgain = session.ContextWithStdioSession(ctxOneAgain)
 	sessionOneAgain := session.FromContext(ctxOneAgain)
 
-	workspace, err := sessionOneAgain.GetWorkspace()
+	workspace, err := sessionOneAgain.GetWorkspace(ctxOneAgain)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -39,11 +39,11 @@ func TestStdioSession(t *testing.T) {
 		t.Errorf("Expected workspace-one, got %s", workspace)
 	}
 
-	if err := sessionOneAgain.SetWorkspace("workspace-two"); err != nil {
+	if err := sessionOneAgain.SetWorkspace(ctxOneAgain, "workspace-two"); err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
-	workspace, err = sessionOne.GetWorkspace()
+	workspace, err = sessionOne.GetWorkspace(ctxOne)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}

@@ -133,7 +133,7 @@ func createPostgres(postgresRepo *Repo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			ownerId, err := session.FromContext(ctx).GetWorkspace()
+			ownerId, err := session.FromContext(ctx).GetWorkspace(ctx)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}

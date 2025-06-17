@@ -257,7 +257,7 @@ func validatedCreateServiceRequest(ctx context.Context, request mcp.CallToolRequ
 	if err != nil {
 		return nil, err
 	}
-	ownerId, err := session.FromContext(ctx).GetWorkspace()
+	ownerId, err := session.FromContext(ctx).GetWorkspace(ctx)
 	if err != nil {
 		return nil, err
 	}

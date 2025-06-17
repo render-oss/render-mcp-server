@@ -29,7 +29,7 @@ func NewRepo(c postgresRepoClient) *Repo {
 }
 
 func (r *Repo) ListPostgres(ctx context.Context, params *client.ListPostgresParams) ([]*client.Postgres, error) {
-	workspace, err := session.FromContext(ctx).GetWorkspace()
+	workspace, err := session.FromContext(ctx).GetWorkspace(ctx)
 	if err != nil {
 		return nil, err
 	}

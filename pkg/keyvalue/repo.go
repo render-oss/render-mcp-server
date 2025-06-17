@@ -27,7 +27,7 @@ func NewRepo(c keyValueRepoClient) *Repo {
 }
 
 func (r *Repo) ListKeyValue(ctx context.Context, params *client.ListKeyValueParams) ([]*client.KeyValue, error) {
-	workspace, err := session.FromContext(ctx).GetWorkspace()
+	workspace, err := session.FromContext(ctx).GetWorkspace(ctx)
 	if err != nil {
 		return nil, err
 	}

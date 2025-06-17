@@ -10,7 +10,7 @@ import (
 // WorkspaceMatches gets the workspace from the config and validates that it matches the provided input. If the
 // workspace is not set, no error is returned
 func WorkspaceMatches(ctx context.Context, workspaceID string) error {
-	workspace, err := session.FromContext(ctx).GetWorkspace()
+	workspace, err := session.FromContext(ctx).GetWorkspace(ctx)
 	if err != nil {
 		return err
 	}

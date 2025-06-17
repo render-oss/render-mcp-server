@@ -48,7 +48,7 @@ func listWorkspaces(ownerRepo *Repo) server.ServerTool {
 			resultText := ""
 
 			if len(workspaces) == 1 {
-				err = session.FromContext(ctx).SetWorkspace(workspaces[0].Id)
+				err = session.FromContext(ctx).SetWorkspace(ctx, workspaces[0].Id)
 				if err != nil {
 					return mcp.NewToolResultError(err.Error()), nil
 				}
@@ -84,7 +84,7 @@ func selectWorkspace() server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			err = session.FromContext(ctx).SetWorkspace(ownerID)
+			err = session.FromContext(ctx).SetWorkspace(ctx, ownerID)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
@@ -106,7 +106,7 @@ func getSelectedWorkspace() server.ServerTool {
 			}),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			workspace, err := session.FromContext(ctx).GetWorkspace()
+			workspace, err := session.FromContext(ctx).GetWorkspace(ctx)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}

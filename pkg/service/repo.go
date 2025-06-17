@@ -30,7 +30,7 @@ func NewRepo(c serviceRepoClient) *Repo {
 }
 
 func (s *Repo) ListServices(ctx context.Context, params *client.ListServicesParams) ([]*client.Service, error) {
-	workspace, err := session.FromContext(ctx).GetWorkspace()
+	workspace, err := session.FromContext(ctx).GetWorkspace(ctx)
 	if err != nil {
 		return nil, err
 	}

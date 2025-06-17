@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"log"
+	"os"
 
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/render-oss/render-mcp-server/pkg/cfg"
@@ -36,7 +37,17 @@ func Serve(transport string) *server.MCPServer {
 	s.AddTools(logs.Tools(c)...)
 
 	if transport == "http" {
-		sessionStore := session.NewInMemoryStore()
+		var sessionStore session.Store
+		if redisURL, ok := os.LookupEnv("REDIS_URL"); ok {
+			log.Print("using Redis session store\n")
+			sessionStore, err = session.NewRedisStore(redisURL)
+			if err != nil {
+				log.Fatalf("failed to initialize Redis session store: %v", err)
+			}
+		} else {
+			log.Print("using in-memory session store\n")
+			sessionStore = session.NewInMemoryStore()
+		}
 		if err := server.NewStreamableHTTPServer(s, server.WithHTTPContextFunc(session.ContextWithHTTPSession(sessionStore))).Start(":10000"); err != nil {
 			log.Fatalf("Starting Streamable server: %v\n:", err)
 		}

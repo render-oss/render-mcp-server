@@ -14,10 +14,10 @@ type StdioSession struct{}
 
 var _ Session = (*StdioSession)(nil)
 
-func (h *StdioSession) GetWorkspace() (string, error) {
+func (h *StdioSession) GetWorkspace(_ context.Context) (string, error) {
 	return config.WorkspaceID()
 }
 
-func (h *StdioSession) SetWorkspace(s string) error {
+func (h *StdioSession) SetWorkspace(_ context.Context, s string) error {
 	return config.SelectWorkspace(s)
 }
