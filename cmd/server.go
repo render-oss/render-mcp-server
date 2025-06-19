@@ -5,11 +5,13 @@ import (
 	"os"
 
 	"github.com/mark3labs/mcp-go/server"
+	"github.com/render-oss/render-mcp-server/pkg/authn"
 	"github.com/render-oss/render-mcp-server/pkg/cfg"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	"github.com/render-oss/render-mcp-server/pkg/deploy"
 	"github.com/render-oss/render-mcp-server/pkg/keyvalue"
 	"github.com/render-oss/render-mcp-server/pkg/logs"
+	"github.com/render-oss/render-mcp-server/pkg/multicontext"
 	"github.com/render-oss/render-mcp-server/pkg/owner"
 	"github.com/render-oss/render-mcp-server/pkg/postgres"
 	"github.com/render-oss/render-mcp-server/pkg/service"
@@ -48,11 +50,21 @@ func Serve(transport string) *server.MCPServer {
 			log.Print("using in-memory session store\n")
 			sessionStore = session.NewInMemoryStore()
 		}
-		if err := server.NewStreamableHTTPServer(s, server.WithHTTPContextFunc(session.ContextWithHTTPSession(sessionStore))).Start(":10000"); err != nil {
+		err := server.
+			NewStreamableHTTPServer(s, server.WithHTTPContextFunc(multicontext.MultiHTTPContextFunc(
+				session.ContextWithHTTPSession(sessionStore),
+				authn.ContextWithAPITokenFromHeader,
+			))).
+			Start(":10000")
+		if err != nil {
 			log.Fatalf("Starting Streamable server: %v\n:", err)
 		}
 	} else {
-		if err := server.ServeStdio(s, server.WithStdioContextFunc(session.ContextWithStdioSession)); err != nil {
+		err := server.ServeStdio(s, server.WithStdioContextFunc(multicontext.MultiStdioContextFunc(
+			session.ContextWithStdioSession,
+			authn.ContextWithAPITokenFromConfig,
+		)))
+		if err != nil {
 			log.Fatalf("Starting STDIO server: %v\n", err)
 		}
 	}

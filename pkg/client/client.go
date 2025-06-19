@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/render-oss/render-mcp-server/pkg/authn"
 	"github.com/render-oss/render-mcp-server/pkg/cfg"
 	"github.com/render-oss/render-mcp-server/pkg/config"
 )
@@ -92,7 +93,7 @@ func firstNonNilErrorField(response any) *ErrorWithCode {
 
 func clientWithAuth(httpClient *http.Client, apiCfg config.APIConfig) (*ClientWithResponses, error) {
 	insertAuth := func(ctx context.Context, req *http.Request) error {
-		req.Header = AddHeaders(req.Header, apiCfg.Key)
+		req.Header = AddHeaders(req.Header, authn.APITokenFromContext(ctx))
 		return nil
 	}
 

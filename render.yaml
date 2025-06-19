@@ -6,8 +6,6 @@ services:
   buildCommand: go build -tags netgo -ldflags '-s -w' -o app
   startCommand: ./app --transport http
   envVars:
-  - key: RENDER_API_KEY
-    sync: false
   - key: REDIS_URL
     fromService:
       name: mcp-kv
