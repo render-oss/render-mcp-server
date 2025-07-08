@@ -10,7 +10,11 @@ var Version = "dev"
 var osInfo string
 
 func GetHost() string {
-	return "https://api.render.com/v1/"
+	baseHost := "api.render.com"
+	if host := os.Getenv("RENDER_HOST"); host != "" {
+		baseHost = host
+	}
+	return fmt.Sprintf("https://%s/v1", baseHost)
 }
 
 func GetAPIKey() string {
