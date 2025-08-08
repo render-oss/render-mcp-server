@@ -8,6 +8,7 @@ server that allows you to interact with your Render resources via LLMs.
 
 - Creating and managing web services, static sites, and databases on Render
 - Monitoring application logs and deployment status to help troubleshoot issues
+- Monitoring service performance metrics for debugging, capacity planning, and optimization
 - Querying your Postgres databases directly inside an LLM
 
 ## Feedback
@@ -215,6 +216,16 @@ feedback or would like to report a bug or feature request, please [create a GitH
   - `endTime`: End time for log query (RFC3339 format) (string, optional)
   - `direction`: The direction to query logs for (string, optional)
 
+### Metrics
+
+- **get_metrics** - Get performance metrics for any Render resource (services, Postgres databases, key-value stores). Metrics may be empty if the metric is not valid for the given resource
+  - `resourceId`: The ID of the resource to get metrics for (service ID, Postgres ID, or key-value store ID) (string, required)
+  - `metricTypes`: Which metrics to fetch (array of strings, required). Accepted values: 'cpu', 'memory', 'http', 'connections', 'instancecount', 'httperrors', 'responsetime'. CPU and memory are available for all resources. HTTP, instance count, HTTP error, and response time metrics are only available for services. Connection metrics are only available for databases and key-value stores
+  - `startTime`: Start time for metrics query (RFC3339 format), defaults to 1 hour ago (string, optional)
+  - `endTime`: End time for metrics query (RFC3339 format), defaults to now (string, optional)
+  - `resolution`: Time resolution for data points in seconds, minimum 30 seconds. API defaults to 60 seconds if not provided (number, optional)
+  - `aggregationMethod`: Data aggregation method. Accepted values: 'AVG', 'MAX', 'MIN', defaults to 'AVG' (string, optional)
+
 ### Postgres Databases
 
 - **query_render_postgres** - Run a read-only SQL query against a Render-hosted Postgres database
@@ -270,6 +281,28 @@ feedback or would like to report a bug or feature request, please [create a GitH
 
 "Set up a cache for my user data using a Key Value store"
 [MCP will create a Key Value with appropriate configuration]
+```
+
+### Performance Monitoring & Optimization
+
+```
+"Show me CPU and memory metrics for my service srv-abc123 over the last 2 hours"
+[MCP will fetch CPU and memory time-series data for analysis]
+
+"Get HTTP request metrics for my web service to identify traffic patterns"
+[MCP will show HTTP request volume and response metrics, or empty results if not a web service]
+
+"Show me instance count metrics to understand my service scaling"
+[MCP will display instance count over time to help with capacity planning and scaling decisions]
+
+"Get HTTP error metrics to identify if issues are client-side or server-side problems"
+[MCP will show error rates by status code, helping distinguish 4xx (client errors) vs 5xx (server errors)]
+
+"Check response time metrics to debug performance issues"
+[MCP will display P95 response time percentiles to identify latency bottlenecks and timeout issues]
+
+"Check database performance metrics for my Postgres instance pg-def456"
+[MCP will display CPU, memory, and connection metrics for the database]
 ```
 
 ## Troubleshooting

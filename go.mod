@@ -6,7 +6,6 @@ require (
 	github.com/alicebob/miniredis/v2 v2.35.0
 	github.com/jackc/pgx/v5 v5.7.5
 	github.com/mark3labs/mcp-go v0.32.0
-	github.com/mitchellh/mapstructure v1.5.0
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/redis/go-redis/v9 v9.10.0
 	github.com/spf13/pflag v1.0.6

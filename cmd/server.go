@@ -11,6 +11,7 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/deploy"
 	"github.com/render-oss/render-mcp-server/pkg/keyvalue"
 	"github.com/render-oss/render-mcp-server/pkg/logs"
+	"github.com/render-oss/render-mcp-server/pkg/metrics"
 	"github.com/render-oss/render-mcp-server/pkg/multicontext"
 	"github.com/render-oss/render-mcp-server/pkg/owner"
 	"github.com/render-oss/render-mcp-server/pkg/postgres"
@@ -37,6 +38,7 @@ func Serve(transport string) *server.MCPServer {
 	s.AddTools(postgres.Tools(c)...)
 	s.AddTools(keyvalue.Tools(c)...)
 	s.AddTools(logs.Tools(c)...)
+	s.AddTools(metrics.Tools(c)...)
 
 	if transport == "http" {
 		var sessionStore session.Store
