@@ -220,11 +220,15 @@ feedback or would like to report a bug or feature request, please [create a GitH
 
 - **get_metrics** - Get performance metrics for any Render resource (services, Postgres databases, key-value stores). Metrics may be empty if the metric is not valid for the given resource
   - `resourceId`: The ID of the resource to get metrics for (service ID, Postgres ID, or key-value store ID) (string, required)
-  - `metricTypes`: Which metrics to fetch (array of strings, required). Accepted values: 'cpu', 'memory', 'http', 'connections', 'instancecount', 'httperrors', 'responsetime'. CPU and memory are available for all resources. HTTP, instance count, HTTP error, and response time metrics are only available for services. Connection metrics are only available for databases and key-value stores
-  - `startTime`: Start time for metrics query (RFC3339 format), defaults to 1 hour ago (string, optional)
-  - `endTime`: End time for metrics query (RFC3339 format), defaults to now (string, optional)
-  - `resolution`: Time resolution for data points in seconds, minimum 30 seconds. API defaults to 60 seconds if not provided (number, optional)
-  - `aggregationMethod`: Data aggregation method. Accepted values: 'AVG', 'MAX', 'MIN', defaults to 'AVG' (string, optional)
+  - `metricTypes`: Which metrics to fetch (array of strings, required). Accepted values: 'cpu_usage', 'cpu_limit', 'cpu_target', 'memory_usage', 'memory_limit', 'memory_target', 'http_request_count', 'active_connections', 'instance_count', 'http_latency'. CPU usage/limits/targets, memory usage/limits/targets, and instance count metrics are available for all resources. HTTP request counts and response time metrics are only available for services. Active connection metrics are only available for databases and key-value stores. Limits show resource constraints, targets show autoscaling thresholds
+  - `startTime`: Start time for metrics query in RFC3339 format (e.g., '2024-01-01T12:00:00Z'), defaults to 1 hour ago. The start time must be within the last 30 days (string, optional)
+  - `endTime`: End time for metrics query in RFC3339 format (e.g., '2024-01-01T13:00:00Z'), defaults to the current time. The end time must be within the last 30 days (string, optional)
+  - `resolution`: Time resolution for data points in seconds. Lower values provide more granular data. Higher values provide more aggregated data points. API defaults to 60 seconds if not provided, minimum 30 seconds (number, optional)
+  - `cpuUsageAggregationMethod`: Method for aggregating CPU usage metric values over time intervals. Accepted values: 'AVG', 'MAX', 'MIN', defaults to 'AVG' (string, optional)
+  - `aggregateHttpRequestCountsBy`: Field to aggregate HTTP request count metrics by. Accepted values: 'host' (aggregate by request host), 'statusCode' (aggregate by HTTP status code). When not specified, returns total request counts (string, optional)
+  - `httpLatencyQuantile`: The quantile/percentile of HTTP latency to fetch. Only supported for http_latency metric. Common values: 0.5 (median), 0.95 (95th percentile), 0.99 (99th percentile). Defaults to 0.95 if not specified (number, optional, min: 0.0, max: 1.0)
+  - `httpHost`: Filter HTTP metrics to specific request hosts. Supported for http_request_count and http_latency metrics. Example: 'api.example.com' or 'myapp.render.com'. When not specified, includes all hosts (string, optional)
+  - `httpPath`: Filter HTTP metrics to specific request paths. Supported for http_request_count and http_latency metrics. Example: '/api/users' or '/health'. When not specified, includes all paths (string, optional)
 
 ### Postgres Databases
 
