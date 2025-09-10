@@ -72,6 +72,11 @@ func (m *MockClientWithResponses) GetMemoryTargetWithResponse(ctx context.Contex
 	return args.Get(0).(*client.GetMemoryTargetResponse), args.Error(1)
 }
 
+func (m *MockClientWithResponses) GetBandwidthWithResponse(ctx context.Context, params *client.GetBandwidthParams, reqEditors ...client.RequestEditorFn) (*client.GetBandwidthResponse, error) {
+	args := m.Called(ctx, params, reqEditors)
+	return args.Get(0).(*client.GetBandwidthResponse), args.Error(1)
+}
+
 // MetricsTestSuite provides shared setup and utilities for metrics tests
 type MetricsTestSuite struct {
 	suite.Suite
@@ -223,6 +228,17 @@ func NewMockMemoryLimitResponse(value float32) *client.GetMemoryLimitResponse {
 
 func NewMockMemoryTargetResponse(value float32) *client.GetMemoryTargetResponse {
 	return &client.GetMemoryTargetResponse{
+		HTTPResponse: &http.Response{StatusCode: 200},
+		JSON200: &metricstypes.TimeSeriesCollection{{
+			Unit:   "bytes",
+			Labels: []metricstypes.Label{{Field: "instance", Value: "srv-123-abc"}},
+			Values: []metricstypes.TimeSeriesValue{{Timestamp: testTimestamp, Value: value}},
+		}},
+	}
+}
+
+func NewMockBandwidthResponse(value float32) *client.GetBandwidthResponse {
+	return &client.GetBandwidthResponse{
 		HTTPResponse: &http.Response{StatusCode: 200},
 		JSON200: &metricstypes.TimeSeriesCollection{{
 			Unit:   "bytes",

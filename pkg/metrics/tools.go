@@ -26,7 +26,7 @@ func getMetrics(metricsRepo *Repo) server.ServerTool {
 	return server.ServerTool{
 		Tool: mcp.NewTool("get_metrics",
 			mcp.WithDescription("Get performance metrics for any Render resource (services, Postgres databases, key-value stores). "+
-				"Supports CPU usage/limits/targets, memory usage/limits/targets, service instance counts, HTTP request counts and response time metrics, database active connection counts for debugging, capacity planning, and performance optimization. "+
+				"Supports CPU usage/limits/targets, memory usage/limits/targets, service instance counts, HTTP request counts and response time metrics, bandwidth usage metrics, database active connection counts for debugging, capacity planning, and performance optimization. "+
 				"Returns time-series data with timestamps and values for the specified time range. "+
 				"HTTP metrics support filtering by host and path for more granular analysis. "+
 				"Limits and targets help understand resource constraints and autoscaling thresholds. "+
@@ -44,7 +44,7 @@ func getMetrics(metricsRepo *Repo) server.ServerTool {
 				mcp.Required(),
 				mcp.Description("Which metrics to fetch. "+
 					"CPU usage/limits/targets, memory usage/limits/targets, and instance count metrics are available for all resources. "+
-					"HTTP request counts and response time metrics are only available for services. "+
+					"HTTP request counts and response time metrics, and bandwidth usage metrics are only available for services. "+
 					"Active connection metrics are only available for databases and key-value stores. "+
 					"Limits show resource constraints, targets show autoscaling thresholds."),
 				mcp.Items(map[string]interface{}{
@@ -55,6 +55,7 @@ func getMetrics(metricsRepo *Repo) server.ServerTool {
 						string(MetricTypeInstanceCount), string(MetricTypeHTTPLatency),
 						string(MetricTypeCPULimit), string(MetricTypeCPUTarget),
 						string(MetricTypeMemoryLimit), string(MetricTypeMemoryTarget),
+						string(MetricTypeBandwidthUsage),
 					},
 				}),
 			),
@@ -133,10 +134,10 @@ func getMetrics(metricsRepo *Repo) server.ServerTool {
 
 				metricType := MetricType(mtStr)
 				switch metricType {
-				case MetricTypeCPUUsage, MetricTypeMemoryUsage, MetricTypeHTTPRequestCount, MetricTypeActiveConnections, MetricTypeInstanceCount, MetricTypeHTTPLatency, MetricTypeCPULimit, MetricTypeCPUTarget, MetricTypeMemoryLimit, MetricTypeMemoryTarget:
+				case MetricTypeCPUUsage, MetricTypeMemoryUsage, MetricTypeHTTPRequestCount, MetricTypeActiveConnections, MetricTypeInstanceCount, MetricTypeHTTPLatency, MetricTypeCPULimit, MetricTypeCPUTarget, MetricTypeMemoryLimit, MetricTypeMemoryTarget, MetricTypeBandwidthUsage:
 					metricTypes = append(metricTypes, metricType)
 				default:
-					return mcp.NewToolResultError(fmt.Sprintf("invalid metric type: %s. Must be one of: cpu_usage, memory_usage, http_request_count, active_connections, instance_count, http_latency, cpu_limit, cpu_target, memory_limit, memory_target", mtStr)), nil
+					return mcp.NewToolResultError(fmt.Sprintf("invalid metric type: %s. Must be one of: cpu_usage, memory_usage, http_request_count, active_connections, instance_count, http_latency, cpu_limit, cpu_target, memory_limit, memory_target, bandwidth_usage", mtStr)), nil
 				}
 			}
 

@@ -121,6 +121,15 @@ func (s *MetricsIntegrationSuite) TestSuccessfulMetricsFetching() {
 			},
 			value: 1073741824,
 		},
+		{
+			name:       "Bandwidth usage success",
+			metricType: MetricTypeBandwidthUsage,
+			setupMock: func() {
+				s.mockClient.On("GetBandwidthWithResponse", mock.Anything, mock.Anything, mock.Anything).
+					Return(NewMockBandwidthResponse(1048576), nil)
+			},
+			value: 1048576,
+		},
 	}
 
 	for _, tt := range tests {

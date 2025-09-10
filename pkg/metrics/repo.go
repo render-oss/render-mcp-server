@@ -21,6 +21,7 @@ type MetricsClient interface {
 	GetCpuTargetWithResponse(ctx context.Context, params *client.GetCpuTargetParams, reqEditors ...client.RequestEditorFn) (*client.GetCpuTargetResponse, error)
 	GetMemoryLimitWithResponse(ctx context.Context, params *client.GetMemoryLimitParams, reqEditors ...client.RequestEditorFn) (*client.GetMemoryLimitResponse, error)
 	GetMemoryTargetWithResponse(ctx context.Context, params *client.GetMemoryTargetParams, reqEditors ...client.RequestEditorFn) (*client.GetMemoryTargetResponse, error)
+	GetBandwidthWithResponse(ctx context.Context, params *client.GetBandwidthParams, reqEditors ...client.RequestEditorFn) (*client.GetBandwidthResponse, error)
 }
 
 type Repo struct {
@@ -44,6 +45,7 @@ const (
 	MetricTypeCPUTarget         MetricType = "cpu_target"
 	MetricTypeMemoryLimit       MetricType = "memory_limit"
 	MetricTypeMemoryTarget      MetricType = "memory_target"
+	MetricTypeBandwidthUsage    MetricType = "bandwidth_usage"
 )
 
 type MetricsRequest struct {
@@ -124,6 +126,8 @@ func (r *Repo) fetchMetric(ctx context.Context, resourceId string, metricType Me
 		data, err = r.getMemoryLimit(ctx, resourceId, req)
 	case MetricTypeMemoryTarget:
 		data, err = r.getMemoryTarget(ctx, resourceId, req)
+	case MetricTypeBandwidthUsage:
+		data, err = r.getBandwidthUsage(ctx, resourceId, req)
 	default:
 		return MetricData{}, fmt.Errorf("unsupported metric type: %s", metricType)
 	}
@@ -479,6 +483,32 @@ func (r *Repo) getMemoryTarget(ctx context.Context, resourceId string, req Metri
 
 	if resp.JSON200 == nil {
 		return nil, fmt.Errorf("empty response from memory target metrics API")
+	}
+
+	return *resp.JSON200, nil
+}
+
+func (r *Repo) getBandwidthUsage(ctx context.Context, resourceId string, req MetricsRequest) (metricstypes.TimeSeriesCollection, error) {
+	params := &client.GetBandwidthParams{
+		StartTime: req.StartTime,
+		EndTime:   req.EndTime,
+	}
+
+	// Set resource parameter - use ServiceResourceQueryParam for bandwidth
+	serviceResource := metricstypes.ServiceResourceQueryParam(resourceId)
+	params.Resource = &serviceResource
+
+	resp, err := r.client.GetBandwidthWithResponse(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bandwidth usage metrics: %w", err)
+	}
+
+	if resp.StatusCode() != 200 {
+		return nil, fmt.Errorf("bandwidth usage metrics API returned status %d", resp.StatusCode())
+	}
+
+	if resp.JSON200 == nil {
+		return metricstypes.TimeSeriesCollection{}, nil
 	}
 
 	return *resp.JSON200, nil
