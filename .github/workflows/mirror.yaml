@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout private repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         if: ${{ env.ENABLE_MIRROR == 'true' }}
         with:
           # Must be set to avoid conflicting with the subsequent push
