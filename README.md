@@ -1,7 +1,8 @@
 # Render MCP Server
 
 ## Overview
-The Render MCP Server is an early access [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction)
+
+The Render MCP Server is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction)
 server that allows you to interact with your Render resources via LLMs.
 
 ## Use Cases
@@ -13,8 +14,8 @@ server that allows you to interact with your Render resources via LLMs.
 
 ## Feedback
 
-The official Render MCP server is currently in early access. Please leave feedback via 
-[filing a GitHub issue](https://github.com/render-oss/render-mcp-server/issues) if you have any 
+Please leave feedback via
+[filing a GitHub issue](https://github.com/render-oss/render-mcp-server/issues) if you have any
 feature requests, bug reports, suggestions, comments, or concerns.
 
 ## Getting Started
@@ -22,19 +23,22 @@ feature requests, bug reports, suggestions, comments, or concerns.
 This guide will help you set up the Render MCP Server. To use the server, you will need a desktop application that can act as an MCP client (e.g., Claude Desktop, Cursor IDE, VS Code). All installation methods require a Render API Key, and you will configure your chosen MCP client with the server details.
 
 ### 1. Obtain a Render API Key
+
 You must create a Render API key from your [Render Dashboard → Account Settings → API Keys](https://dashboard.render.com/settings#api-keys).
 
 > [!IMPORTANT]
-> Render API keys are currently broadly scoped, giving your AI tools the same permissions that you would have access to. This MCP server avoids destructive operations, but please make sure you're comfortable granting your AI tools these permissions. 
+> Render API keys are currently broadly scoped, giving your AI tools the same permissions that you would have access to. This MCP server avoids destructive operations, but please make sure you're comfortable granting your AI tools these permissions.
 
 ### 2. Choose an Installation Method
 
 Select one of the following methods to install and run the Render MCP Server.
 
 #### Method A: Using Docker (Recommended)
+
 This is the simplest way to get started if you have [Docker](https://www.docker.com) installed and running.
 
 **Steps:**
+
 1. Ensure Docker is installed and operational on your system.
 2. Configure your MCP client with the following settings (or by using the one-click install buttons below), replacing `<YOUR_API_KEY>` with the API key you obtained in Step 1:
    ```json
@@ -63,12 +67,15 @@ This is the simplest way to get started if you have [Docker](https://www.docker.
 [![Add to Cursor](https://cursor.com/deeplink/mcp-install-light.svg)](https://cursor.com/install-mcp?name=render&config=eyJjb21tYW5kIjoiZG9ja2VyIHJ1biAtaSAtLXJtIC1lIFJFTkRFUl9BUElfS0VZIC12IHJlbmRlci1tY3Atc2VydmVyLWNvbmZpZzovY29uZmlnIGdoY3IuaW8vcmVuZGVyLW9zcy9yZW5kZXItbWNwLXNlcnZlciIsImVudiI6eyJSRU5ERVJfQVBJX0tFWSI6IllPVVJfQVBJX0tFWSJ9fQ%3D%3D)
 
 #### Method B: Using the install script (Linux/MacOS only)
+
 1. Run the following command:
+
 ```shell
 curl -fsSL https://raw.githubusercontent.com/render-oss/render-mcp-server/refs/heads/main/bin/install.sh | sh
 ```
+
 2. Note the full path where the install script saved the downloaded executable. It should have a directory where it was installed e.g., `✨ Successfully installed Render MCP Server to /Users/example/.local/bin/render-mcp-server`
-2. Configure your MCP client with the following settings (or by using the one-click install buttons below). Replace `/path/to/render-mcp-server` with the actual path to the executable and `<YOUR_API_KEY>` with your API key:
+3. Configure your MCP client with the following settings (or by using the one-click install buttons below). Replace `/path/to/render-mcp-server` with the actual path to the executable and `<YOUR_API_KEY>` with your API key:
    ```json
    {
      "mcpServers": {
@@ -85,9 +92,11 @@ curl -fsSL https://raw.githubusercontent.com/render-oss/render-mcp-server/refs/h
 [![Add to Cursor](https://cursor.com/deeplink/mcp-install-light.svg)](https://cursor.com/install-mcp?name=render&config=eyJjb21tYW5kIjoiL3BhdGgvdG8vcmVuZGVyLW1jcC1zZXJ2ZXIiLCJlbnYiOnsiUkVOREVSX0FQSV9LRVkiOiI8WU9VUl9BUElfS0VZPiJ9fQ%3D%3D)
 
 #### Method C: Direct Download
+
 Use this method if you prefer not to use Docker and a pre-compiled binary is available for your system.
 
 **Steps:**
+
 1. Open the MCP server's [GitHub releases page](https://github.com/render-oss/render-mcp-server/releases/).
 2. Download the executable that corresponds to your system's architecture.
 3. Note the full path to where you saved the downloaded executable.
@@ -95,9 +104,11 @@ Use this method if you prefer not to use Docker and a pre-compiled binary is ava
    > **macOS Users**: If you run the binary directly on macOS, you may need to grant an exception for it to run. See the [Limitations](#limitations) section for more details and a link to Apple's support page.
 
 #### Method D: Build from Source
+
 Choose this method if no pre-compiled binary suits your system, you want to build from the latest code, or you are a developer modifying the server. You will need [Go (Golang)](https://go.dev/doc/install) installed.
 
 **Steps:**
+
 1. Ensure Go is installed on your system.
 2. Clone the repository and build the executable:
    ```shell
@@ -112,8 +123,8 @@ Choose this method if no pre-compiled binary suits your system, you want to buil
 ## Limitations
 
 > [!NOTE]
-> The MCP server is currently in early access, and there are several limitations. If you have specific
-feedback or would like to report a bug or feature request, please [create a GitHub Issue](https://github.com/render-oss/render-mcp-server/issues). 
+> The MCP server has several limitations. If you have specific
+> feedback or would like to report a bug or feature request, please [create a GitHub Issue](https://github.com/render-oss/render-mcp-server/issues).
 
 1. **macOS Users**: If you download and run the binary directly on macOS, you may need to grant an exception to run it as it's from an "unknown developer". You can find instructions on how to do this [here](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac). This issue might not present a pop-up if the binary is launched from within another application like Claude or Cursor. This is not an issue if you are launching the MCP server via Docker.
 
@@ -134,9 +145,11 @@ feedback or would like to report a bug or feature request, please [create a GitH
 ### Workspaces
 
 - **list_workspaces** - List the workspaces that you have access to
+
   - No parameters required
 
 - **select_workspace** - Select a workspace to use
+
   - `ownerID`: The ID of the workspace to use (string, required)
 
 - **get_selected_workspace** - Get the currently selected workspace
@@ -145,12 +158,15 @@ feedback or would like to report a bug or feature request, please [create a GitH
 ### Services
 
 - **list_services** - List all services in your Render account
+
   - `includePreviews`: Whether to include preview services, defaults to false (boolean, optional)
 
 - **get_service** - Get details about a specific service
+
   - `serviceId`: The ID of the service to retrieve (string, required)
 
 - **create_web_service** - Create a new web service in your Render account
+
   - `name`: A unique name for your service (string, required)
   - `runtime`: Runtime environment for your service. Accepted values: 'node', 'python', 'go', 'rust', 'ruby', 'elixir', 'docker' (string, required)
   - `buildCommand`: Command used to build your service (string, required)
@@ -163,6 +179,7 @@ feedback or would like to report a bug or feature request, please [create a GitH
   - `envVars`: Environment variables array (array, optional)
 
 - **create_static_site** - Create a new static site in your Render account
+
   - `name`: A unique name for your service (string, required)
   - `buildCommand`: Command to build your app (string, required)
   - `repo`: Repository containing source code (string, optional)
@@ -178,6 +195,7 @@ feedback or would like to report a bug or feature request, please [create a GitH
 ### Deployments
 
 - **list_deploys** - List deployment history for a service
+
   - `serviceId`: The ID of the service to get deployments for (string, required)
 
 - **get_deploy** - Get details about a specific deployment
@@ -187,6 +205,7 @@ feedback or would like to report a bug or feature request, please [create a GitH
 ### Logs
 
 - **list_logs** - List logs matching the provided filters
+
   - `resource`: Filter logs by their resource (array of strings, required)
   - `level`: Filter logs by their severity level (array of strings, optional)
   - `type`: Filter logs by their type (array of strings, optional)
@@ -233,13 +252,16 @@ feedback or would like to report a bug or feature request, please [create a GitH
 ### Postgres Databases
 
 - **query_render_postgres** - Run a read-only SQL query against a Render-hosted Postgres database
+
   - `postgresId`: The ID of the Postgres instance to query (string, required)
   - `sql`: The SQL query to run (string, required)
 
 - **list_postgres_instances** - List all PostgreSQL databases in your Render account
+
   - No parameters required
 
 - **get_postgres** - Get details about a specific PostgreSQL database
+
   - `postgresId`: The ID of the PostgreSQL database to retrieve (string, required)
 
 - **create_postgres** - Create a new PostgreSQL database
@@ -252,9 +274,11 @@ feedback or would like to report a bug or feature request, please [create a GitH
 ### Key Value instances
 
 - **list_key_value** - List all Key Value instances in your Render account
+
   - No parameters required
 
 - **get_key_value** - Get details about a specific Key Value instance
+
   - `keyValueId`: The ID of the Key Value instance to retrieve (string, required)
 
 - **create_key_value** - Create a new Key Value instance
@@ -314,11 +338,13 @@ feedback or would like to report a bug or feature request, please [create a GitH
 ### Common Issues
 
 1. **Connection Issues**
+
    - Verify your RENDER_API_KEY is correct
    - Check your internet connection
    - Verify Render.com API status
 
 2. **Authorization Errors**
+
    - Check if your API key has expired
    - Ensure your API key is still valid and has not been revoked
 
