@@ -168,14 +168,34 @@ Choose this method if no pre-compiled binary suits your system, you want to buil
 - **create_web_service** - Create a new web service in your Render account
 
   - `name`: A unique name for your service (string, required)
-  - `runtime`: Runtime environment for your service. Accepted values: 'node', 'python', 'go', 'rust', 'ruby', 'elixir', 'docker' (string, required)
+  - `runtime`: Runtime environment for your service (string, required). Accepted values:
+    - `node`
+    - `python`
+    - `go`
+    - `rust`
+    - `ruby`
+    - `elixir`
+    - `docker`
   - `buildCommand`: Command used to build your service (string, required)
   - `startCommand`: Command used to start your service (string, required)
   - `repo`: Repository containing source code (string, optional)
   - `branch`: Repository branch to deploy (string, optional)
-  - `plan`: Plan for your service. Accepted values: 'starter', 'standard', 'pro', 'pro_max', 'pro_plus', 'pro_ultra' (string, optional)
-  - `autoDeploy`: Whether to automatically deploy the service. Accepted values: 'yes', 'no'. Defaults to 'yes' (string, optional)
-  - `region`: Geographic region for deployment. Accepted values: 'oregon', 'frankfurt', 'singapore', 'ohio', 'virginia'. Defaults to 'oregon' (string, optional)
+  - `plan`: Plan for your service (string, optional). Accepted values:
+    - `starter`
+    - `standard`
+    - `pro`
+    - `pro_max`
+    - `pro_plus`
+    - `pro_ultra`
+  - `autoDeploy`: Whether to automatically deploy the service (string, optional). Defaults to `yes`. Accepted values:
+    - `yes`: Enable automatic deployments
+    - `no`: Disable automatic deployments
+  - `region`: Geographic region for deployment (string, optional). Defaults to `oregon`. Accepted values:
+    - `oregon`
+    - `frankfurt`
+    - `singapore`
+    - `ohio`
+    - `virginia`
   - `envVars`: Environment variables array (array, optional)
 
 - **create_static_site** - Create a new static site in your Render account
@@ -184,7 +204,9 @@ Choose this method if no pre-compiled binary suits your system, you want to buil
   - `buildCommand`: Command to build your app (string, required)
   - `repo`: Repository containing source code (string, optional)
   - `branch`: Repository branch to deploy (string, optional)
-  - `autoDeploy`: Whether to automatically deploy the service. Accepted values: 'yes', 'no'. Defaults to 'yes' (string, optional)
+  - `autoDeploy`: Whether to automatically deploy the service (string, optional). Defaults to `yes`. Accepted values:
+    - `yes`: Enable automatic deployments
+    - `no`: Disable automatic deployments
   - `publishPath`: Directory containing built assets (string, optional)
   - `envVars`: Environment variables array (array, optional)
 
@@ -239,12 +261,28 @@ Choose this method if no pre-compiled binary suits your system, you want to buil
 
 - **get_metrics** - Get performance metrics for any Render resource (services, Postgres databases, key-value stores). Metrics may be empty if the metric is not valid for the given resource
   - `resourceId`: The ID of the resource to get metrics for (service ID, Postgres ID, or key-value store ID) (string, required)
-  - `metricTypes`: Which metrics to fetch (array of strings, required). Accepted values: 'cpu_usage', 'cpu_limit', 'cpu_target', 'memory_usage', 'memory_limit', 'memory_target', 'http_request_count', 'active_connections', 'instance_count', 'http_latency', 'bandwidth_usage'. CPU usage/limits/targets, memory usage/limits/targets, and instance count metrics are available for all resources. HTTP request counts and response time metrics, and bandwidth usage metrics are only available for services. Active connection metrics are only available for databases and key-value stores. Limits show resource constraints, targets show autoscaling thresholds
+  - `metricTypes`: Which metrics to fetch (array of strings, required). Accepted values:
+    - `cpu_usage`: CPU usage metrics (available for all resources)
+    - `cpu_limit`: CPU resource constraints (available for all resources)
+    - `cpu_target`: CPU autoscaling thresholds (available for all resources)
+    - `memory_usage`: Memory usage metrics (available for all resources)
+    - `memory_limit`: Memory resource constraints (available for all resources)
+    - `memory_target`: Memory autoscaling thresholds (available for all resources)
+    - `instance_count`: Instance count metrics (available for all resources)
+    - `http_request_count`: HTTP request count metrics (services only)
+    - `http_latency`: HTTP response time metrics (services only)
+    - `bandwidth_usage`: Bandwidth usage metrics (services only)
+    - `active_connections`: Active connection metrics (databases and key-value stores only)
   - `startTime`: Start time for metrics query in RFC3339 format (e.g., '2024-01-01T12:00:00Z'), defaults to 1 hour ago. The start time must be within the last 30 days (string, optional)
   - `endTime`: End time for metrics query in RFC3339 format (e.g., '2024-01-01T13:00:00Z'), defaults to the current time. The end time must be within the last 30 days (string, optional)
   - `resolution`: Time resolution for data points in seconds. Lower values provide more granular data. Higher values provide more aggregated data points. API defaults to 60 seconds if not provided, minimum 30 seconds (number, optional)
-  - `cpuUsageAggregationMethod`: Method for aggregating CPU usage metric values over time intervals. Accepted values: 'AVG', 'MAX', 'MIN', defaults to 'AVG' (string, optional)
-  - `aggregateHttpRequestCountsBy`: Field to aggregate HTTP request count metrics by. Accepted values: 'host' (aggregate by request host), 'statusCode' (aggregate by HTTP status code). When not specified, returns total request counts (string, optional)
+  - `cpuUsageAggregationMethod`: Method for aggregating CPU usage metric values over time intervals (string, optional). Defaults to `AVG`. Accepted values:
+    - `AVG`: Average CPU usage over time intervals
+    - `MAX`: Maximum CPU usage over time intervals
+    - `MIN`: Minimum CPU usage over time intervals
+  - `aggregateHttpRequestCountsBy`: Field to aggregate HTTP request count metrics by (string, optional). When not specified, returns total request counts. Accepted values:
+    - `host`: Aggregate by request host
+    - `statusCode`: Aggregate by HTTP status code
   - `httpLatencyQuantile`: The quantile/percentile of HTTP latency to fetch. Only supported for http_latency metric. Common values: 0.5 (median), 0.95 (95th percentile), 0.99 (99th percentile). Defaults to 0.95 if not specified (number, optional, min: 0.0, max: 1.0)
   - `httpHost`: Filter HTTP metrics to specific request hosts. Supported for http_request_count and http_latency metrics. Example: 'api.example.com' or 'myapp.render.com'. When not specified, includes all hosts (string, optional)
   - `httpPath`: Filter HTTP metrics to specific request paths. Supported for http_request_count and http_latency metrics. Example: '/api/users' or '/health'. When not specified, includes all paths (string, optional)
@@ -266,8 +304,36 @@ Choose this method if no pre-compiled binary suits your system, you want to buil
 
 - **create_postgres** - Create a new PostgreSQL database
   - `name`: Name of the PostgreSQL database (string, required)
-  - `plan`: Pricing plan for the database. Accepted values: 'free', 'basic_256mb', 'basic_1gb', 'basic_4gb', 'pro_4gb', 'pro_8gb', 'pro_16gb', 'pro_32gb', 'pro_64gb', 'pro_128gb', 'pro_192gb', 'pro_256gb', 'pro_384gb', 'pro_512gb', 'accelerated_16gb', 'accelerated_32gb', 'accelerated_64gb', 'accelerated_128gb', 'accelerated_256gb', 'accelerated_384gb', 'accelerated_512gb', 'accelerated_768gb', 'accelerated_1024gb' (string, required)
-  - `region`: Region for deployment. Accepted values: 'oregon', 'frankfurt', 'singapore', 'ohio', 'virginia' (string, optional)
+  - `plan`: Pricing plan for the database (string, required). Accepted values:
+    - `free`
+    - `basic_256mb`
+    - `basic_1gb`
+    - `basic_4gb`
+    - `pro_4gb`
+    - `pro_8gb`
+    - `pro_16gb`
+    - `pro_32gb`
+    - `pro_64gb`
+    - `pro_128gb`
+    - `pro_192gb`
+    - `pro_256gb`
+    - `pro_384gb`
+    - `pro_512gb`
+    - `accelerated_16gb`
+    - `accelerated_32gb`
+    - `accelerated_64gb`
+    - `accelerated_128gb`
+    - `accelerated_256gb`
+    - `accelerated_384gb`
+    - `accelerated_512gb`
+    - `accelerated_768gb`
+    - `accelerated_1024gb`
+  - `region`: Region for deployment (string, optional). Accepted values:
+    - `oregon`
+    - `frankfurt`
+    - `singapore`
+    - `ohio`
+    - `virginia`
   - `version`: PostgreSQL version to use (e.g., 14, 15) (number, optional)
   - `diskSizeGb`: Database capacity in GB (number, optional)
 
@@ -283,9 +349,27 @@ Choose this method if no pre-compiled binary suits your system, you want to buil
 
 - **create_key_value** - Create a new Key Value instance
   - `name`: Name of the Key Value instance (string, required)
-  - `plan`: Pricing plan for the Key Value instance. Accepted values: 'free', 'starter', 'standard', 'pro', 'pro_plus' (string, required)
-  - `region`: Region for deployment. Accepted values: 'oregon', 'frankfurt', 'singapore', 'ohio', 'virginia' (string, optional)
-  - `maxmemoryPolicy`: Eviction policy for the Key Value store. Accepted values: 'noeviction', 'allkeys_lfu', 'allkeys_lru', 'allkeys_random', 'volatile_lfu', 'volatile_lru', 'volatile_random', 'volatile_ttl' (string, optional)
+  - `plan`: Pricing plan for the Key Value instance (string, required). Accepted values:
+    - `free`
+    - `starter`
+    - `standard`
+    - `pro`
+    - `pro_plus`
+  - `region`: Region for deployment (string, optional). Accepted values:
+    - `oregon`
+    - `frankfurt`
+    - `singapore`
+    - `ohio`
+    - `virginia`
+  - `maxmemoryPolicy`: Eviction policy for the Key Value store (string, optional). Accepted values:
+    - `noeviction`: No eviction policy (may cause memory errors)
+    - `allkeys_lfu`: Evict least frequently used keys from all keys
+    - `allkeys_lru`: Evict least recently used keys from all keys
+    - `allkeys_random`: Evict random keys from all keys
+    - `volatile_lfu`: Evict least frequently used keys from keys with expiration
+    - `volatile_lru`: Evict least recently used keys from keys with expiration
+    - `volatile_random`: Evict random keys from keys with expiration
+    - `volatile_ttl`: Evict keys with shortest time to live from keys with expiration
 
 ## Example Interactions
 
