@@ -64,7 +64,7 @@ This is the simplest way to get started if you have [Docker](https://www.docker.
    }
    ```
 
-[![Add to Cursor](https://cursor.com/deeplink/mcp-install-light.svg)](https://cursor.com/install-mcp?name=render&config=eyJjb21tYW5kIjoiZG9ja2VyIHJ1biAtaSAtLXJtIC1lIFJFTkRFUl9BUElfS0VZIC12IHJlbmRlci1tY3Atc2VydmVyLWNvbmZpZzovY29uZmlnIGdoY3IuaW8vcmVuZGVyLW9zcy9yZW5kZXItbWNwLXNlcnZlciIsImVudiI6eyJSRU5ERVJfQVBJX0tFWSI6IllPVVJfQVBJX0tFWSJ9fQ%3D%3D)
+[![Add to Cursor](https://cursor.com/deeplink/mcp-install-light.svg)](cursor://anysphere.cursor-deeplink/mcp/install?name=render&config=eyJjb21tYW5kIjoiZG9ja2VyIiwiYXJncyI6WyJydW4iLCItaSIsIi0tcm0iLCItZSIsIlJFTkRFUl9BUElfS0VZIiwiLXYiLCJyZW5kZXItbWNwLXNlcnZlci1jb25maWc6L2NvbmZpZyIsImdoY3IuaW8vcmVuZGVyLW9zcy9yZW5kZXItbWNwLXNlcnZlciJdLCJlbnYiOnsiUkVOREVSX0FQSV9LRVkiOiI8WU9VUl9BUElfS0VZPiJ9fQ==)
 
 #### Method B: Using the install script (Linux/MacOS only)
 
@@ -89,7 +89,7 @@ curl -fsSL https://raw.githubusercontent.com/render-oss/render-mcp-server/refs/h
    }
    ```
 
-[![Add to Cursor](https://cursor.com/deeplink/mcp-install-light.svg)](https://cursor.com/install-mcp?name=render&config=eyJjb21tYW5kIjoiL3BhdGgvdG8vcmVuZGVyLW1jcC1zZXJ2ZXIiLCJlbnYiOnsiUkVOREVSX0FQSV9LRVkiOiI8WU9VUl9BUElfS0VZPiJ9fQ%3D%3D)
+[![Add to Cursor](https://cursor.com/deeplink/mcp-install-light.svg)](cursor://anysphere.cursor-deeplink/mcp/install?name=render&config=eyJjb21tYW5kIjoiL3BhdGgvdG8vcmVuZGVyLW1jcC1zZXJ2ZXIiLCJlbnYiOnsiUkVOREVSX0FQSV9LRVkiOiI8WU9VUl9BUElfS0VZPiJ9fQ==)
 
 #### Method C: Direct Download
 
