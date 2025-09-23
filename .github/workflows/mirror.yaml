@@ -1,7 +1,10 @@
 name: Mirror to Public Repository
+permissions:
+  contents: read
+
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   mirror:

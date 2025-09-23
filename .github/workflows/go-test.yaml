@@ -1,10 +1,12 @@
 name: Go Tests
+permissions:
+  contents: read
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   test:
