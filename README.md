@@ -11,7 +11,7 @@ Get started with the MCP server by following the official docs: https://render.c
 
 ## Use Cases
 
-- Creating and managing web services, static sites, and databases on Render
+- Creating and managing web services, static sites, cron jobs, and databases on Render
 - Monitoring application logs and deployment status to help troubleshoot issues
 - Monitoring service performance metrics for debugging, capacity planning, and optimization
 - Querying your Postgres databases directly inside an LLM
@@ -90,6 +90,44 @@ feature requests, bug reports, suggestions, comments, or concerns.
     - `yes`: Enable automatic deployments
     - `no`: Disable automatic deployments
   - `publishPath`: Directory containing built assets (string, optional)
+  - `envVars`: Environment variables array (array, optional)
+
+- **create_cron_job** - Create a new cron job in your Render account
+
+  - `name`: A unique name for your cron job (string, required)
+  - `schedule`: Cron schedule expression (string, required). Uses standard cron syntax with 5 fields: minute (0-59), hour (0-23), day of month (1-31), month (1-12), day of week (0-6, Sunday=0). Examples:
+    - `0 0 * * *`: Daily at midnight
+    - `*/15 * * * *`: Every 15 minutes
+    - `0 9 * * 1-5`: Weekdays at 9am
+    - `0 0 1 * *`: First day of each month at midnight
+  - `runtime`: Runtime environment for your cron job (string, required). Accepted values:
+    - `node`
+    - `python`
+    - `go`
+    - `rust`
+    - `ruby`
+    - `elixir`
+    - `docker`
+  - `buildCommand`: Command used to build your cron job (string, required)
+  - `startCommand`: Command that runs when your cron job executes (string, required)
+  - `repo`: Repository containing source code (string, optional)
+  - `branch`: Repository branch to deploy (string, optional)
+  - `plan`: Plan for your cron job (string, optional). Accepted values:
+    - `starter`
+    - `standard`
+    - `pro`
+    - `pro_max`
+    - `pro_plus`
+    - `pro_ultra`
+  - `autoDeploy`: Whether to automatically deploy the cron job (string, optional). Defaults to `yes`. Accepted values:
+    - `yes`: Enable automatic deployments
+    - `no`: Disable automatic deployments
+  - `region`: Geographic region for deployment (string, optional). Defaults to `oregon`. Accepted values:
+    - `oregon`
+    - `frankfurt`
+    - `singapore`
+    - `ohio`
+    - `virginia`
   - `envVars`: Environment variables array (array, optional)
 
 - **update_environment_variables** - Update all environment variables for a service

@@ -22,8 +22,10 @@ func Tools(c *client.ClientWithResponses) []server.ServerTool {
 		getService(serviceRepo),
 		createWebService(serviceRepo),
 		createStaticSite(serviceRepo),
+		createCronJob(serviceRepo),
 		updateWebService(),
 		updateStaticSite(),
+		updateCronJob(),
 		updateEnvVars(serviceRepo),
 	}
 }
@@ -400,6 +402,186 @@ func createValidatedStaticSiteRequest(ctx context.Context, request mcp.CallToolR
 	return validatedCreateServiceRequest(ctx, request, client.StaticSite, &serviceDetails)
 }
 
+func createCronJob(serviceRepo *Repo) server.ServerTool {
+	return server.ServerTool{
+		Tool: mcp.NewTool("create_cron_job",
+			mcp.WithDescription("Create a new cron job in your Render account. "+
+				"A cron job is a scheduled task that runs on a recurring schedule specified using cron syntax. "+
+				"Cron jobs are ideal for background tasks like data processing, cleanup operations, sending emails, or generating reports. "+
+				"By default, these services are automatically deployed when the specified branch is updated. "+
+				"This tool is currently limited to support only a subset of the cron job configuration parameters. "+
+				"It also only supports cron jobs which don't use Docker, or a container registry. "+
+				"To create a cron job without those limitations, please use the dashboard at: "+config.DashboardURL()+"/create"),
+			mcp.WithToolAnnotation(mcp.ToolAnnotation{
+				Title:          "Create cron job",
+				ReadOnlyHint:   pointers.From(false),
+				IdempotentHint: pointers.From(false),
+				OpenWorldHint:  pointers.From(true),
+			}),
+			mcp.WithString("name",
+				mcp.Required(),
+				mcp.Description("A unique name for your cron job."),
+			),
+			mcp.WithString("schedule",
+				mcp.Required(),
+				mcp.Description("The cron schedule expression that determines when the job runs. "+
+					"Uses standard cron syntax with 5 fields: minute (0-59), hour (0-23), day of month (1-31), month (1-12), day of week (0-6, Sunday=0). "+
+					"Examples: '0 0 * * *' (daily at midnight), '*/15 * * * *' (every 15 minutes), '0 9 * * 1-5' (weekdays at 9am), '0 0 1 * *' (first day of each month at midnight). "+
+					"For natural language requests like 'every hour' or 'daily at 3pm', convert to cron syntax."),
+			),
+			mcp.WithString("repo",
+				mcp.Description("The repository containing the source code for your cron job. Must be a valid Git URL that Render can clone and deploy. Do not include the branch in the repo string. You can instead supply a 'branch' parameter."),
+			),
+			mcp.WithString("branch",
+				mcp.Description("The repository branch to deploy. This branch will be deployed when you manually trigger deploys and when auto-deploy is enabled. If left empty, this will fall back to the default branch of the repository."),
+			),
+			mcp.WithString("autoDeploy",
+				mcp.Description("Whether to automatically deploy the cron job when the specified branch is updated. Defaults to 'yes'."),
+				mcp.Enum(string(client.AutoDeployYes), string(client.AutoDeployNo)),
+				mcp.DefaultString(string(client.AutoDeployYes)),
+			),
+			mcp.WithString("runtime",
+				mcp.Required(),
+				mcp.Description("The runtime environment for your cron job. This determines how your job is built and run."),
+				mcp.Enum("node", "python", "go", "rust", "ruby", "elixir", "docker"),
+			),
+			mcp.WithString("plan",
+				mcp.Description("The pricing plan for your cron job. Different plans offer different levels of resources and features."),
+				mcp.Enum(mcpserver.EnumValuesFromClientType(client.PaidPlanStarter, client.PaidPlanStandard, client.PaidPlanPro, client.PaidPlanProMax, client.PaidPlanProPlus, client.PaidPlanProUltra)...),
+				mcp.DefaultString(string(client.PaidPlanStarter)),
+			),
+			mcp.WithString("buildCommand",
+				mcp.Required(),
+				mcp.Description("The command used to build your cron job. For example, 'npm install' for Node.js or 'pip install -r requirements.txt' for Python."),
+			),
+			mcp.WithString("startCommand",
+				mcp.Required(),
+				mcp.Description("The command that runs when your cron job executes. For example, 'node scripts/cleanup.js' for Node.js or 'python scripts/process_data.py' for Python."),
+			),
+			mcp.WithString("region",
+				mcp.Description("The geographic region where your cron job will be deployed. Defaults to Oregon."),
+				mcp.Enum(mcpserver.RegionEnumValues()...),
+				mcp.DefaultString(string(client.Oregon)),
+			),
+			mcp.WithArray("envVars",
+				mcp.Description("Environment variables to set for your cron job. These are exposed during builds and at runtime."),
+				mcp.Items(
+					map[string]interface{}{
+						"type":                 "object",
+						"additionalProperties": false,
+						"required":             []string{"key", "value"},
+						"properties": map[string]interface{}{
+							"key": map[string]interface{}{
+								"type":        "string",
+								"description": "The name of the environment variable",
+							},
+							"value": map[string]interface{}{
+								"type":        "string",
+								"description": "The value of the environment variable",
+							},
+						},
+					},
+				),
+			),
+		),
+		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			requestBody, err := createValidatedCronJobRequest(ctx, request)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			response, err := serviceRepo.CreateService(ctx, *requestBody)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			respJSON, err := json.Marshal(response)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			return mcp.NewToolResultText(string(respJSON)), nil
+		},
+	}
+}
+
+func createValidatedCronJobRequest(ctx context.Context, request mcp.CallToolRequest) (*client.CreateServiceJSONRequestBody, error) {
+	runtime, err := validate.RequiredToolParam[string](request, "runtime")
+	if err != nil {
+		return nil, err
+	}
+
+	buildCommand, err := validate.RequiredToolParam[string](request, "buildCommand")
+	if err != nil {
+		return nil, err
+	}
+
+	startCommand, err := validate.RequiredToolParam[string](request, "startCommand")
+	if err != nil {
+		return nil, err
+	}
+
+	schedule, err := validate.RequiredToolParam[string](request, "schedule")
+	if err != nil {
+		return nil, err
+	}
+
+	nativeEnvironmentDetails := client.NativeEnvironmentDetailsPOST{
+		BuildCommand: buildCommand,
+		StartCommand: startCommand,
+	}
+
+	envSpecificDetailsPOST := client.EnvSpecificDetailsPOST{}
+	if err = envSpecificDetailsPOST.FromNativeEnvironmentDetailsPOST(nativeEnvironmentDetails); err != nil {
+		return nil, err
+	}
+
+	// Convert EnvSpecificDetailsPOST to EnvSpecificDetails
+	envSpecificDetails := client.EnvSpecificDetails{}
+	nativeEnvDetails, err := envSpecificDetailsPOST.AsNativeEnvironmentDetailsPOST()
+	if err != nil {
+		return nil, err
+	}
+	// Convert POST type to regular type
+	regularNativeEnvDetails := client.NativeEnvironmentDetails{
+		BuildCommand:     nativeEnvDetails.BuildCommand,
+		StartCommand:     nativeEnvDetails.StartCommand,
+		PreDeployCommand: nil, // Not available in POST version
+	}
+	if err = envSpecificDetails.FromNativeEnvironmentDetails(regularNativeEnvDetails); err != nil {
+		return nil, err
+	}
+
+	cronJobDetailsPOST := client.CronJobDetailsPOST{
+		Runtime:            client.ServiceRuntime(runtime),
+		Schedule:           schedule,
+		EnvSpecificDetails: &envSpecificDetails,
+	}
+
+	if plan, ok, err := validate.OptionalToolParam[string](request, "plan"); err != nil {
+		return nil, err
+	} else if ok {
+		paidPlan, err := validate.PaidPlan(plan)
+		if err != nil {
+			return nil, err
+		}
+		cronJobDetailsPOST.Plan = paidPlan
+	}
+
+	if region, ok, err := validate.OptionalToolParam[string](request, "region"); err != nil {
+		return nil, err
+	} else if ok {
+		cronJobDetailsPOST.Region = (*client.Region)(&region)
+	}
+
+	serviceDetails := client.ServicePOST_ServiceDetails{}
+	if err = serviceDetails.FromCronJobDetailsPOST(cronJobDetailsPOST); err != nil {
+		return nil, err
+	}
+
+	return validatedCreateServiceRequest(ctx, request, client.CronJob, &serviceDetails)
+}
+
 func updateWebService() server.ServerTool {
 	return server.ServerTool{
 		Tool: mcp.NewTool("update_web_service",
@@ -452,6 +634,34 @@ func updateStaticSite() server.ServerTool {
 			return mcp.NewToolResultText(
 				"Updating a static site directly is not supported. Please make changes using the dashboard or the API.\n\n" +
 					"Dashboard URL: " + config.DashboardURL() + "/static/" + serviceId + "/settings"), nil
+		},
+	}
+}
+
+func updateCronJob() server.ServerTool {
+	return server.ServerTool{
+		Tool: mcp.NewTool("update_cron_job",
+			mcp.WithDescription("Update an existing cron job in your Render account."),
+			mcp.WithToolAnnotation(mcp.ToolAnnotation{
+				Title:          "Update cron job",
+				ReadOnlyHint:   pointers.From(true),
+				IdempotentHint: pointers.From(true),
+			}),
+			mcp.WithString("serviceId",
+				mcp.Required(),
+				mcp.Description("The ID of the service to update"),
+			),
+		),
+		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			serviceId, err := validate.RequiredToolParam[string](request, "serviceId")
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			// Return a message indicating direct updates are not supported via MCP server
+			return mcp.NewToolResultText(
+				"Updating a cron job directly is not supported. Please make changes using the dashboard or the API.\n\n" +
+					"Dashboard URL: " + config.DashboardURL() + "/cron/" + serviceId + "/settings"), nil
 		},
 	}
 }
