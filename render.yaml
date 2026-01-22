@@ -3,6 +3,11 @@ services:
 - type: web
   name: mcp
   runtime: go
+  plan: standard
+  scaling:
+    minInstances: 1
+    maxInstances: 3
+    targetMemoryPercent: 60
   buildCommand: go build -tags netgo -ldflags '-s -w' -o app
   startCommand: ./app --transport http
   envVars:
