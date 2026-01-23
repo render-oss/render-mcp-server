@@ -21,8 +21,12 @@ func GetAPIKey() string {
 	return os.Getenv("RENDER_API_KEY")
 }
 
-func AddUserAgent(header http.Header) http.Header {
-	header.Add("user-agent", fmt.Sprintf("render-mcp-server/%s (%s)", Version, getOSInfoOnce()))
+func AddUserAgent(header http.Header, clientUserAgent string) http.Header {
+	ua := fmt.Sprintf("render-mcp-server/%s (%s)", Version, getOSInfoOnce())
+	if clientUserAgent != "" {
+		ua = ua + " " + clientUserAgent
+	}
+	header.Add("user-agent", ua)
 	return header
 }
 

@@ -9,6 +9,7 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/cfg"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	"github.com/render-oss/render-mcp-server/pkg/deploy"
+	"github.com/render-oss/render-mcp-server/pkg/httpcontext"
 	"github.com/render-oss/render-mcp-server/pkg/keyvalue"
 	"github.com/render-oss/render-mcp-server/pkg/logs"
 	"github.com/render-oss/render-mcp-server/pkg/metrics"
@@ -56,6 +57,7 @@ func Serve(transport string) *server.MCPServer {
 			NewStreamableHTTPServer(s, server.WithHTTPContextFunc(multicontext.MultiHTTPContextFunc(
 				session.ContextWithHTTPSession(sessionStore),
 				authn.ContextWithAPITokenFromHeader,
+				httpcontext.ContextWithHTTPRequest,
 			))).
 			Start(":10000")
 		if err != nil {

@@ -11,6 +11,7 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/authn"
 	"github.com/render-oss/render-mcp-server/pkg/cfg"
 	"github.com/render-oss/render-mcp-server/pkg/config"
+	"github.com/render-oss/render-mcp-server/pkg/httpcontext"
 )
 
 var ErrUnauthorized = errors.New("unauthorized")
@@ -24,9 +25,13 @@ func NewDefaultClient() (*ClientWithResponses, error) {
 	return clientWithAuth(&http.Client{}, apiCfg)
 }
 
-func AddHeaders(header http.Header, token string) http.Header {
-	header = cfg.AddUserAgent(header)
+func AddHeaders(ctx context.Context, header http.Header, token string) http.Header {
+	hc := httpcontext.FromContext(ctx)
+	header = cfg.AddUserAgent(header, hc.UserAgent)
 	header.Add("authorization", fmt.Sprintf("Bearer %s", token))
+	if hc.ForwardedFor != "" {
+		header.Add("X-Forwarded-For", hc.ForwardedFor)
+	}
 	return header
 }
 
@@ -93,7 +98,7 @@ func firstNonNilErrorField(response any) *ErrorWithCode {
 
 func clientWithAuth(httpClient *http.Client, apiCfg config.APIConfig) (*ClientWithResponses, error) {
 	insertAuth := func(ctx context.Context, req *http.Request) error {
-		req.Header = AddHeaders(req.Header, authn.APITokenFromContext(ctx))
+		req.Header = AddHeaders(ctx, req.Header, authn.APITokenFromContext(ctx))
 		return nil
 	}
 
