@@ -3,11 +3,13 @@ package validate
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	pgclient "github.com/render-oss/render-mcp-server/pkg/client/postgres"
 	"github.com/render-oss/render-mcp-server/pkg/config"
+	"github.com/render-oss/render-mcp-server/pkg/mcpserver"
 	"github.com/render-oss/render-mcp-server/pkg/pointers"
 )
 
@@ -126,17 +128,12 @@ func EnvVars(request mcp.CallToolRequest) ([]client.EnvVarInput, bool, error) {
 	return envVars, true, nil
 }
 
-func PaidPlan(plan string) (*client.PaidPlan, error) {
-	switch client.PaidPlan(plan) {
-	case client.PaidPlanStarter, client.PaidPlanStandard, client.PaidPlanPro,
-		client.PaidPlanProMax, client.PaidPlanProPlus, client.PaidPlanProUltra:
-		return pointers.From(client.PaidPlan(plan)), nil
-	case "free":
-		return nil, fmt.Errorf("MCP server doesn't support free plans. "+
-			"If you're looking to create a free service, use the dashboard at: %s", config.DashboardURL())
-	default:
-		return nil, fmt.Errorf("invalid paid plan: %s", plan)
+func ServicePlan(plan string) (*client.PaidPlan, error) {
+	paidPlan := client.PaidPlan(plan)
+	if slices.Contains(mcpserver.ValidServicePlanValues, paidPlan) {
+		return &paidPlan, nil
 	}
+	return nil, fmt.Errorf("invalid service plan: %s", plan)
 }
 
 func KeyValuePlan(plan string) (*client.KeyValuePlan, error) {

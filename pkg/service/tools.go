@@ -141,8 +141,8 @@ func createWebService(serviceRepo *Repo) server.ServerTool {
 			),
 			mcp.WithString("plan",
 				mcp.Description("The pricing plan for your service. Different plans offer different levels of resources and features."),
-				mcp.Enum(mcpserver.EnumValuesFromClientType(client.PaidPlanStarter, client.PaidPlanStandard, client.PaidPlanPro, client.PaidPlanProMax, client.PaidPlanProPlus, client.PaidPlanProUltra)...),
-				mcp.DefaultString(string(client.PaidPlanStarter)),
+				mcp.Enum(mcpserver.ServicePlanEnumValues()...),
+				mcp.DefaultString(string(client.PlanFree)),
 			),
 			mcp.WithString("buildCommand",
 				mcp.Required(),
@@ -233,11 +233,11 @@ func createValidatedWebServiceRequest(ctx context.Context, request mcp.CallToolR
 	if plan, ok, err := validate.OptionalToolParam[string](request, "plan"); err != nil {
 		return nil, err
 	} else if ok {
-		paidPlan, err := validate.PaidPlan(plan)
+		servicePlan, err := validate.ServicePlan(plan)
 		if err != nil {
 			return nil, err
 		}
-		webServiceDetailsPOST.Plan = paidPlan
+		webServiceDetailsPOST.Plan = servicePlan
 	}
 
 	if region, ok, err := validate.OptionalToolParam[string](request, "region"); err != nil {
@@ -447,8 +447,8 @@ func createCronJob(serviceRepo *Repo) server.ServerTool {
 			),
 			mcp.WithString("plan",
 				mcp.Description("The pricing plan for your cron job. Different plans offer different levels of resources and features."),
-				mcp.Enum(mcpserver.EnumValuesFromClientType(client.PaidPlanStarter, client.PaidPlanStandard, client.PaidPlanPro, client.PaidPlanProMax, client.PaidPlanProPlus, client.PaidPlanProUltra)...),
-				mcp.DefaultString(string(client.PaidPlanStarter)),
+				mcp.Enum(mcpserver.ServicePlanEnumValues()...),
+				mcp.DefaultString(string(client.PlanStarter)),
 			),
 			mcp.WithString("buildCommand",
 				mcp.Required(),
@@ -561,11 +561,11 @@ func createValidatedCronJobRequest(ctx context.Context, request mcp.CallToolRequ
 	if plan, ok, err := validate.OptionalToolParam[string](request, "plan"); err != nil {
 		return nil, err
 	} else if ok {
-		paidPlan, err := validate.PaidPlan(plan)
+		servicePlan, err := validate.ServicePlan(plan)
 		if err != nil {
 			return nil, err
 		}
-		cronJobDetailsPOST.Plan = paidPlan
+		cronJobDetailsPOST.Plan = servicePlan
 	}
 
 	if region, ok, err := validate.OptionalToolParam[string](request, "region"); err != nil {

@@ -12,6 +12,7 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/pointers"
 	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUpdateEnvVarsTool(t *testing.T) {
@@ -153,6 +154,80 @@ func envVarInputsAsParams(envVars []client.EnvVarInput) []interface{} {
 	return envVarsAsParams
 }
 
+func TestCreateWebServiceTool(t *testing.T) {
+	ownerId := "own-123456"
+	serviceName := "test-web-service"
+	runtime := "node"
+	buildCommand := "npm install"
+	startCommand := "npm start"
+
+	tests := []struct {
+		name         string
+		plan         string
+		expectedPlan *client.PaidPlan
+	}{
+		{
+			name:         "Create web service with free plan",
+			plan:         "free",
+			expectedPlan: pointers.From(client.PaidPlan("free")),
+		},
+		{
+			name:         "Create web service with starter plan",
+			plan:         "starter",
+			expectedPlan: pointers.From(client.PaidPlanStarter),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeClient := &fakes.FakeServiceRepoClient{}
+			repo := NewRepo(fakeClient)
+
+			fakeClient.CreateServiceWithResponseReturns(&client.CreateServiceResponse{
+				JSON201: &client.ServiceAndDeploy{
+					Service: &client.Service{
+						Id:   "srv-web-123",
+						Name: serviceName,
+						Type: client.WebService,
+					},
+				},
+				HTTPResponse: &http.Response{
+					StatusCode: 201,
+				},
+			}, nil)
+
+			ctx := createTestContext(ownerId)
+
+			request := mcp.CallToolRequest{}
+			request.Params.Arguments = map[string]any{
+				"name":         serviceName,
+				"runtime":      runtime,
+				"buildCommand": buildCommand,
+				"startCommand": startCommand,
+				"plan":         tt.plan,
+			}
+
+			tool := createWebService(repo)
+			result, err := tool.Handler(ctx, request)
+
+			require.NoError(t, err)
+			require.NotNil(t, result)
+			require.False(t, result.IsError, "expected no error but got: %v", result.Content)
+
+			assert.Equal(t, 1, fakeClient.CreateServiceWithResponseCallCount())
+			_, requestBody, _ := fakeClient.CreateServiceWithResponseArgsForCall(0)
+			assert.Equal(t, serviceName, requestBody.Name)
+			assert.Equal(t, ownerId, requestBody.OwnerId)
+			assert.Equal(t, client.WebService, requestBody.Type)
+
+			webServiceDetails, err := requestBody.ServiceDetails.AsWebServiceDetailsPOST()
+			assert.NoError(t, err)
+			assert.Equal(t, client.ServiceRuntime(runtime), webServiceDetails.Runtime)
+			assert.Equal(t, tt.expectedPlan, webServiceDetails.Plan)
+		})
+	}
+}
+
 func TestCreateCronJobTool(t *testing.T) {
 	ownerId := "own-123456"
 	cronJobName := "test-cron-job"
@@ -173,12 +248,12 @@ func TestCreateCronJobTool(t *testing.T) {
 	}
 
 	tests := []struct {
-		name                  string
-		params                map[string]interface{}
-		expectedServiceType   client.ServiceType
-		expectedResponseCode  int
-		expectError           bool
-		validateRequestBody   func(*testing.T, client.CreateServiceJSONRequestBody)
+		name                 string
+		params               map[string]interface{}
+		expectedServiceType  client.ServiceType
+		expectedResponseCode int
+		expectError          bool
+		validateRequestBody  func(*testing.T, client.CreateServiceJSONRequestBody)
 	}{
 		{
 			name: "Create cron job with all required params",

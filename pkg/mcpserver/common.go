@@ -5,6 +5,16 @@ import (
 	pgclient "github.com/render-oss/render-mcp-server/pkg/client/postgres"
 )
 
+var ValidServicePlanValues = []client.PaidPlan{
+	client.PaidPlan("free"),
+	client.PaidPlanStarter,
+	client.PaidPlanStandard,
+	client.PaidPlanPro,
+	client.PaidPlanProPlus,
+	client.PaidPlanProMax,
+	client.PaidPlanProUltra,
+}
+
 func RegionEnumValues() []string {
 	return EnumValuesFromClientType(
 		client.Oregon,
@@ -13,6 +23,10 @@ func RegionEnumValues() []string {
 		client.Ohio,
 		client.Virginia,
 	)
+}
+
+func ServicePlanEnumValues() []string {
+	return EnumValuesFromClientType(ValidServicePlanValues...)
 }
 
 func PostgresPlanEnumValues() []string {
