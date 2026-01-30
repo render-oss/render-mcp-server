@@ -163,17 +163,22 @@ func TestCreateWebServiceTool(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		plan         string
+		plan         *string
 		expectedPlan *client.PaidPlan
 	}{
 		{
+			name:         "Create web service with no plan defaults to free",
+			plan:         nil,
+			expectedPlan: pointers.From(client.PaidPlan("free")),
+		},
+		{
 			name:         "Create web service with free plan",
-			plan:         "free",
+			plan:         pointers.From("free"),
 			expectedPlan: pointers.From(client.PaidPlan("free")),
 		},
 		{
 			name:         "Create web service with starter plan",
-			plan:         "starter",
+			plan:         pointers.From("starter"),
 			expectedPlan: pointers.From(client.PaidPlanStarter),
 		},
 	}
@@ -198,14 +203,17 @@ func TestCreateWebServiceTool(t *testing.T) {
 
 			ctx := createTestContext(ownerId)
 
-			request := mcp.CallToolRequest{}
-			request.Params.Arguments = map[string]any{
+			args := map[string]any{
 				"name":         serviceName,
 				"runtime":      runtime,
 				"buildCommand": buildCommand,
 				"startCommand": startCommand,
-				"plan":         tt.plan,
 			}
+			if tt.plan != nil {
+				args["plan"] = *tt.plan
+			}
+			request := mcp.CallToolRequest{}
+			request.Params.Arguments = args
 
 			tool := createWebService(repo)
 			result, err := tool.Handler(ctx, request)

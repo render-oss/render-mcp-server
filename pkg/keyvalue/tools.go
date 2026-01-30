@@ -105,7 +105,6 @@ func createKeyValue(keyValueRepo *Repo) server.ServerTool {
 				mcp.Description("Name of the Key Value instance"),
 			),
 			mcp.WithString("plan",
-				mcp.Required(),
 				mcp.Description("Pricing plan for the Key Value instance"),
 				mcp.Enum(mcpserver.EnumValuesFromClientType(client.KeyValuePlanFree, client.KeyValuePlanStarter, client.KeyValuePlanStandard, client.KeyValuePlanPro, client.KeyValuePlanProPlus)...),
 				mcp.DefaultString(string(client.KeyValuePlanFree)),
@@ -131,19 +130,23 @@ func createKeyValue(keyValueRepo *Repo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			plan, err := validate.RequiredToolParam[string](request, "plan")
-			if err != nil {
+			var keyValuePlan client.KeyValuePlan
+			if plan, ok, err := validate.OptionalToolParam[string](request, "plan"); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
-			}
-			keyValuePlan, err := validate.KeyValuePlan(plan)
-			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
+			} else if ok {
+				kvPlan, err := validate.KeyValuePlan(plan)
+				if err != nil {
+					return mcp.NewToolResultError(err.Error()), nil
+				}
+				keyValuePlan = *kvPlan
+			} else {
+				keyValuePlan = client.KeyValuePlanFree
 			}
 
 			createParams := client.KeyValuePOSTInput{
 				Name:    name,
 				OwnerId: ownerId,
-				Plan:    *keyValuePlan,
+				Plan:    keyValuePlan,
 			}
 
 			if region, ok, err := validate.OptionalToolParam[string](request, "region"); err != nil {

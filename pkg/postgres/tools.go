@@ -109,9 +109,9 @@ func createPostgres(postgresRepo *Repo) server.ServerTool {
 				mcp.Description("The name of the database as it will appear in the Render Dashboard"),
 			),
 			mcp.WithString("plan",
-				mcp.Required(),
 				mcp.Description("Pricing plan for the database"),
 				mcp.Enum(mcpserver.PostgresPlanEnumValues()...),
+				mcp.DefaultString(string(pgclient.Free)),
 			),
 			mcp.WithString("region",
 				mcp.Description("Region where the database will be deployed"),
@@ -138,13 +138,16 @@ func createPostgres(postgresRepo *Repo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			plan, err := validate.RequiredToolParam[string](request, "plan")
-			if err != nil {
+			var postgresPlan pgclient.PostgresPlans
+			if plan, ok, err := validate.OptionalToolParam[string](request, "plan"); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
-			}
-			postgresPlan, err := validate.PostgresPlan(plan)
-			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
+			} else if ok {
+				postgresPlan, err = validate.PostgresPlan(plan)
+				if err != nil {
+					return mcp.NewToolResultError(err.Error()), nil
+				}
+			} else {
+				postgresPlan = pgclient.Free
 			}
 
 			createParams := client.PostgresPOSTInput{

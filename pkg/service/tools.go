@@ -238,6 +238,8 @@ func createValidatedWebServiceRequest(ctx context.Context, request mcp.CallToolR
 			return nil, err
 		}
 		webServiceDetailsPOST.Plan = servicePlan
+	} else {
+		webServiceDetailsPOST.Plan = pointers.From(client.PaidPlan("free"))
 	}
 
 	if region, ok, err := validate.OptionalToolParam[string](request, "region"); err != nil {
