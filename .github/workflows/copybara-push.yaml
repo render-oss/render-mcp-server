@@ -1,0 +1,78 @@
+name: copybara-push
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force initial sync (use --init-history)'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  copy:
+    if: ${{ github.repository == 'renderinc/render-mcp-server' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: oracle
+          java-version: 21
+      - name: Generate an app token for render-oss
+        id: generate-token-oss
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_KEY }}
+          owner: render-oss
+          repositories: render-mcp-server
+      - name: Generate an app token for renderinc
+        id: generate-token-renderinc
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_KEY }}
+          owner: renderinc
+          repositories: render-mcp-server
+      - name: Get GitHub App User ID
+        id: get-user-id
+        env:
+          GH_TOKEN: ${{ steps.generate-token-renderinc.outputs.token }}
+          APP_SLUG: ${{ steps.generate-token-renderinc.outputs.app-slug }}
+        run: echo "user-id=$(gh api "/users/$APP_SLUG[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+      - name: Set up credentials
+        env:
+          RENDERINC_TOKEN: ${{ steps.generate-token-renderinc.outputs.token }}
+          RENDER_OSS_TOKEN: ${{ steps.generate-token-oss.outputs.token }}
+          APP_SLUG: ${{ steps.generate-token-oss.outputs.app-slug }}
+          USER_ID: ${{ steps.get-user-id.outputs.user-id }}
+        run: |
+          echo "https://$USER:$RENDERINC_TOKEN@api.github.com" > ~/.git-credentials
+          echo "https://$USER:$RENDERINC_TOKEN@github.com" >> ~/.git-credentials
+          git config --global user.name "$APP_SLUG[bot]"
+          git config --global user.email "$USER_ID+$APP_SLUG[bot]@users.noreply.github.com"
+          git config --global url."https://$USER:${RENDERINC_TOKEN}@github.com/renderinc".insteadOf "git@github.com:renderinc"
+          git config --global url."https://$USER:${RENDERINC_TOKEN}@github.com/renderinc".insteadOf "https://github.com/renderinc"
+          git config --global url."https://$USER:${RENDER_OSS_TOKEN}@github.com/render-oss".insteadOf "git@github.com:render-oss"
+          git config --global url."https://$USER:${RENDER_OSS_TOKEN}@github.com/render-oss".insteadOf "https://github.com/render-oss"
+      - name: Set up copybara
+        run: |
+          wget https://github.com/google/copybara/releases/download/v20251215/copybara_deploy.jar
+          java -jar copybara_deploy.jar version
+          java -jar copybara_deploy.jar validate copy.bara.sky
+      - name: Run workflow
+        env:
+          RENDER_OSS_TOKEN: ${{ steps.generate-token-oss.outputs.token }}
+          FORCE_INIT: ${{ github.event.inputs.force }}
+        run: |
+          EXTRA_ARGS=""
+          if [ "$FORCE_INIT" = "true" ]; then
+            EXTRA_ARGS="--init-history"
+          fi
+          java -jar copybara_deploy.jar copy.bara.sky push \
+            --git-destination-url "https://$USER:$RENDER_OSS_TOKEN@github.com/render-oss/render-mcp-server.git" \
+            $EXTRA_ARGS
