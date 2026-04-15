@@ -3,6 +3,7 @@ package metrics
 import (
 	"context"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/render-oss/render-mcp-server/pkg/client"
@@ -86,10 +87,11 @@ type MetricsTestSuite struct {
 }
 
 func (s *MetricsTestSuite) SetupTest() {
+	s.T().Setenv("RENDER_CONFIG_PATH", filepath.Join(s.T().TempDir(), "mcp-server.yaml"))
 	s.mockClient = &MockClientWithResponses{}
 	s.repo = NewRepo(s.mockClient)
 	s.ctx = session.ContextWithStdioSession(context.Background())
-	
+
 	// Set up a workspace for tests
 	sess := session.FromContext(s.ctx)
 	err := sess.SetWorkspace(s.ctx, "test-workspace-123")

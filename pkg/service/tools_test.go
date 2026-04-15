@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -201,7 +202,7 @@ func TestCreateWebServiceTool(t *testing.T) {
 				},
 			}, nil)
 
-			ctx := createTestContext(ownerId)
+			ctx := createTestContext(t, ownerId)
 
 			args := map[string]any{
 				"name":         serviceName,
@@ -373,7 +374,7 @@ func TestCreateCronJobTool(t *testing.T) {
 			}, nil)
 
 			// Create a test context with a session
-			ctx := createTestContext(ownerId)
+			ctx := createTestContext(t, ownerId)
 
 			// Build the request
 			request := mcp.CallToolRequest{}
@@ -410,7 +411,9 @@ func TestCreateCronJobTool(t *testing.T) {
 }
 
 // createTestContext creates a test context with a session that has the given workspace ID
-func createTestContext(workspaceID string) context.Context {
+func createTestContext(t *testing.T, workspaceID string) context.Context {
+	t.Helper()
+	t.Setenv("RENDER_CONFIG_PATH", filepath.Join(t.TempDir(), "mcp-server.yaml"))
 	ctx := session.ContextWithStdioSession(context.Background())
 	sess := session.FromContext(ctx)
 	sess.SetWorkspace(ctx, workspaceID)

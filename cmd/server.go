@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/mark3labs/mcp-go/server"
@@ -53,13 +54,26 @@ func Serve(transport string) *server.MCPServer {
 			log.Print("using in-memory session store\n")
 			sessionStore = session.NewInMemoryStore()
 		}
-		err := server.
-			NewStreamableHTTPServer(s, server.WithHTTPContextFunc(multicontext.MultiHTTPContextFunc(
-				session.ContextWithHTTPSession(sessionStore),
-				authn.ContextWithAPITokenFromHeader,
-				httpcontext.ContextWithHTTPRequest,
-			))).
-			Start(":10000")
+		streamableServer := server.NewStreamableHTTPServer(s, server.WithHTTPContextFunc(multicontext.MultiHTTPContextFunc(
+			session.ContextWithHTTPSession(sessionStore),
+			authn.ContextWithAPITokenFromHeader,
+			httpcontext.ContextWithHTTPRequest,
+		)))
+
+		mux := http.NewServeMux()
+		mux.Handle("/mcp", streamableServer)
+		if token := os.Getenv("OPENAI_VERIFICATION_TOKEN"); token != "" {
+			mux.HandleFunc("/.well-known/openai-apps-challenge", func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "text/plain")
+				w.Write([]byte(token))
+			})
+		}
+
+		httpServer := &http.Server{
+			Addr:    ":10000",
+			Handler: mux,
+		}
+		err := httpServer.ListenAndServe()
 		if err != nil {
 			log.Fatalf("Starting Streamable server: %v\n:", err)
 		}

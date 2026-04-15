@@ -11,6 +11,8 @@ services:
   buildCommand: go build -tags netgo -ldflags '-s -w' -o app
   startCommand: ./app --transport http
   envVars:
+  - key: OPENAI_VERIFICATION_TOKEN
+    sync: false
   - key: REDIS_URL
     fromService:
       name: mcp-kv
