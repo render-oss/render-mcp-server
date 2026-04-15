@@ -28,10 +28,11 @@ func listWorkspaces(ownerRepo *Repo) server.ServerTool {
 		Tool: mcp.NewTool("list_workspaces",
 			mcp.WithDescription("List the workspaces that you have access to"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
-				Title:          "List workspaces",
-				ReadOnlyHint:   pointers.From(true),
-				IdempotentHint: pointers.From(true),
-				OpenWorldHint:  pointers.From(true),
+				Title:           "List workspaces",
+				ReadOnlyHint:    pointers.From(true),
+				DestructiveHint: pointers.From(false),
+				IdempotentHint:  pointers.From(true),
+				OpenWorldHint:   pointers.From(true),
 			}),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -69,9 +70,11 @@ func selectWorkspace() server.ServerTool {
 				"as part of an automated process. Having the wrong workspace selected can lead to "+
 				"destructive actions being performed on unintended resources."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
-				Title:          "Select workspace",
-				IdempotentHint: pointers.From(true),
-				OpenWorldHint:  pointers.From(true),
+				Title:           "Select workspace",
+				ReadOnlyHint:    pointers.From(false),
+				DestructiveHint: pointers.From(false),
+				IdempotentHint:  pointers.From(true),
+				OpenWorldHint:   pointers.From(true),
 			}),
 			mcp.WithString("ownerID",
 				mcp.Required(),
@@ -99,10 +102,11 @@ func getSelectedWorkspace() server.ServerTool {
 		Tool: mcp.NewTool("get_selected_workspace",
 			mcp.WithDescription("Get the currently selected workspace"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
-				Title:          "Get selected workspace",
-				ReadOnlyHint:   pointers.From(true),
-				IdempotentHint: pointers.From(true),
-				OpenWorldHint:  pointers.From(true),
+				Title:           "Get selected workspace",
+				ReadOnlyHint:    pointers.From(true),
+				DestructiveHint: pointers.From(false),
+				IdempotentHint:  pointers.From(true),
+				OpenWorldHint:   pointers.From(true),
 			}),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {

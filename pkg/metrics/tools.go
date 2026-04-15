@@ -32,9 +32,10 @@ func getMetrics(metricsRepo *Repo) server.ServerTool {
 				"Limits and targets help understand resource constraints and autoscaling thresholds. "+
 				"Metrics may be empty if the metric is not valid for the given resource."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
-				Title:         "Get resource metrics",
-				ReadOnlyHint:  pointers.From(true),
-				OpenWorldHint: pointers.From(true),
+				Title:           "Get resource metrics",
+				ReadOnlyHint:    pointers.From(true),
+				DestructiveHint: pointers.From(false),
+				OpenWorldHint:   pointers.From(true),
 			}),
 			mcp.WithString("resourceId",
 				mcp.Required(),
