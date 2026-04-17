@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/render-oss/render-mcp-server/pkg/authn"
@@ -70,8 +71,9 @@ func Serve(transport string) *server.MCPServer {
 		}
 
 		httpServer := &http.Server{
-			Addr:    ":10000",
-			Handler: mux,
+			Addr:        ":10000",
+			Handler:     mux,
+			ReadTimeout: 5 * time.Second,
 		}
 		err := httpServer.ListenAndServe()
 		if err != nil {
