@@ -22,11 +22,26 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/session"
 )
 
+const serverInstructions = `This server manages resources on Render (https://render.com).
+
+Workspace selection is required before most actions. Tools that operate on services, ` +
+	"deploys, postgres databases, key-value stores, logs, or metrics need a workspace to be " +
+	"selected for the current session.\n\n" +
+	`Workspace flow:
+  1. If unsure whether a workspace is selected, call ` + "`get_selected_workspace`" + `.
+  2. If none is selected (or a tool returns a "no workspace selected" error), call ` +
+	"`list_workspaces`" + ` to see available workspaces.
+  3. Ask the user which workspace to use. NEVER pick one yourself — selecting the wrong ` +
+	`workspace can cause destructive actions on unintended resources.
+  4. Once the user confirms, call ` + "`select_workspace`" + ` with the matching ownerID, then ` +
+	`retry the original tool call.`
+
 func Serve(transport string) *server.MCPServer {
 	// Create MCP server
 	s := server.NewMCPServer(
 		"render-mcp-server",
 		cfg.Version,
+		server.WithInstructions(serverInstructions),
 	)
 
 	c, err := client.NewDefaultClient()
