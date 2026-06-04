@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/render-oss/render-mcp-server/pkg/cfg"
+	"github.com/render-oss/render-mcp-server/pkg/logging"
 )
 
 const apiTokenKey string = "token"
@@ -28,6 +29,7 @@ func ContextWithAPITokenFromHeader(ctx context.Context, req *http.Request) conte
 	token := req.Header.Get("Authorization")
 
 	if token == "" {
+		logging.Error("auth: no Authorization header on %s %s", req.Method, req.URL.Path)
 		return ctx
 	}
 

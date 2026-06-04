@@ -45,6 +45,15 @@ func TestErrorFromResponse(t *testing.T) {
 
 			require.ErrorContains(t, err, "received response code 400: unknown error")
 		})
+
+		t.Run("when body has no message field", func(t *testing.T) {
+			err := client.ErrorFromResponse(&client.ListSnapshotsResponse{
+				Body:         []byte(`{}`),
+				HTTPResponse: &http.Response{StatusCode: 502},
+			})
+
+			require.ErrorContains(t, err, "received response code 502 with empty message")
+		})
 	})
 
 	t.Run("status code < 400", func(t *testing.T) {
