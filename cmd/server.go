@@ -7,12 +7,14 @@ import (
 	"time"
 
 	"github.com/mark3labs/mcp-go/server"
+	mcputil "github.com/mark3labs/mcp-go/util"
 	"github.com/render-oss/render-mcp-server/pkg/authn"
 	"github.com/render-oss/render-mcp-server/pkg/cfg"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	"github.com/render-oss/render-mcp-server/pkg/deploy"
 	"github.com/render-oss/render-mcp-server/pkg/httpcontext"
 	"github.com/render-oss/render-mcp-server/pkg/keyvalue"
+	"github.com/render-oss/render-mcp-server/pkg/logging"
 	"github.com/render-oss/render-mcp-server/pkg/logs"
 	"github.com/render-oss/render-mcp-server/pkg/metrics"
 	"github.com/render-oss/render-mcp-server/pkg/multicontext"
@@ -23,10 +25,16 @@ import (
 )
 
 func Serve(transport string) *server.MCPServer {
+	mcpServerOpts := []server.ServerOption{}
+	if hooks := logging.NewHooks(); hooks != nil {
+		mcpServerOpts = append(mcpServerOpts, server.WithHooks(hooks))
+	}
+
 	// Create MCP server
 	s := server.NewMCPServer(
 		"render-mcp-server",
 		cfg.Version,
+		mcpServerOpts...,
 	)
 
 	c, err := client.NewDefaultClient()
@@ -55,11 +63,14 @@ func Serve(transport string) *server.MCPServer {
 			log.Print("using in-memory session store\n")
 			sessionStore = session.NewInMemoryStore()
 		}
-		streamableServer := server.NewStreamableHTTPServer(s, server.WithHTTPContextFunc(multicontext.MultiHTTPContextFunc(
-			session.ContextWithHTTPSession(sessionStore),
-			authn.ContextWithAPITokenFromHeader,
-			httpcontext.ContextWithHTTPRequest,
-		)))
+		streamableServer := server.NewStreamableHTTPServer(s,
+			server.WithLogger(mcputil.DefaultLogger()),
+			server.WithHTTPContextFunc(multicontext.MultiHTTPContextFunc(
+				session.ContextWithHTTPSession(sessionStore),
+				authn.ContextWithAPITokenFromHeader,
+				httpcontext.ContextWithHTTPRequest,
+			)),
+		)
 
 		mux := http.NewServeMux()
 		mux.Handle("/mcp", streamableServer)
@@ -72,7 +83,7 @@ func Serve(transport string) *server.MCPServer {
 
 		httpServer := &http.Server{
 			Addr:        ":10000",
-			Handler:     mux,
+			Handler:     logging.HTTPMiddleware(mux),
 			ReadTimeout: 5 * time.Second,
 		}
 		err := httpServer.ListenAndServe()

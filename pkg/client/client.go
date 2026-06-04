@@ -12,6 +12,7 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/cfg"
 	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/httpcontext"
+	"github.com/render-oss/render-mcp-server/pkg/logging"
 )
 
 var ErrUnauthorized = errors.New("unauthorized")
@@ -42,17 +43,22 @@ func ErrorFromResponse(v any) error {
 	}
 
 	if responseErr.Code == http.StatusUnauthorized {
+		logging.Error("render api: unauthorized (status 401)")
 		return ErrUnauthorized
 	}
 	if responseErr.Code == http.StatusForbidden {
+		logging.Error("render api: forbidden (status 403)")
 		return ErrForbidden
 	}
 
+	var err error
 	if responseErr.Message != nil && *responseErr.Message != "" {
-		return fmt.Errorf("received response code %d: %s", responseErr.Code, *responseErr.Message)
+		err = fmt.Errorf("received response code %d: %s", responseErr.Code, *responseErr.Message)
+	} else {
+		err = fmt.Errorf("received response code %d with empty message", responseErr.Code)
 	}
-
-	return fmt.Errorf("unknown error")
+	logging.Error("render api: %v", err)
+	return err
 }
 
 type ErrorWithCode struct {
