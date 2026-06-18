@@ -18,6 +18,7 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/logs"
 	"github.com/render-oss/render-mcp-server/pkg/metrics"
 	"github.com/render-oss/render-mcp-server/pkg/multicontext"
+	"github.com/render-oss/render-mcp-server/pkg/oauth"
 	"github.com/render-oss/render-mcp-server/pkg/owner"
 	"github.com/render-oss/render-mcp-server/pkg/postgres"
 	"github.com/render-oss/render-mcp-server/pkg/service"
@@ -72,21 +73,20 @@ func Serve(transport string) *server.MCPServer {
 			)),
 		)
 
-		mux := http.NewServeMux()
-		mux.Handle("/mcp", streamableServer)
-		if token := os.Getenv("OPENAI_VERIFICATION_TOKEN"); token != "" {
-			mux.HandleFunc("/.well-known/openai-apps-challenge", func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Content-Type", "text/plain")
-				w.Write([]byte(token))
-			})
+		// OAuth resource-server support is opt-in via OAUTH_ENABLED;
+		// pkg/oauth owns the gate. Fail at boot on misconfiguration.
+		oauthCfg, err := oauth.FromEnv()
+		if err != nil {
+			log.Fatalf("OAuth configuration: %v", err)
 		}
+		mux := newHTTPMux(streamableServer, oauthCfg, os.Getenv("OPENAI_VERIFICATION_TOKEN"))
 
 		httpServer := &http.Server{
 			Addr:        ":10000",
 			Handler:     logging.HTTPMiddleware(mux),
 			ReadTimeout: 5 * time.Second,
 		}
-		err := httpServer.ListenAndServe()
+		err = httpServer.ListenAndServe()
 		if err != nil {
 			log.Fatalf("Starting Streamable server: %v\n:", err)
 		}
@@ -101,4 +101,29 @@ func Serve(transport string) *server.MCPServer {
 	}
 
 	return s
+}
+
+// newHTTPMux serves /mcp behind the OAuth middleware plus the RFC 9728 metadata
+// routes. When OAuth is disabled the middleware is identity and metadata 404s,
+// so /mcp is unchanged. openAIToken, when set, serves the OpenAI app challenge.
+func newHTTPMux(mcpHandler http.Handler, oauthCfg oauth.Config, openAIToken string) *http.ServeMux {
+	oauthMiddleware := oauth.Middleware(oauthCfg, oauth.NewIntrospector(
+		oauthCfg.AuthorizationServerURL,
+		oauthCfg.IntrospectionServiceToken,
+		oauth.DefaultIntrospectionCacheTTL,
+	))
+
+	mux := http.NewServeMux()
+	mux.Handle("/mcp", oauthMiddleware(mcpHandler))
+	metadata := oauth.HandleProtectedResourceMetadata(oauthCfg)
+	for _, path := range oauthCfg.MetadataPaths() {
+		mux.HandleFunc(path, metadata)
+	}
+	if openAIToken != "" {
+		mux.HandleFunc("/.well-known/openai-apps-challenge", func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "text/plain")
+			_, _ = w.Write([]byte(openAIToken))
+		})
+	}
+	return mux
 }

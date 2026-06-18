@@ -13,6 +13,8 @@ services:
   envVars:
   - key: OPENAI_VERIFICATION_TOKEN
     sync: false
+  - key: OAUTH_INTROSPECTION_SERVICE_TOKEN
+    sync: false
   - key: REDIS_URL
     fromService:
       name: mcp-kv
