@@ -18,7 +18,12 @@ var defaultConfigPath string
 const configPathEnvKey = "RENDER_CONFIG_PATH"
 const workspaceEnvKey = "RENDER_WORKSPACE"
 
-var ErrNoWorkspace = errors.New("no workspace set. Prompt the user to select a workspace. Do NOT try to select a workspace for them, as it may be destructive")
+var ErrNoWorkspace = errors.New("no workspace selected. To resolve: " +
+	"(1) call the `list_workspaces` tool to see the workspaces this account has access to, " +
+	"(2) ask the user which workspace to use — do NOT pick one yourself, since acting on the " +
+	"wrong workspace can cause destructive changes to unintended resources, " +
+	"(3) once the user confirms, call the `select_workspace` tool with the matching `ownerID`, " +
+	"then retry the original tool call")
 var ErrLogin = errors.New("not authenticated; either set RENDER_API_KEY or ask your MCP host to authenticate")
 
 type Config struct {
