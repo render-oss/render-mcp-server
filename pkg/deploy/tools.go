@@ -17,6 +17,7 @@ func Tools(c *client.ClientWithResponses) []server.ServerTool {
 	return []server.ServerTool{
 		listDeploys(deployRepo),
 		getDeploy(deployRepo),
+		triggerDeploy(deployRepo),
 	}
 }
 
@@ -128,6 +129,50 @@ func getDeploy(deployRepo *Repo) server.ServerTool {
 			}
 
 			respJSON, err := json.Marshal(response)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			return mcp.NewToolResultText(string(respJSON)), nil
+		},
+	}
+}
+func triggerDeploy(deployRepo *Repo) server.ServerTool {
+	return server.ServerTool{
+		Tool: mcp.NewTool("trigger_deploy",
+			mcp.WithDescription("Trigger a new deploy for a service. Use this to redeploy a service after making changes."),
+			mcp.WithToolAnnotation(mcp.ToolAnnotation{
+				Title:          "Trigger deploy",
+				ReadOnlyHint:   pointers.From(false),
+				IdempotentHint: pointers.From(false),
+				OpenWorldHint:  pointers.From(true),
+			}),
+			mcp.WithString("serviceId",
+				mcp.Required(),
+				mcp.Description("The ID of the service to trigger a deploy for"),
+			),
+			mcp.WithBoolean("clearCache",
+				mcp.Description("Whether to clear the build cache before deploying. Defaults to false."),
+				mcp.DefaultBool(false),
+			),
+		),
+		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			serviceId, err := validate.RequiredToolParam[string](request, "serviceId")
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			clearCache, _, err := validate.OptionalToolParam[bool](request, "clearCache")
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			deploy, err := deployRepo.TriggerDeploy(ctx, serviceId, clearCache)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			respJSON, err := json.Marshal(deploy)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
