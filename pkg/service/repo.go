@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	"github.com/render-oss/render-mcp-server/pkg/pointers"
@@ -17,6 +18,7 @@ type serviceRepoClient interface {
 	CreateDeployWithResponse(ctx context.Context, serviceId string, body client.CreateDeployJSONRequestBody, reqEditors ...client.RequestEditorFn) (*client.CreateDeployResponse, error)
 	CreateServiceWithResponse(ctx context.Context, data client.CreateServiceJSONRequestBody, reqEditors ...client.RequestEditorFn) (*client.CreateServiceResponse, error)
 	RetrieveServiceWithResponse(ctx context.Context, id string, reqEditors ...client.RequestEditorFn) (*client.RetrieveServiceResponse, error)
+	UpdateServiceWithResponse(ctx context.Context, serviceId client.ServiceIdParam, body client.UpdateServiceJSONRequestBody, reqEditors ...client.RequestEditorFn) (*client.UpdateServiceResponse, error)
 }
 
 type Repo struct {
@@ -151,6 +153,32 @@ func (s *Repo) CreateService(ctx context.Context, data client.CreateServiceJSONR
 	}
 
 	return resp.JSON201, nil
+}
+
+// UpdateService applies a PATCH to an existing service. It first retrieves the
+// service to confirm it belongs to the selected workspace and that its type
+// matches the caller's expectation, so a tool scoped to one service type (e.g.
+// web service) can't mutate a service of a different type.
+func (s *Repo) UpdateService(ctx context.Context, serviceId string, expectedType client.ServiceType, body client.UpdateServiceJSONRequestBody) (*client.Service, error) {
+	existing, err := s.GetService(ctx, serviceId)
+	if err != nil {
+		return nil, err
+	}
+
+	if existing.Type != expectedType {
+		return nil, fmt.Errorf("service %s is a %s, not a %s; use the matching update tool for that service type", serviceId, existing.Type, expectedType)
+	}
+
+	resp, err := s.client.UpdateServiceWithResponse(ctx, serviceId, body)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := client.ErrorFromResponse(resp); err != nil {
+		return nil, err
+	}
+
+	return resp.JSON200, nil
 }
 
 func (s *Repo) GetService(ctx context.Context, id string) (*client.Service, error) {

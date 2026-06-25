@@ -561,3 +561,127 @@ func TestMergeEnvVars(t *testing.T) {
 		})
 	}
 }
+
+func TestUpdateWebServiceTool(t *testing.T) {
+	serviceId := "srv-web-123"
+
+	fakeClient := &fakes.FakeServiceRepoClient{}
+	repo := NewRepo(fakeClient)
+
+	fakeClient.RetrieveServiceWithResponseReturns(&client.RetrieveServiceResponse{
+		JSON200:      &client.Service{Id: serviceId, Type: client.WebService},
+		HTTPResponse: &http.Response{StatusCode: 200},
+	}, nil)
+	fakeClient.UpdateServiceWithResponseReturns(&client.UpdateServiceResponse{
+		JSON200:      &client.Service{Id: serviceId, Type: client.WebService},
+		HTTPResponse: &http.Response{StatusCode: 200},
+	}, nil)
+
+	request := mcp.CallToolRequest{}
+	request.Params.Arguments = map[string]any{
+		"serviceId": serviceId,
+		"plan":      "standard",
+	}
+
+	tool := updateWebService(repo)
+	result, err := tool.Handler(context.Background(), request)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.False(t, result.IsError, "expected no error but got: %v", result.Content)
+
+	assert.Equal(t, 1, fakeClient.UpdateServiceWithResponseCallCount())
+	_, gotServiceId, body, _ := fakeClient.UpdateServiceWithResponseArgsForCall(0)
+	assert.Equal(t, serviceId, gotServiceId)
+
+	require.NotNil(t, body.ServiceDetails)
+	patch, err := body.ServiceDetails.AsWebServiceDetailsPATCH()
+	require.NoError(t, err)
+	assert.Equal(t, pointers.From(client.PaidPlanStandard), patch.Plan)
+}
+
+func TestUpdateWebServiceToolRejectsWrongServiceType(t *testing.T) {
+	serviceId := "crn-123"
+
+	fakeClient := &fakes.FakeServiceRepoClient{}
+	repo := NewRepo(fakeClient)
+
+	// The service exists but is a cron job, not a web service.
+	fakeClient.RetrieveServiceWithResponseReturns(&client.RetrieveServiceResponse{
+		JSON200:      &client.Service{Id: serviceId, Type: client.CronJob},
+		HTTPResponse: &http.Response{StatusCode: 200},
+	}, nil)
+
+	request := mcp.CallToolRequest{}
+	request.Params.Arguments = map[string]any{
+		"serviceId": serviceId,
+		"plan":      "standard",
+	}
+
+	tool := updateWebService(repo)
+	result, err := tool.Handler(context.Background(), request)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.IsError, "expected an error result for a service-type mismatch")
+	assert.Equal(t, 0, fakeClient.UpdateServiceWithResponseCallCount())
+}
+
+func TestUpdateWebServiceToolRejectsInvalidPlan(t *testing.T) {
+	fakeClient := &fakes.FakeServiceRepoClient{}
+	repo := NewRepo(fakeClient)
+
+	request := mcp.CallToolRequest{}
+	request.Params.Arguments = map[string]any{
+		"serviceId": "srv-web-123",
+		"plan":      "not-a-real-plan",
+	}
+
+	tool := updateWebService(repo)
+	result, err := tool.Handler(context.Background(), request)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.IsError, "expected an error result for an invalid plan")
+	// An invalid plan is rejected before any API calls are made.
+	assert.Equal(t, 0, fakeClient.RetrieveServiceWithResponseCallCount())
+	assert.Equal(t, 0, fakeClient.UpdateServiceWithResponseCallCount())
+}
+
+func TestUpdateCronJobTool(t *testing.T) {
+	serviceId := "crn-123"
+
+	fakeClient := &fakes.FakeServiceRepoClient{}
+	repo := NewRepo(fakeClient)
+
+	fakeClient.RetrieveServiceWithResponseReturns(&client.RetrieveServiceResponse{
+		JSON200:      &client.Service{Id: serviceId, Type: client.CronJob},
+		HTTPResponse: &http.Response{StatusCode: 200},
+	}, nil)
+	fakeClient.UpdateServiceWithResponseReturns(&client.UpdateServiceResponse{
+		JSON200:      &client.Service{Id: serviceId, Type: client.CronJob},
+		HTTPResponse: &http.Response{StatusCode: 200},
+	}, nil)
+
+	request := mcp.CallToolRequest{}
+	request.Params.Arguments = map[string]any{
+		"serviceId": serviceId,
+		"plan":      "starter",
+	}
+
+	tool := updateCronJob(repo)
+	result, err := tool.Handler(context.Background(), request)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.False(t, result.IsError, "expected no error but got: %v", result.Content)
+
+	assert.Equal(t, 1, fakeClient.UpdateServiceWithResponseCallCount())
+	_, gotServiceId, body, _ := fakeClient.UpdateServiceWithResponseArgsForCall(0)
+	assert.Equal(t, serviceId, gotServiceId)
+
+	require.NotNil(t, body.ServiceDetails)
+	patch, err := body.ServiceDetails.AsCronJobDetailsPATCH()
+	require.NoError(t, err)
+	assert.Equal(t, pointers.From(client.PaidPlanStarter), patch.Plan)
+}

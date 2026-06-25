@@ -102,6 +102,22 @@ type FakeServiceRepoClient struct {
 		result1 *client.UpdateEnvVarsForServiceResponse
 		result2 error
 	}
+	UpdateServiceWithResponseStub        func(context.Context, client.ServiceIdParam, client.UpdateServiceJSONRequestBody, ...client.RequestEditorFn) (*client.UpdateServiceResponse, error)
+	updateServiceWithResponseMutex       sync.RWMutex
+	updateServiceWithResponseArgsForCall []struct {
+		arg1 context.Context
+		arg2 client.ServiceIdParam
+		arg3 client.UpdateServiceJSONRequestBody
+		arg4 []client.RequestEditorFn
+	}
+	updateServiceWithResponseReturns struct {
+		result1 *client.UpdateServiceResponse
+		result2 error
+	}
+	updateServiceWithResponseReturnsOnCall map[int]struct {
+		result1 *client.UpdateServiceResponse
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -510,6 +526,73 @@ func (fake *FakeServiceRepoClient) UpdateEnvVarsForServiceWithResponseReturnsOnC
 	}{result1, result2}
 }
 
+func (fake *FakeServiceRepoClient) UpdateServiceWithResponse(arg1 context.Context, arg2 client.ServiceIdParam, arg3 client.UpdateServiceJSONRequestBody, arg4 ...client.RequestEditorFn) (*client.UpdateServiceResponse, error) {
+	fake.updateServiceWithResponseMutex.Lock()
+	ret, specificReturn := fake.updateServiceWithResponseReturnsOnCall[len(fake.updateServiceWithResponseArgsForCall)]
+	fake.updateServiceWithResponseArgsForCall = append(fake.updateServiceWithResponseArgsForCall, struct {
+		arg1 context.Context
+		arg2 client.ServiceIdParam
+		arg3 client.UpdateServiceJSONRequestBody
+		arg4 []client.RequestEditorFn
+	}{arg1, arg2, arg3, arg4})
+	stub := fake.UpdateServiceWithResponseStub
+	fakeReturns := fake.updateServiceWithResponseReturns
+	fake.recordInvocation("UpdateServiceWithResponse", []interface{}{arg1, arg2, arg3, arg4})
+	fake.updateServiceWithResponseMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4...)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeServiceRepoClient) UpdateServiceWithResponseCallCount() int {
+	fake.updateServiceWithResponseMutex.RLock()
+	defer fake.updateServiceWithResponseMutex.RUnlock()
+	return len(fake.updateServiceWithResponseArgsForCall)
+}
+
+func (fake *FakeServiceRepoClient) UpdateServiceWithResponseCalls(stub func(context.Context, client.ServiceIdParam, client.UpdateServiceJSONRequestBody, ...client.RequestEditorFn) (*client.UpdateServiceResponse, error)) {
+	fake.updateServiceWithResponseMutex.Lock()
+	defer fake.updateServiceWithResponseMutex.Unlock()
+	fake.UpdateServiceWithResponseStub = stub
+}
+
+func (fake *FakeServiceRepoClient) UpdateServiceWithResponseArgsForCall(i int) (context.Context, client.ServiceIdParam, client.UpdateServiceJSONRequestBody, []client.RequestEditorFn) {
+	fake.updateServiceWithResponseMutex.RLock()
+	defer fake.updateServiceWithResponseMutex.RUnlock()
+	argsForCall := fake.updateServiceWithResponseArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+}
+
+func (fake *FakeServiceRepoClient) UpdateServiceWithResponseReturns(result1 *client.UpdateServiceResponse, result2 error) {
+	fake.updateServiceWithResponseMutex.Lock()
+	defer fake.updateServiceWithResponseMutex.Unlock()
+	fake.UpdateServiceWithResponseStub = nil
+	fake.updateServiceWithResponseReturns = struct {
+		result1 *client.UpdateServiceResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeServiceRepoClient) UpdateServiceWithResponseReturnsOnCall(i int, result1 *client.UpdateServiceResponse, result2 error) {
+	fake.updateServiceWithResponseMutex.Lock()
+	defer fake.updateServiceWithResponseMutex.Unlock()
+	fake.UpdateServiceWithResponseStub = nil
+	if fake.updateServiceWithResponseReturnsOnCall == nil {
+		fake.updateServiceWithResponseReturnsOnCall = make(map[int]struct {
+			result1 *client.UpdateServiceResponse
+			result2 error
+		})
+	}
+	fake.updateServiceWithResponseReturnsOnCall[i] = struct {
+		result1 *client.UpdateServiceResponse
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeServiceRepoClient) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -525,6 +608,8 @@ func (fake *FakeServiceRepoClient) Invocations() map[string][][]interface{} {
 	defer fake.retrieveServiceWithResponseMutex.RUnlock()
 	fake.updateEnvVarsForServiceWithResponseMutex.RLock()
 	defer fake.updateEnvVarsForServiceWithResponseMutex.RUnlock()
+	fake.updateServiceWithResponseMutex.RLock()
+	defer fake.updateServiceWithResponseMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

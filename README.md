@@ -134,6 +134,28 @@ feature requests, bug reports, suggestions, comments, or concerns.
   - `serviceId`: The ID of the service to update (string, required)
   - `envVars`: Complete list of environment variables (array, required)
 
+- **update_web_service** - Update the compute plan of an existing web service. The change is applied immediately and does not require a manual deploy.
+  - `serviceId`: The ID of the web service to update (string, required)
+  - `plan`: The new plan for your web service (string, required). Accepted values:
+    - `free`
+    - `starter`
+    - `standard`
+    - `pro`
+    - `pro_max`
+    - `pro_plus`
+    - `pro_ultra`
+
+- **update_cron_job** - Update the compute plan of an existing cron job. The change is applied immediately and does not require a manual deploy.
+  - `serviceId`: The ID of the cron job to update (string, required)
+  - `plan`: The new plan for your cron job (string, required). Accepted values:
+    - `free`
+    - `starter`
+    - `standard`
+    - `pro`
+    - `pro_max`
+    - `pro_plus`
+    - `pro_ultra`
+
 ### Deployments
 
 - **list_deploys** - List deployment history for a service
