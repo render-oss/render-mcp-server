@@ -134,7 +134,7 @@ feature requests, bug reports, suggestions, comments, or concerns.
   - `serviceId`: The ID of the service to update (string, required)
   - `envVars`: Complete list of environment variables (array, required)
 
-- **update_web_service** - Update the compute plan of an existing web service. The change is applied immediately and does not require a manual deploy.
+- **update_web_service** - Update the compute plan of an existing web service. Triggers a new deploy to apply the new instance type (zero-downtime for stateless services; brief downtime for services with an attached persistent disk), so no manual deploy is needed.
   - `serviceId`: The ID of the web service to update (string, required)
   - `plan`: The new plan for your web service (string, required). Accepted values:
     - `free`
@@ -145,7 +145,7 @@ feature requests, bug reports, suggestions, comments, or concerns.
     - `pro_plus`
     - `pro_ultra`
 
-- **update_cron_job** - Update the compute plan of an existing cron job. The change is applied immediately and does not require a manual deploy.
+- **update_cron_job** - Update the compute plan of an existing cron job. Triggers a new deploy to apply the new instance type (takes effect on the next run), so no manual deploy is needed.
   - `serviceId`: The ID of the cron job to update (string, required)
   - `plan`: The new plan for your cron job (string, required). Accepted values:
     - `free`

@@ -593,8 +593,9 @@ func updateWebService(serviceRepo *Repo) server.ServerTool {
 	return server.ServerTool{
 		Tool: mcp.NewTool("update_web_service",
 			mcp.WithDescription("Update the compute plan (instance type) of an existing web service in your Render account. "+
-				"Changing the plan scales the service's CPU and memory. Render applies the change immediately, "+
-				"so a manual deploy is not required. "+
+				"Changing the plan scales the service's CPU and memory. This triggers a new deploy to apply the new "+
+				"instance type, so no manual deploy is needed. The deploy is zero-downtime for stateless services; "+
+				"services with an attached persistent disk briefly go down during the switch. "+
 				"This tool currently only supports changing the plan. For other configuration changes, "+
 				"use the dashboard at: "+config.DashboardURL()+"/web/new"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
@@ -640,12 +641,26 @@ func updateWebService(serviceRepo *Repo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
+			// The Render API records the new plan but does not apply it until the next
+			// successful deploy, so trigger one. This is zero-downtime for stateless
+			// services; services with an attached persistent disk briefly go down.
+			deployResponse, err := serviceRepo.DeployService(ctx, serviceId)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
 			respJSON, err := json.Marshal(updated)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			return mcp.NewToolResultText(string(respJSON)), nil
+			responseText := "Compute plan updated. A new deploy has been triggered to apply the new instance type. " +
+				"This is a zero-downtime change for stateless services; services with an attached persistent disk " +
+				"briefly go down during the switch.\n\n" +
+				"Updated service: " + string(respJSON) + "\n\n" +
+				"Response from deploying service: " + string(deployResponse.Body)
+
+			return mcp.NewToolResultText(responseText), nil
 		},
 	}
 }
@@ -684,8 +699,8 @@ func updateCronJob(serviceRepo *Repo) server.ServerTool {
 	return server.ServerTool{
 		Tool: mcp.NewTool("update_cron_job",
 			mcp.WithDescription("Update the compute plan (instance type) of an existing cron job in your Render account. "+
-				"Changing the plan scales the CPU and memory available to each run. Render applies the change immediately, "+
-				"so a manual deploy is not required. "+
+				"Changing the plan scales the CPU and memory available to each run. This triggers a new deploy to apply "+
+				"the new instance type, so no manual deploy is needed. The new plan takes effect on the cron job's next run. "+
 				"This tool currently only supports changing the plan. For other configuration changes, "+
 				"use the dashboard at: "+config.DashboardURL()+"/create"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
@@ -731,12 +746,24 @@ func updateCronJob(serviceRepo *Repo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
+			// The Render API records the new plan but does not apply it until the next
+			// successful deploy, so trigger one. The new plan takes effect on the next run.
+			deployResponse, err := serviceRepo.DeployService(ctx, serviceId)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
 			respJSON, err := json.Marshal(updated)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			return mcp.NewToolResultText(string(respJSON)), nil
+			responseText := "Compute plan updated. A new deploy has been triggered to apply the new instance type, " +
+				"which takes effect on the cron job's next run.\n\n" +
+				"Updated service: " + string(respJSON) + "\n\n" +
+				"Response from deploying service: " + string(deployResponse.Body)
+
+			return mcp.NewToolResultText(responseText), nil
 		},
 	}
 }

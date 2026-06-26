@@ -576,6 +576,10 @@ func TestUpdateWebServiceTool(t *testing.T) {
 		JSON200:      &client.Service{Id: serviceId, Type: client.WebService},
 		HTTPResponse: &http.Response{StatusCode: 200},
 	}, nil)
+	fakeClient.CreateDeployWithResponseReturns(&client.CreateDeployResponse{
+		HTTPResponse: &http.Response{StatusCode: 201},
+		Body:         []byte("create deploy response"),
+	}, nil)
 
 	request := mcp.CallToolRequest{}
 	request.Params.Arguments = map[string]any{
@@ -598,6 +602,11 @@ func TestUpdateWebServiceTool(t *testing.T) {
 	patch, err := body.ServiceDetails.AsWebServiceDetailsPATCH()
 	require.NoError(t, err)
 	assert.Equal(t, pointers.From(client.PaidPlanStandard), patch.Plan)
+
+	// A plan change only takes effect on the next deploy, so the tool must trigger one.
+	assert.Equal(t, 1, fakeClient.CreateDeployWithResponseCallCount())
+	_, deployServiceId, _, _ := fakeClient.CreateDeployWithResponseArgsForCall(0)
+	assert.Equal(t, serviceId, deployServiceId)
 }
 
 func TestUpdateWebServiceToolRejectsWrongServiceType(t *testing.T) {
@@ -625,6 +634,7 @@ func TestUpdateWebServiceToolRejectsWrongServiceType(t *testing.T) {
 	require.NotNil(t, result)
 	assert.True(t, result.IsError, "expected an error result for a service-type mismatch")
 	assert.Equal(t, 0, fakeClient.UpdateServiceWithResponseCallCount())
+	assert.Equal(t, 0, fakeClient.CreateDeployWithResponseCallCount())
 }
 
 func TestUpdateWebServiceToolRejectsInvalidPlan(t *testing.T) {
@@ -646,6 +656,7 @@ func TestUpdateWebServiceToolRejectsInvalidPlan(t *testing.T) {
 	// An invalid plan is rejected before any API calls are made.
 	assert.Equal(t, 0, fakeClient.RetrieveServiceWithResponseCallCount())
 	assert.Equal(t, 0, fakeClient.UpdateServiceWithResponseCallCount())
+	assert.Equal(t, 0, fakeClient.CreateDeployWithResponseCallCount())
 }
 
 func TestUpdateCronJobTool(t *testing.T) {
@@ -661,6 +672,10 @@ func TestUpdateCronJobTool(t *testing.T) {
 	fakeClient.UpdateServiceWithResponseReturns(&client.UpdateServiceResponse{
 		JSON200:      &client.Service{Id: serviceId, Type: client.CronJob},
 		HTTPResponse: &http.Response{StatusCode: 200},
+	}, nil)
+	fakeClient.CreateDeployWithResponseReturns(&client.CreateDeployResponse{
+		HTTPResponse: &http.Response{StatusCode: 201},
+		Body:         []byte("create deploy response"),
 	}, nil)
 
 	request := mcp.CallToolRequest{}
@@ -684,4 +699,9 @@ func TestUpdateCronJobTool(t *testing.T) {
 	patch, err := body.ServiceDetails.AsCronJobDetailsPATCH()
 	require.NoError(t, err)
 	assert.Equal(t, pointers.From(client.PaidPlanStarter), patch.Plan)
+
+	// A plan change only takes effect on the next deploy, so the tool must trigger one.
+	assert.Equal(t, 1, fakeClient.CreateDeployWithResponseCallCount())
+	_, deployServiceId, _, _ := fakeClient.CreateDeployWithResponseArgsForCall(0)
+	assert.Equal(t, serviceId, deployServiceId)
 }
