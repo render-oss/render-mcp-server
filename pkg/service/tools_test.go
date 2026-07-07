@@ -9,6 +9,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/render-oss/render-mcp-server/pkg/client"
+	envvar "github.com/render-oss/render-mcp-server/pkg/client/envvar"
 	"github.com/render-oss/render-mcp-server/pkg/fakes"
 	"github.com/render-oss/render-mcp-server/pkg/pointers"
 	"github.com/render-oss/render-mcp-server/pkg/session"
@@ -22,7 +23,7 @@ func TestUpdateEnvVarsTool(t *testing.T) {
 		{Key: "KEY1", Value: "old_value1"},
 		{Key: "KEY2", Value: "old_value2"},
 	}
-	newEnvVars := []client.EnvVarInput{
+	newEnvVars := []envvar.EnvVarInput{
 		envVarInput("KEY1", "new_value1"),
 		envVarInput("KEY3", "new_value3"),
 	}
@@ -33,7 +34,7 @@ func TestUpdateEnvVarsTool(t *testing.T) {
 	tests := []struct {
 		name            string
 		replace         bool
-		expectedEnvVars []client.EnvVarInput
+		expectedEnvVars []envvar.EnvVarInput
 	}{
 		{
 			name:            "Replace existing env vars, does not include sensitive info",
@@ -43,7 +44,7 @@ func TestUpdateEnvVarsTool(t *testing.T) {
 		{
 			name:    "Merge with existing env vars, does not include sensitive info",
 			replace: false,
-			expectedEnvVars: []client.EnvVarInput{
+			expectedEnvVars: []envvar.EnvVarInput{
 				envVarInput("KEY1", "new_value1"),
 				envVarInput("KEY2", "old_value2"),
 				envVarInput("KEY3", "new_value3"),
@@ -123,9 +124,9 @@ func TestUpdateEnvVarsTool(t *testing.T) {
 	}
 }
 
-func envVarInput(key, value string) client.EnvVarInput {
-	var input client.EnvVarInput
-	input.FromEnvVarKeyValue(client.EnvVarKeyValue{
+func envVarInput(key, value string) envvar.EnvVarInput {
+	var input envvar.EnvVarInput
+	input.FromEnvVarKeyValue(envvar.EnvVarKeyValue{
 		Key:   key,
 		Value: value,
 	})
@@ -143,7 +144,7 @@ func envVarsWithCursor(envVars []*client.EnvVar) []client.EnvVarWithCursor {
 	return envVarsWithCursor
 }
 
-func envVarInputsAsParams(envVars []client.EnvVarInput) []interface{} {
+func envVarInputsAsParams(envVars []envvar.EnvVarInput) []interface{} {
 	envVarsAsParams := make([]interface{}, 0, len(envVars))
 	for _, envVar := range envVars {
 		kv, _ := envVar.AsEnvVarKeyValue()
@@ -165,22 +166,22 @@ func TestCreateWebServiceTool(t *testing.T) {
 	tests := []struct {
 		name         string
 		plan         *string
-		expectedPlan *client.PaidPlan
+		expectedPlan *client.Plan
 	}{
 		{
 			name:         "Create web service with no plan defaults to free",
 			plan:         nil,
-			expectedPlan: pointers.From(client.PaidPlan("free")),
+			expectedPlan: pointers.From(client.Plan("free")),
 		},
 		{
 			name:         "Create web service with free plan",
 			plan:         pointers.From("free"),
-			expectedPlan: pointers.From(client.PaidPlan("free")),
+			expectedPlan: pointers.From(client.Plan("free")),
 		},
 		{
 			name:         "Create web service with starter plan",
 			plan:         pointers.From("starter"),
-			expectedPlan: pointers.From(client.PaidPlanStarter),
+			expectedPlan: pointers.From(client.PlanStarter),
 		},
 	}
 
@@ -424,18 +425,18 @@ func TestMergeEnvVars(t *testing.T) {
 	tests := []struct {
 		name          string
 		oldEnvVars    []*client.EnvVar
-		newEnvVars    []client.EnvVarInput
-		expected      []client.EnvVarInput
+		newEnvVars    []envvar.EnvVarInput
+		expected      []envvar.EnvVarInput
 		expectedError string
 	}{
 		{
 			name:       "Empty old env vars, non-empty new env vars",
 			oldEnvVars: []*client.EnvVar{},
-			newEnvVars: []client.EnvVarInput{
+			newEnvVars: []envvar.EnvVarInput{
 				envVarInput("KEY1", "value1"),
 				envVarInput("KEY2", "value2"),
 			},
-			expected: []client.EnvVarInput{
+			expected: []envvar.EnvVarInput{
 				envVarInput("KEY1", "value1"),
 				envVarInput("KEY2", "value2"),
 			},
@@ -446,8 +447,8 @@ func TestMergeEnvVars(t *testing.T) {
 				{Key: "KEY1", Value: "value1"},
 				{Key: "KEY2", Value: "value2"},
 			},
-			newEnvVars: []client.EnvVarInput{},
-			expected: []client.EnvVarInput{
+			newEnvVars: []envvar.EnvVarInput{},
+			expected: []envvar.EnvVarInput{
 				envVarInput("KEY1", "value1"),
 				envVarInput("KEY2", "value2"),
 			},
@@ -458,11 +459,11 @@ func TestMergeEnvVars(t *testing.T) {
 				{Key: "KEY1", Value: "value1"},
 				{Key: "KEY2", Value: "value2"},
 			},
-			newEnvVars: []client.EnvVarInput{
+			newEnvVars: []envvar.EnvVarInput{
 				envVarInput("KEY3", "value3"),
 				envVarInput("KEY4", "value4"),
 			},
-			expected: []client.EnvVarInput{
+			expected: []envvar.EnvVarInput{
 				envVarInput("KEY1", "value1"),
 				envVarInput("KEY2", "value2"),
 				envVarInput("KEY3", "value3"),
@@ -476,12 +477,12 @@ func TestMergeEnvVars(t *testing.T) {
 				{Key: "KEY2", Value: "old_value2"},
 				{Key: "KEY3", Value: "value3"},
 			},
-			newEnvVars: []client.EnvVarInput{
+			newEnvVars: []envvar.EnvVarInput{
 				envVarInput("KEY1", "new_value1"),
 				envVarInput("KEY2", "new_value2"),
 				envVarInput("KEY4", "value4"),
 			},
-			expected: []client.EnvVarInput{
+			expected: []envvar.EnvVarInput{
 				envVarInput("KEY1", "new_value1"),
 				envVarInput("KEY2", "new_value2"),
 				envVarInput("KEY3", "value3"),
@@ -494,11 +495,11 @@ func TestMergeEnvVars(t *testing.T) {
 				{Key: "KEY1", Value: "old_value1"},
 				{Key: "KEY2", Value: "old_value2"},
 			},
-			newEnvVars: []client.EnvVarInput{
+			newEnvVars: []envvar.EnvVarInput{
 				envVarInput("KEY1", "new_value1"),
 				envVarInput("KEY2", "new_value2"),
 			},
-			expected: []client.EnvVarInput{
+			expected: []envvar.EnvVarInput{
 				envVarInput("KEY1", "new_value1"),
 				envVarInput("KEY2", "new_value2"),
 			},
@@ -506,8 +507,8 @@ func TestMergeEnvVars(t *testing.T) {
 		{
 			name:       "Empty both old and new env vars",
 			oldEnvVars: []*client.EnvVar{},
-			newEnvVars: []client.EnvVarInput{},
-			expected:   []client.EnvVarInput{},
+			newEnvVars: []envvar.EnvVarInput{},
+			expected:   []envvar.EnvVarInput{},
 		},
 		{
 			name: "Case sensitivity in keys",
@@ -515,10 +516,10 @@ func TestMergeEnvVars(t *testing.T) {
 				{Key: "key", Value: "value"},
 				{Key: "KEY", Value: "VALUE"},
 			},
-			newEnvVars: []client.EnvVarInput{
+			newEnvVars: []envvar.EnvVarInput{
 				envVarInput("Key", "newValue"),
 			},
-			expected: []client.EnvVarInput{
+			expected: []envvar.EnvVarInput{
 				envVarInput("KEY", "VALUE"),
 				envVarInput("Key", "newValue"),
 				envVarInput("key", "value"),
@@ -529,10 +530,10 @@ func TestMergeEnvVars(t *testing.T) {
 			oldEnvVars: []*client.EnvVar{
 				{Key: "DATABASE_URL", Value: "postgres://user:pass@localhost:5432/db"},
 			},
-			newEnvVars: []client.EnvVarInput{
+			newEnvVars: []envvar.EnvVarInput{
 				envVarInput("API_KEY", "abcd1234"),
 			},
-			expected: []client.EnvVarInput{
+			expected: []envvar.EnvVarInput{
 				envVarInput("API_KEY", "abcd1234"),
 				envVarInput("DATABASE_URL", "postgres://user:pass@localhost:5432/db"),
 			},
@@ -542,10 +543,10 @@ func TestMergeEnvVars(t *testing.T) {
 			oldEnvVars: []*client.EnvVar{
 				{Key: "EMPTY_KEY", Value: ""},
 			},
-			newEnvVars: []client.EnvVarInput{
+			newEnvVars: []envvar.EnvVarInput{
 				envVarInput("ANOTHER_EMPTY", ""),
 			},
-			expected: []client.EnvVarInput{
+			expected: []envvar.EnvVarInput{
 				envVarInput("ANOTHER_EMPTY", ""),
 				envVarInput("EMPTY_KEY", ""),
 			},

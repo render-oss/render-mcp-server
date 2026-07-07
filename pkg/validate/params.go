@@ -7,6 +7,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/render-oss/render-mcp-server/pkg/client"
+	envvar "github.com/render-oss/render-mcp-server/pkg/client/envvar"
 	pgclient "github.com/render-oss/render-mcp-server/pkg/client/postgres"
 	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/mcpserver"
@@ -83,12 +84,12 @@ func OptionalToolArrayParam[T any](request mcp.CallToolRequest, param string) ([
 	return outputArray, true, nil
 }
 
-func EnvVars(request mcp.CallToolRequest) ([]client.EnvVarInput, bool, error) {
+func EnvVars(request mcp.CallToolRequest) ([]envvar.EnvVarInput, bool, error) {
 	if _, ok := request.GetArguments()["envVars"]; !ok {
 		return nil, false, nil
 	}
 
-	var envVars client.EnvVarInputArray
+	var envVars envvar.EnvVarInputArray
 	invalidErr := errors.New("parameter envVars is not of expected type")
 	if envVarsRaw, ok := request.GetArguments()["envVars"]; ok && envVarsRaw != nil {
 		envVarsSlice, ok := envVarsRaw.([]interface{})
@@ -112,8 +113,8 @@ func EnvVars(request mcp.CallToolRequest) ([]client.EnvVarInput, bool, error) {
 				return nil, false, invalidErr
 			}
 
-			var envVarInput client.EnvVarInput
-			envVarKeyValue := client.EnvVarKeyValue{
+			var envVarInput envvar.EnvVarInput
+			envVarKeyValue := envvar.EnvVarKeyValue{
 				Key:   key,
 				Value: value,
 			}

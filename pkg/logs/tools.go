@@ -204,7 +204,7 @@ func listLogs(logRepo *LogRepo) server.ServerTool {
 			if direction, ok, err := validate.OptionalToolParam[string](request, "direction"); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			} else if ok {
-				directionParam := logsclient.LogDirectionParam(direction)
+				directionParam := logsclient.LogDirection(direction)
 				llParams.Direction = &directionParam
 			}
 
@@ -416,7 +416,7 @@ func listLogLabelValues(logRepo *LogRepo) server.ServerTool {
 			if direction, ok, err := validate.OptionalToolParam[string](request, "direction"); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			} else if ok {
-				directionParam := logsclient.LogDirectionParam(direction)
+				directionParam := logsclient.LogDirection(direction)
 				params.Direction = &directionParam
 			}
 

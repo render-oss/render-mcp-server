@@ -7,6 +7,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/render-oss/render-mcp-server/pkg/client"
+	envvar "github.com/render-oss/render-mcp-server/pkg/client/envvar"
 	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/mcpserver"
 	"github.com/render-oss/render-mcp-server/pkg/pointers"
@@ -240,9 +241,9 @@ func createValidatedWebServiceRequest(ctx context.Context, request mcp.CallToolR
 		if err != nil {
 			return nil, err
 		}
-		webServiceDetailsPOST.Plan = servicePlan
+		webServiceDetailsPOST.Plan = (*client.Plan)(servicePlan)
 	} else {
-		webServiceDetailsPOST.Plan = pointers.From(client.PaidPlan("free"))
+		webServiceDetailsPOST.Plan = pointers.From(client.Plan("free"))
 	}
 
 	if region, ok, err := validate.OptionalToolParam[string](request, "region"); err != nil {
@@ -730,7 +731,7 @@ func updateEnvVars(serviceRepo *Repo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			var envVars []client.EnvVarInput
+			var envVars []envvar.EnvVarInput
 			var ok bool
 			if envVars, ok, err = validate.EnvVars(request); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
@@ -738,7 +739,7 @@ func updateEnvVars(serviceRepo *Repo) server.ServerTool {
 				return mcp.NewToolResultError("Environment variables are required"), nil
 			}
 
-			var envVarsToSet []client.EnvVarInput
+			var envVarsToSet []envvar.EnvVarInput
 
 			replace, _, err := validate.OptionalToolParam[bool](request, "replace")
 			if err != nil {
@@ -777,7 +778,7 @@ func updateEnvVars(serviceRepo *Repo) server.ServerTool {
 	}
 }
 
-func mergeEnvVars(oldEnvVars []*client.EnvVar, envVarInputs []client.EnvVarInput) ([]client.EnvVarInput, error) {
+func mergeEnvVars(oldEnvVars []*client.EnvVar, envVarInputs []envvar.EnvVarInput) ([]envvar.EnvVarInput, error) {
 	envVarMap := make(map[string]string)
 	for _, envVar := range oldEnvVars {
 		envVarMap[envVar.Key] = envVar.Value
@@ -792,10 +793,10 @@ func mergeEnvVars(oldEnvVars []*client.EnvVar, envVarInputs []client.EnvVarInput
 	}
 
 	// Convert map back to list
-	var mergedEnvVars []client.EnvVarInput
+	var mergedEnvVars []envvar.EnvVarInput
 	for k, v := range envVarMap {
-		var envVarInput client.EnvVarInput
-		err := envVarInput.FromEnvVarKeyValue(client.EnvVarKeyValue{
+		var envVarInput envvar.EnvVarInput
+		err := envVarInput.FromEnvVarKeyValue(envvar.EnvVarKeyValue{
 			Key:   k,
 			Value: v,
 		})

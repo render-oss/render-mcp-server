@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/render-oss/render-mcp-server/pkg/client"
+	envvar "github.com/render-oss/render-mcp-server/pkg/client/envvar"
 )
 
 type FakeServiceRepoClient struct {
@@ -86,12 +87,12 @@ type FakeServiceRepoClient struct {
 		result1 *client.RetrieveServiceResponse
 		result2 error
 	}
-	UpdateEnvVarsForServiceWithResponseStub        func(context.Context, string, []client.EnvVarInput, ...client.RequestEditorFn) (*client.UpdateEnvVarsForServiceResponse, error)
+	UpdateEnvVarsForServiceWithResponseStub        func(context.Context, string, []envvar.EnvVarInput, ...client.RequestEditorFn) (*client.UpdateEnvVarsForServiceResponse, error)
 	updateEnvVarsForServiceWithResponseMutex       sync.RWMutex
 	updateEnvVarsForServiceWithResponseArgsForCall []struct {
 		arg1 context.Context
 		arg2 string
-		arg3 []client.EnvVarInput
+		arg3 []envvar.EnvVarInput
 		arg4 []client.RequestEditorFn
 	}
 	updateEnvVarsForServiceWithResponseReturns struct {
@@ -438,10 +439,10 @@ func (fake *FakeServiceRepoClient) RetrieveServiceWithResponseReturnsOnCall(i in
 	}{result1, result2}
 }
 
-func (fake *FakeServiceRepoClient) UpdateEnvVarsForServiceWithResponse(arg1 context.Context, arg2 string, arg3 []client.EnvVarInput, arg4 ...client.RequestEditorFn) (*client.UpdateEnvVarsForServiceResponse, error) {
-	var arg3Copy []client.EnvVarInput
+func (fake *FakeServiceRepoClient) UpdateEnvVarsForServiceWithResponse(arg1 context.Context, arg2 string, arg3 []envvar.EnvVarInput, arg4 ...client.RequestEditorFn) (*client.UpdateEnvVarsForServiceResponse, error) {
+	var arg3Copy []envvar.EnvVarInput
 	if arg3 != nil {
-		arg3Copy = make([]client.EnvVarInput, len(arg3))
+		arg3Copy = make([]envvar.EnvVarInput, len(arg3))
 		copy(arg3Copy, arg3)
 	}
 	fake.updateEnvVarsForServiceWithResponseMutex.Lock()
@@ -449,7 +450,7 @@ func (fake *FakeServiceRepoClient) UpdateEnvVarsForServiceWithResponse(arg1 cont
 	fake.updateEnvVarsForServiceWithResponseArgsForCall = append(fake.updateEnvVarsForServiceWithResponseArgsForCall, struct {
 		arg1 context.Context
 		arg2 string
-		arg3 []client.EnvVarInput
+		arg3 []envvar.EnvVarInput
 		arg4 []client.RequestEditorFn
 	}{arg1, arg2, arg3Copy, arg4})
 	stub := fake.UpdateEnvVarsForServiceWithResponseStub
@@ -471,13 +472,13 @@ func (fake *FakeServiceRepoClient) UpdateEnvVarsForServiceWithResponseCallCount(
 	return len(fake.updateEnvVarsForServiceWithResponseArgsForCall)
 }
 
-func (fake *FakeServiceRepoClient) UpdateEnvVarsForServiceWithResponseCalls(stub func(context.Context, string, []client.EnvVarInput, ...client.RequestEditorFn) (*client.UpdateEnvVarsForServiceResponse, error)) {
+func (fake *FakeServiceRepoClient) UpdateEnvVarsForServiceWithResponseCalls(stub func(context.Context, string, []envvar.EnvVarInput, ...client.RequestEditorFn) (*client.UpdateEnvVarsForServiceResponse, error)) {
 	fake.updateEnvVarsForServiceWithResponseMutex.Lock()
 	defer fake.updateEnvVarsForServiceWithResponseMutex.Unlock()
 	fake.UpdateEnvVarsForServiceWithResponseStub = stub
 }
 
-func (fake *FakeServiceRepoClient) UpdateEnvVarsForServiceWithResponseArgsForCall(i int) (context.Context, string, []client.EnvVarInput, []client.RequestEditorFn) {
+func (fake *FakeServiceRepoClient) UpdateEnvVarsForServiceWithResponseArgsForCall(i int) (context.Context, string, []envvar.EnvVarInput, []client.RequestEditorFn) {
 	fake.updateEnvVarsForServiceWithResponseMutex.RLock()
 	defer fake.updateEnvVarsForServiceWithResponseMutex.RUnlock()
 	argsForCall := fake.updateEnvVarsForServiceWithResponseArgsForCall[i]

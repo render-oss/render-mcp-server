@@ -162,7 +162,7 @@ func createPostgres(postgresRepo *Repo) server.ServerTool {
 			if region, ok, err := validate.OptionalToolParam[string](request, "region"); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			} else if ok {
-				createParams.Region = &region
+				createParams.Region = (*client.Region)(&region)
 			}
 
 			if version, ok, err := validate.OptionalToolParam[float64](request, "version"); err != nil {

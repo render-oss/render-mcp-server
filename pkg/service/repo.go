@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/render-oss/render-mcp-server/pkg/client"
+	envvar "github.com/render-oss/render-mcp-server/pkg/client/envvar"
 	"github.com/render-oss/render-mcp-server/pkg/pointers"
 	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/render-oss/render-mcp-server/pkg/validate"
@@ -13,7 +14,7 @@ import (
 type serviceRepoClient interface {
 	ListServicesWithResponse(ctx context.Context, params *client.ListServicesParams, reqEditors ...client.RequestEditorFn) (*client.ListServicesResponse, error)
 	GetEnvVarsForServiceWithResponse(ctx context.Context, serviceId string, params *client.GetEnvVarsForServiceParams, reqEditors ...client.RequestEditorFn) (*client.GetEnvVarsForServiceResponse, error)
-	UpdateEnvVarsForServiceWithResponse(ctx context.Context, serviceId string, body []client.EnvVarInput, reqEditors ...client.RequestEditorFn) (*client.UpdateEnvVarsForServiceResponse, error)
+	UpdateEnvVarsForServiceWithResponse(ctx context.Context, serviceId string, body []envvar.EnvVarInput, reqEditors ...client.RequestEditorFn) (*client.UpdateEnvVarsForServiceResponse, error)
 	CreateDeployWithResponse(ctx context.Context, serviceId string, body client.CreateDeployJSONRequestBody, reqEditors ...client.RequestEditorFn) (*client.CreateDeployResponse, error)
 	CreateServiceWithResponse(ctx context.Context, data client.CreateServiceJSONRequestBody, reqEditors ...client.RequestEditorFn) (*client.CreateServiceResponse, error)
 	RetrieveServiceWithResponse(ctx context.Context, id string, reqEditors ...client.RequestEditorFn) (*client.RetrieveServiceResponse, error)
@@ -98,7 +99,7 @@ func (s *Repo) listEnvVarsPage(ctx context.Context, params *ListEnvParams) ([]*c
 	return envVars, &res[len(res)-1].Cursor, nil
 }
 
-func (s *Repo) UpdateEnvVars(ctx context.Context, serviceId string, envVars []client.EnvVarInput) (*client.UpdateEnvVarsForServiceResponse, error) {
+func (s *Repo) UpdateEnvVars(ctx context.Context, serviceId string, envVars []envvar.EnvVarInput) (*client.UpdateEnvVarsForServiceResponse, error) {
 	// validate that the service belongs to the workspace
 	_, err := s.GetService(ctx, serviceId)
 	if err != nil {
