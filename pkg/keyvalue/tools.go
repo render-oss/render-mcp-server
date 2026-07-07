@@ -121,6 +121,10 @@ func createKeyValue(keyValueRepo *Repo) server.ServerTool {
 				mcp.Description("The eviction policy for the Key Value store"),
 				mcp.Enum(mcpserver.EnumValuesFromClientType(client.Noeviction, client.AllkeysLfu, client.AllkeysLru, client.AllkeysRandom, client.VolatileLfu, client.VolatileLru, client.VolatileRandom, client.VolatileTtl)...),
 			),
+			mcp.WithString("persistenceMode",
+				mcp.Description("The data persistence behavior for the Key Value store"),
+				mcp.Enum(mcpserver.EnumValuesFromClientType(client.JournalSnapshot, client.Snapshot, client.Off)...),
+			),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			name, err := validate.RequiredToolParam[string](request, "name")
@@ -162,6 +166,12 @@ func createKeyValue(keyValueRepo *Repo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			} else if ok {
 				createParams.MaxmemoryPolicy = pointers.From(client.MaxmemoryPolicy(maxmemoryPolicy))
+			}
+
+			if persistenceMode, ok, err := validate.OptionalToolParam[string](request, "persistenceMode"); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			} else if ok {
+				createParams.PersistenceMode = pointers.From(client.PersistenceMode(persistenceMode))
 			}
 
 			keyValue, err := keyValueRepo.CreateKeyValue(ctx, createParams)
