@@ -138,46 +138,29 @@ func ServicePlan(plan string) (*client.PaidPlan, error) {
 }
 
 func KeyValuePlan(plan string) (*client.KeyValuePlan, error) {
-	switch client.KeyValuePlan(plan) {
-	case client.KeyValuePlanFree, client.KeyValuePlanStarter, client.KeyValuePlanStandard, client.KeyValuePlanPro, client.KeyValuePlanProPlus:
-		return pointers.From(client.KeyValuePlan(plan)), nil
-	case client.KeyValuePlanCustom:
+	kvPlan := client.KeyValuePlan(plan)
+	switch {
+	case kvPlan == client.KeyValuePlanCustom:
 		return nil, fmt.Errorf("MCP server doesn't support custom Key Value plans. "+
 			"If you're looking to create a Key Value instance with a custom plan, use the dashboard at: %s/%s", config.DashboardURL(), "new/redis")
+	case kvPlan.Valid():
+		return pointers.From(kvPlan), nil
 	default:
 		return nil, fmt.Errorf("invalid Key Value plan: %s", plan)
 	}
 }
 
 func PostgresPlan(plan string) (pgclient.PostgresPlans, error) {
-	switch pgclient.PostgresPlans(plan) {
-	case pgclient.Free,
-		pgclient.Basic256mb,
-		pgclient.Basic1gb,
-		pgclient.Basic4gb,
-		pgclient.Pro4gb,
-		pgclient.Pro8gb,
-		pgclient.Pro16gb,
-		pgclient.Pro32gb,
-		pgclient.Pro64gb,
-		pgclient.Pro128gb,
-		pgclient.Pro192gb,
-		pgclient.Pro256gb,
-		pgclient.Pro384gb,
-		pgclient.Pro512gb,
-		pgclient.Accelerated16gb,
-		pgclient.Accelerated32gb,
-		pgclient.Accelerated64gb,
-		pgclient.Accelerated128gb,
-		pgclient.Accelerated256gb,
-		pgclient.Accelerated384gb,
-		pgclient.Accelerated512gb,
-		pgclient.Accelerated768gb,
-		pgclient.Accelerated1024gb:
-		return pgclient.PostgresPlans(plan), nil
-	case pgclient.Custom:
+	pgPlan := pgclient.PostgresPlans(plan)
+	switch {
+	case pgPlan == pgclient.Custom:
 		return "", fmt.Errorf("MCP server doesn't support custom Postgres plans. "+
 			"If you're looking to create a Postgres instance with a custom plan, use the dashboard at: %s/%s", config.DashboardURL(), "new/database")
+	// PostgresPlans.Valid() would also admit the deprecated legacy tier names
+	// (starter/standard/pro/pro_plus); membership in the modern source-of-truth
+	// list keeps those rejected.
+	case slices.Contains(mcpserver.ValidPostgresPlanValues, pgPlan):
+		return pgPlan, nil
 	default:
 		return "", fmt.Errorf("invalid Postgres plan: %s", plan)
 	}

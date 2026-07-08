@@ -109,7 +109,7 @@ func createKeyValue(keyValueRepo *Repo) server.ServerTool {
 			),
 			mcp.WithString("plan",
 				mcp.Description("Pricing plan for the Key Value instance"),
-				mcp.Enum(mcpserver.EnumValuesFromClientType(client.KeyValuePlanFree, client.KeyValuePlanStarter, client.KeyValuePlanStandard, client.KeyValuePlanPro, client.KeyValuePlanProPlus)...),
+				mcp.Enum(mcpserver.KeyValuePlanEnumValues()...),
 				mcp.DefaultString(string(client.KeyValuePlanFree)),
 			),
 			mcp.WithString("region",
