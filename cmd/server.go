@@ -79,6 +79,14 @@ func Serve(transport string) *server.MCPServer {
 		if err != nil {
 			log.Fatalf("OAuth configuration: %v", err)
 		}
+		if oauthCfg.Enabled {
+			// The resource URI must match the audience api mints per env; a
+			// mismatch rejects every token, so log the resolved values.
+			log.Printf("OAuth enabled: resource=%s authorization-server=%s api-key-passthrough=%t",
+				oauthCfg.CanonicalResourceURI, oauthCfg.AuthorizationServerURL, oauthCfg.APIKeyPassthrough)
+		} else {
+			log.Print("OAuth disabled")
+		}
 		mux := newHTTPMux(streamableServer, oauthCfg, os.Getenv("OPENAI_VERIFICATION_TOKEN"))
 
 		httpServer := &http.Server{
