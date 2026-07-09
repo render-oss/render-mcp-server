@@ -3,7 +3,6 @@ package session
 import (
 	"context"
 	"errors"
-	"net/url"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/render-oss/render-mcp-server/pkg/config"
@@ -15,20 +14,11 @@ type redisStore struct {
 
 var _ Store = (*redisStore)(nil)
 
+// NewRedisStore connects using a redis:// or rediss:// URL; rediss:// enables TLS.
 func NewRedisStore(addr string) (Store, error) {
-	u, err := url.Parse(addr)
+	o, err := redis.ParseURL(addr)
 	if err != nil {
 		return nil, err
-	}
-
-	addr = u.Host
-
-	o := &redis.Options{
-		Addr: u.Host,
-	}
-	if u.User != nil {
-		o.Username = u.User.Username()
-		o.Password, _ = u.User.Password()
 	}
 	return &redisStore{
 		c: redis.NewClient(o),
