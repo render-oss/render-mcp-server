@@ -290,3 +290,7 @@ feature requests, bug reports, suggestions, comments, or concerns.
     - `volatile_lru`: Evict least recently used keys from keys with expiration
     - `volatile_random`: Evict random keys from keys with expiration
     - `volatile_ttl`: Evict keys with shortest time to live from keys with expiration
+  - `persistenceMode`: Data persistence behavior for the Key Value store (string, optional). Accepted values:
+    - `journal_snapshot`: Append all writes to a journal and periodically save a snapshot to disk
+    - `snapshot`: Periodically save a snapshot to disk
+    - `off`: Disable persistence completely to prioritize write performance
