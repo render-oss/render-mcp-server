@@ -78,13 +78,17 @@ func Middleware(cfg Config, introspector *Introspector) func(http.Handler) http.
 			}
 
 			if !resp.Active {
-				if !cfg.APIKeyPassthrough {
+				// A token the authorization server recognized as a dead OAuth
+				// token is always challenged, even with passthrough on: passing
+				// it through as an API key would surface an opaque downstream
+				// error instead of the invalid_token signal a client needs to
+				// refresh.
+				if !cfg.APIKeyPassthrough || resp.RenderTokenKind == tokenKindOAuthAccess {
 					writeChallenge(w, challenge, "invalid_token", "token is not active")
 					return
 				}
-				// The authorization server says this is not a live OAuth
-				// token. Pass it through as an API key; the Render API
-				// accepts or rejects it on the downstream call.
+				// Otherwise this isn't a live OAuth token; pass it through as an
+				// API key and let the Render API accept or reject it downstream.
 				next.ServeHTTP(w, r.WithContext(authn.ContextWithAPIToken(r.Context(), token)))
 				return
 			}

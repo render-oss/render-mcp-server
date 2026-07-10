@@ -31,6 +31,12 @@ const (
 	maxResponseBytes = 1 << 20
 )
 
+// tokenKindOAuthAccess is the render_token_kind value the Render authorization
+// server sets on an inactive introspection response when the presented token
+// was a known (expired or revoked) OAuth access token, as opposed to an API
+// key. It lets us challenge a dead OAuth token instead of passing it through.
+const tokenKindOAuthAccess = "oauth_access"
+
 // IntrospectionResponse is the RFC 7662 introspection payload returned by the
 // authorization server. Field names match the on-the-wire JSON.
 type IntrospectionResponse struct {
@@ -39,6 +45,8 @@ type IntrospectionResponse struct {
 	ClientID string   `json:"client_id"`
 	Audience Audience `json:"aud"`
 	Exp      int64    `json:"exp"`
+	// RenderTokenKind is a Render extension; see tokenKindOAuthAccess.
+	RenderTokenKind string `json:"render_token_kind"`
 }
 
 // Audience is the introspected "aud" claim, which may be a single string or

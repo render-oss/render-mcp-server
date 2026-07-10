@@ -163,6 +163,16 @@ func TestMiddleware(t *testing.T) {
 			wantHasResult:  false,
 		},
 		{
+			// A dead OAuth token (expired/revoked) must be challenged even with
+			// passthrough on, so the client gets the invalid_token signal to
+			// refresh instead of an opaque downstream error.
+			name:          "inactive OAuth token is challenged despite passthrough",
+			introspection: `{"active": false, "render_token_kind": "oauth_access"}`,
+			authHeader:    "Bearer the-token",
+			wantStatus:    http.StatusUnauthorized,
+			challengeHas:  []string{`error="invalid_token"`},
+		},
+		{
 			// RFC 6750 §3.1: no error attribute when no credentials were sent.
 			name:           "missing credentials are challenged without an error code",
 			introspection:  `{"active": false}`,
