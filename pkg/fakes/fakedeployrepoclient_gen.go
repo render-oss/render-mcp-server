@@ -57,6 +57,21 @@ type FakeDeployRepoClient struct {
 		result1 *client.RetrieveDeployResponse
 		result2 error
 	}
+	RetrieveServiceWithResponseStub        func(context.Context, client.ServiceIdParam, ...client.RequestEditorFn) (*client.RetrieveServiceResponse, error)
+	retrieveServiceWithResponseMutex       sync.RWMutex
+	retrieveServiceWithResponseArgsForCall []struct {
+		arg1 context.Context
+		arg2 client.ServiceIdParam
+		arg3 []client.RequestEditorFn
+	}
+	retrieveServiceWithResponseReturns struct {
+		result1 *client.RetrieveServiceResponse
+		result2 error
+	}
+	retrieveServiceWithResponseReturnsOnCall map[int]struct {
+		result1 *client.RetrieveServiceResponse
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -262,6 +277,72 @@ func (fake *FakeDeployRepoClient) RetrieveDeployWithResponseReturnsOnCall(i int,
 	}{result1, result2}
 }
 
+func (fake *FakeDeployRepoClient) RetrieveServiceWithResponse(arg1 context.Context, arg2 client.ServiceIdParam, arg3 ...client.RequestEditorFn) (*client.RetrieveServiceResponse, error) {
+	fake.retrieveServiceWithResponseMutex.Lock()
+	ret, specificReturn := fake.retrieveServiceWithResponseReturnsOnCall[len(fake.retrieveServiceWithResponseArgsForCall)]
+	fake.retrieveServiceWithResponseArgsForCall = append(fake.retrieveServiceWithResponseArgsForCall, struct {
+		arg1 context.Context
+		arg2 client.ServiceIdParam
+		arg3 []client.RequestEditorFn
+	}{arg1, arg2, arg3})
+	stub := fake.RetrieveServiceWithResponseStub
+	fakeReturns := fake.retrieveServiceWithResponseReturns
+	fake.recordInvocation("RetrieveServiceWithResponse", []interface{}{arg1, arg2, arg3})
+	fake.retrieveServiceWithResponseMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3...)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeDeployRepoClient) RetrieveServiceWithResponseCallCount() int {
+	fake.retrieveServiceWithResponseMutex.RLock()
+	defer fake.retrieveServiceWithResponseMutex.RUnlock()
+	return len(fake.retrieveServiceWithResponseArgsForCall)
+}
+
+func (fake *FakeDeployRepoClient) RetrieveServiceWithResponseCalls(stub func(context.Context, client.ServiceIdParam, ...client.RequestEditorFn) (*client.RetrieveServiceResponse, error)) {
+	fake.retrieveServiceWithResponseMutex.Lock()
+	defer fake.retrieveServiceWithResponseMutex.Unlock()
+	fake.RetrieveServiceWithResponseStub = stub
+}
+
+func (fake *FakeDeployRepoClient) RetrieveServiceWithResponseArgsForCall(i int) (context.Context, client.ServiceIdParam, []client.RequestEditorFn) {
+	fake.retrieveServiceWithResponseMutex.RLock()
+	defer fake.retrieveServiceWithResponseMutex.RUnlock()
+	argsForCall := fake.retrieveServiceWithResponseArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeDeployRepoClient) RetrieveServiceWithResponseReturns(result1 *client.RetrieveServiceResponse, result2 error) {
+	fake.retrieveServiceWithResponseMutex.Lock()
+	defer fake.retrieveServiceWithResponseMutex.Unlock()
+	fake.RetrieveServiceWithResponseStub = nil
+	fake.retrieveServiceWithResponseReturns = struct {
+		result1 *client.RetrieveServiceResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeDeployRepoClient) RetrieveServiceWithResponseReturnsOnCall(i int, result1 *client.RetrieveServiceResponse, result2 error) {
+	fake.retrieveServiceWithResponseMutex.Lock()
+	defer fake.retrieveServiceWithResponseMutex.Unlock()
+	fake.RetrieveServiceWithResponseStub = nil
+	if fake.retrieveServiceWithResponseReturnsOnCall == nil {
+		fake.retrieveServiceWithResponseReturnsOnCall = make(map[int]struct {
+			result1 *client.RetrieveServiceResponse
+			result2 error
+		})
+	}
+	fake.retrieveServiceWithResponseReturnsOnCall[i] = struct {
+		result1 *client.RetrieveServiceResponse
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeDeployRepoClient) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -271,6 +352,8 @@ func (fake *FakeDeployRepoClient) Invocations() map[string][][]interface{} {
 	defer fake.listDeploysWithResponseMutex.RUnlock()
 	fake.retrieveDeployWithResponseMutex.RLock()
 	defer fake.retrieveDeployWithResponseMutex.RUnlock()
+	fake.retrieveServiceWithResponseMutex.RLock()
+	defer fake.retrieveServiceWithResponseMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

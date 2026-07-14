@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/render-oss/render-mcp-server/pkg/client"
+	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
 //go:generate go tool counterfeiter -o ../fakes/fakedeployrepoclient_gen.go . deployRepoClient
@@ -11,6 +12,7 @@ type deployRepoClient interface {
 	ListDeploysWithResponse(ctx context.Context, serviceId client.ServiceIdParam, params *client.ListDeploysParams, reqEditors ...client.RequestEditorFn) (*client.ListDeploysResponse, error)
 	RetrieveDeployWithResponse(ctx context.Context, serviceId client.ServiceIdParam, deployId client.DeployIdParam, reqEditors ...client.RequestEditorFn) (*client.RetrieveDeployResponse, error)
 	CreateDeployWithResponse(ctx context.Context, serviceId client.ServiceIdParam, body client.CreateDeployJSONRequestBody, reqEditors ...client.RequestEditorFn) (*client.CreateDeployResponse, error)
+	RetrieveServiceWithResponse(ctx context.Context, id client.ServiceIdParam, reqEditors ...client.RequestEditorFn) (*client.RetrieveServiceResponse, error)
 }
 
 type Repo struct {
@@ -59,6 +61,19 @@ func (r *Repo) GetDeploy(ctx context.Context, serviceId string, deployId string)
 }
 
 func (r *Repo) TriggerDeploy(ctx context.Context, serviceId string, clearCache bool) (*client.Deploy, error) {
+	// Validate that the service belongs to the workspace in the current session
+	// before deploying it.
+	serviceResp, err := r.client.RetrieveServiceWithResponse(ctx, serviceId)
+	if err != nil {
+		return nil, err
+	}
+	if err := client.ErrorFromResponse(serviceResp); err != nil {
+		return nil, err
+	}
+	if err := validate.WorkspaceMatches(ctx, serviceResp.JSON200.OwnerId); err != nil {
+		return nil, err
+	}
+
 	clearCacheVal := client.DoNotClear
 	if clearCache {
 		clearCacheVal = client.Clear
