@@ -6,11 +6,18 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/client"
 )
 
-type Repo struct {
-	client *client.ClientWithResponses
+//go:generate go tool counterfeiter -o ../fakes/fakedeployrepoclient_gen.go . deployRepoClient
+type deployRepoClient interface {
+	ListDeploysWithResponse(ctx context.Context, serviceId client.ServiceIdParam, params *client.ListDeploysParams, reqEditors ...client.RequestEditorFn) (*client.ListDeploysResponse, error)
+	RetrieveDeployWithResponse(ctx context.Context, serviceId client.ServiceIdParam, deployId client.DeployIdParam, reqEditors ...client.RequestEditorFn) (*client.RetrieveDeployResponse, error)
+	CreateDeployWithResponse(ctx context.Context, serviceId client.ServiceIdParam, body client.CreateDeployJSONRequestBody, reqEditors ...client.RequestEditorFn) (*client.CreateDeployResponse, error)
 }
 
-func NewRepo(c *client.ClientWithResponses) *Repo {
+type Repo struct {
+	client deployRepoClient
+}
+
+func NewRepo(c deployRepoClient) *Repo {
 	return &Repo{
 		client: c,
 	}
