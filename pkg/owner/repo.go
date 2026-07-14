@@ -2,7 +2,6 @@ package owner
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	"github.com/render-oss/render-mcp-server/pkg/pointers"
@@ -31,12 +30,13 @@ func (r *Repo) ListOwners(ctx context.Context, input ListInput) ([]*client.Owner
 		return nil, err
 	}
 
-	if err := client.ErrorFromResponse(resp); err != nil {
+	res, err := client.BodyFromResponse(resp.JSON200, resp)
+	if err != nil {
 		return nil, err
 	}
 
 	var owners []*client.Owner
-	for _, ownerWithCursor := range *resp.JSON200 {
+	for _, ownerWithCursor := range *res {
 		owners = append(owners, ownerWithCursor.Owner)
 	}
 
@@ -49,9 +49,5 @@ func (r *Repo) RetrieveOwner(ctx context.Context, id string) (*client.Owner, err
 		return nil, err
 	}
 
-	if resp.JSON200 == nil {
-		return nil, fmt.Errorf("unexpected response: %v", resp.Status())
-	}
-
-	return resp.JSON200, nil
+	return client.BodyFromResponse(resp.JSON200, resp)
 }

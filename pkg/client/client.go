@@ -36,6 +36,23 @@ func AddHeaders(ctx context.Context, header http.Header, token string) http.Head
 	return header
 }
 
+// BodyFromResponse returns the parsed success body from a generated client
+// response. It returns an error if the API responded with an error status, or
+// with a success status whose body the client did not parse (for example a
+// 202 with an empty body where a 201 was expected). This keeps callers from
+// silently passing a nil body along.
+func BodyFromResponse[T any](body *T, resp interface{ StatusCode() int }) (*T, error) {
+	if err := ErrorFromResponse(resp); err != nil {
+		return nil, err
+	}
+	if body == nil {
+		err := fmt.Errorf("received response code %d with an unexpected empty body", resp.StatusCode())
+		logging.Error("render api: %v", err)
+		return nil, err
+	}
+	return body, nil
+}
+
 func ErrorFromResponse(v any) error {
 	responseErr := firstNonNilErrorField(v)
 	if responseErr == nil {

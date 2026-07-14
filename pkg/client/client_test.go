@@ -64,3 +64,38 @@ func TestErrorFromResponse(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestBodyFromResponse(t *testing.T) {
+	t.Run("returns the parsed body on success", func(t *testing.T) {
+		resp := &client.CreateDeployResponse{
+			JSON201:      &client.Deploy{Id: "dep-123456"},
+			HTTPResponse: &http.Response{StatusCode: 201},
+		}
+
+		body, err := client.BodyFromResponse(resp.JSON201, resp)
+
+		require.NoError(t, err)
+		require.Equal(t, "dep-123456", body.Id)
+	})
+
+	t.Run("returns the API error for error statuses", func(t *testing.T) {
+		resp := &client.CreateDeployResponse{
+			Body:         []byte(`{"message":"service not found"}`),
+			HTTPResponse: &http.Response{StatusCode: 404},
+		}
+
+		_, err := client.BodyFromResponse(resp.JSON201, resp)
+
+		require.ErrorContains(t, err, "received response code 404: service not found")
+	})
+
+	t.Run("returns an error for success statuses with no parsed body", func(t *testing.T) {
+		resp := &client.CreateDeployResponse{
+			HTTPResponse: &http.Response{StatusCode: 202},
+		}
+
+		_, err := client.BodyFromResponse(resp.JSON201, resp)
+
+		require.ErrorContains(t, err, "received response code 202 with an unexpected empty body")
+	})
+}

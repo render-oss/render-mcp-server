@@ -105,6 +105,40 @@ func TestTriggerDeployToolWorkspaceMismatch(t *testing.T) {
 	assert.Equal(t, 0, fakeClient.CreateDeployWithResponseCallCount())
 }
 
+func TestTriggerDeployToolAcceptedWithoutDeploy(t *testing.T) {
+	fakeClient := &fakes.FakeDeployRepoClient{}
+	repo := NewRepo(fakeClient)
+
+	fakeClient.RetrieveServiceWithResponseReturns(&client.RetrieveServiceResponse{
+		JSON200: &client.Service{Id: "srv-123456", OwnerId: "own-123456"},
+		HTTPResponse: &http.Response{
+			StatusCode: 200,
+		},
+	}, nil)
+
+	// The API responds 202 with an empty body when it accepts the deploy
+	// request without synchronously creating a deploy.
+	fakeClient.CreateDeployWithResponseReturns(&client.CreateDeployResponse{
+		HTTPResponse: &http.Response{
+			StatusCode: 202,
+		},
+	}, nil)
+
+	ctx := createTestContext(t, "own-123456")
+
+	request := mcp.CallToolRequest{}
+	request.Params.Arguments = map[string]any{"serviceId": "srv-123456"}
+
+	tool := triggerDeploy(repo)
+	result, err := tool.Handler(ctx, request)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.False(t, result.IsError)
+	assert.Contains(t, textContent(t, result), "accepted")
+	assert.NotContains(t, textContent(t, result), "null")
+}
+
 func TestTriggerDeployToolServiceNotFound(t *testing.T) {
 	fakeClient := &fakes.FakeDeployRepoClient{}
 	repo := NewRepo(fakeClient)

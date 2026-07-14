@@ -39,12 +39,13 @@ func (r *Repo) ListKeyValue(ctx context.Context, params *client.ListKeyValuePara
 		return nil, err
 	}
 
-	if err := client.ErrorFromResponse(resp); err != nil {
+	res, err := client.BodyFromResponse(resp.JSON200, resp)
+	if err != nil {
 		return nil, err
 	}
 
-	kvs := make([]*client.KeyValue, 0, len(*resp.JSON200))
-	for _, kv := range *resp.JSON200 {
+	kvs := make([]*client.KeyValue, 0, len(*res))
+	for _, kv := range *res {
 		kvs = append(kvs, &kv.KeyValue)
 	}
 
@@ -57,11 +58,7 @@ func (r *Repo) GetKeyValue(ctx context.Context, id string) (*client.KeyValueDeta
 		return nil, err
 	}
 
-	if err := client.ErrorFromResponse(resp); err != nil {
-		return nil, err
-	}
-
-	return resp.JSON200, nil
+	return client.BodyFromResponse(resp.JSON200, resp)
 }
 
 func (r *Repo) CreateKeyValue(ctx context.Context, input client.KeyValuePOSTInput) (*client.KeyValueDetail, error) {
@@ -74,9 +71,5 @@ func (r *Repo) CreateKeyValue(ctx context.Context, input client.KeyValuePOSTInpu
 		return nil, err
 	}
 
-	if err := client.ErrorFromResponse(resp); err != nil {
-		return nil, err
-	}
-
-	return resp.JSON201, nil
+	return client.BodyFromResponse(resp.JSON201, resp)
 }

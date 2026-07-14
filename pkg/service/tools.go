@@ -772,13 +772,17 @@ func updateEnvVars(serviceRepo *Repo, deployRepo *deploy.Repo) server.ServerTool
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			deployJSON, err := json.Marshal(triggeredDeploy)
-			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
-			}
-
 			responseText := "Environment variables updated. A new deploy has been triggered to pick up the changes.\n\n"
-			responseText += "Response from deploying service: " + string(deployJSON)
+			if triggeredDeploy == nil {
+				responseText += "The deploy request was accepted, but the deploy has not been created yet. " +
+					"Use list_deploys to check on the service's deploys."
+			} else {
+				deployJSON, err := json.Marshal(triggeredDeploy)
+				if err != nil {
+					return mcp.NewToolResultError(err.Error()), nil
+				}
+				responseText += "Response from deploying service: " + string(deployJSON)
+			}
 
 			return mcp.NewToolResultText(responseText), nil
 		},

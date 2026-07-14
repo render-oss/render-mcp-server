@@ -67,11 +67,7 @@ func (r *Repo) GetPostgres(ctx context.Context, id string) (*client.PostgresDeta
 		return nil, err
 	}
 
-	if err := client.ErrorFromResponse(resp); err != nil {
-		return nil, err
-	}
-
-	return resp.JSON200, nil
+	return client.BodyFromResponse(resp.JSON200, resp)
 }
 
 func (r *Repo) GetPostgresConnectionInfo(ctx context.Context, id string) (*client.PostgresConnectionInfo, error) {
@@ -80,11 +76,7 @@ func (r *Repo) GetPostgresConnectionInfo(ctx context.Context, id string) (*clien
 		return nil, err
 	}
 
-	if err := client.ErrorFromResponse(resp); err != nil {
-		return nil, err
-	}
-
-	return resp.JSON200, nil
+	return client.BodyFromResponse(resp.JSON200, resp)
 }
 
 func (r *Repo) CreatePostgres(ctx context.Context, input client.PostgresPOSTInput) (*client.PostgresDetail, error) {
@@ -97,11 +89,7 @@ func (r *Repo) CreatePostgres(ctx context.Context, input client.PostgresPOSTInpu
 		return nil, err
 	}
 
-	if err := client.ErrorFromResponse(resp); err != nil {
-		return nil, err
-	}
-
-	return resp.JSON201, nil
+	return client.BodyFromResponse(resp.JSON201, resp)
 }
 
 func (r *Repo) RestartPostgresDatabase(ctx context.Context, id string) error {

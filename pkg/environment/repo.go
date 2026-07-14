@@ -2,7 +2,6 @@ package environment
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/render-oss/render-mcp-server/pkg/client"
 )
@@ -25,11 +24,7 @@ func (e *Repo) GetEnvironment(ctx context.Context, id string) (*client.Environme
 		return nil, err
 	}
 
-	if resp.JSON200 == nil {
-		return nil, fmt.Errorf("unexpected response: %v", resp.Status())
-	}
-
-	return resp.JSON200, nil
+	return client.BodyFromResponse(resp.JSON200, resp)
 }
 
 func (e *Repo) ListEnvironments(ctx context.Context, params *client.ListEnvironmentsParams) ([]*client.Environment, error) {

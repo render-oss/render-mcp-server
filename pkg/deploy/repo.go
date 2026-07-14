@@ -2,6 +2,7 @@ package deploy
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	"github.com/render-oss/render-mcp-server/pkg/validate"
@@ -53,13 +54,12 @@ func (r *Repo) GetDeploy(ctx context.Context, serviceId string, deployId string)
 		return nil, err
 	}
 
-	if err := client.ErrorFromResponse(resp); err != nil {
-		return nil, err
-	}
-
-	return resp.JSON200, nil
+	return client.BodyFromResponse(resp.JSON200, resp)
 }
 
+// TriggerDeploy triggers a new deploy for a service. It returns (nil, nil)
+// when the API accepts the deploy request without synchronously creating a
+// deploy (a 202 response).
 func (r *Repo) TriggerDeploy(ctx context.Context, serviceId string, clearCache bool) (*client.Deploy, error) {
 	// Validate that the service belongs to the workspace in the current session
 	// before deploying it.
@@ -67,10 +67,11 @@ func (r *Repo) TriggerDeploy(ctx context.Context, serviceId string, clearCache b
 	if err != nil {
 		return nil, err
 	}
-	if err := client.ErrorFromResponse(serviceResp); err != nil {
+	service, err := client.BodyFromResponse(serviceResp.JSON200, serviceResp)
+	if err != nil {
 		return nil, err
 	}
-	if err := validate.WorkspaceMatches(ctx, serviceResp.JSON200.OwnerId); err != nil {
+	if err := validate.WorkspaceMatches(ctx, service.OwnerId); err != nil {
 		return nil, err
 	}
 
@@ -87,9 +88,9 @@ func (r *Repo) TriggerDeploy(ctx context.Context, serviceId string, clearCache b
 	if err != nil {
 		return nil, err
 	}
-	if err := client.ErrorFromResponse(resp); err != nil {
-		return nil, err
+	if resp.StatusCode() == http.StatusAccepted {
+		return nil, nil
 	}
 
-	return resp.JSON201, nil
+	return client.BodyFromResponse(resp.JSON201, resp)
 }

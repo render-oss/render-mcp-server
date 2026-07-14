@@ -127,11 +127,7 @@ func (s *Repo) CreateService(ctx context.Context, data client.CreateServiceJSONR
 		return nil, err
 	}
 
-	if err := client.ErrorFromResponse(resp); err != nil {
-		return nil, err
-	}
-
-	return resp.JSON201, nil
+	return client.BodyFromResponse(resp.JSON201, resp)
 }
 
 func (s *Repo) GetService(ctx context.Context, id string) (*client.Service, error) {
@@ -140,9 +136,5 @@ func (s *Repo) GetService(ctx context.Context, id string) (*client.Service, erro
 		return nil, err
 	}
 
-	if err := client.ErrorFromResponse(resp); err != nil {
-		return nil, err
-	}
-
-	return resp.JSON200, nil
+	return client.BodyFromResponse(resp.JSON200, resp)
 }

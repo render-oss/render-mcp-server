@@ -173,6 +173,10 @@ func triggerDeploy(deployRepo *Repo) server.ServerTool {
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
+			if deploy == nil {
+				return mcp.NewToolResultText("The deploy request was accepted, but the deploy has not " +
+					"been created yet. Use list_deploys to check on the service's deploys."), nil
+			}
 
 			respJSON, err := json.Marshal(deploy)
 			if err != nil {
