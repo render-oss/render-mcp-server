@@ -63,7 +63,7 @@ func TestUpdateEnvVarsTool(t *testing.T) {
 			deployRepo := deploy.NewRepo(fakeDeployClient)
 
 			fakeClient.RetrieveServiceWithResponseReturns(&client.RetrieveServiceResponse{
-				JSON200: &client.Service{},
+				JSON200: &client.Service{Id: serviceId, OwnerId: ownerId},
 				HTTPResponse: &http.Response{
 					StatusCode: 200,
 				},
@@ -134,6 +134,39 @@ func TestUpdateEnvVarsTool(t *testing.T) {
 
 		})
 	}
+}
+
+func TestUpdateEnvVarsToolWorkspaceMismatch(t *testing.T) {
+	fakeClient := &fakes.FakeServiceRepoClient{}
+	repo := NewRepo(fakeClient)
+
+	fakeDeployClient := &fakes.FakeDeployRepoClient{}
+	deployRepo := deploy.NewRepo(fakeDeployClient)
+
+	// The service belongs to a different workspace than the session's.
+	fakeClient.RetrieveServiceWithResponseReturns(&client.RetrieveServiceResponse{
+		JSON200: &client.Service{Id: "srv-123456", OwnerId: "own-123456"},
+		HTTPResponse: &http.Response{
+			StatusCode: 200,
+		},
+	}, nil)
+
+	request := mcp.CallToolRequest{}
+	request.Params.Arguments = map[string]interface{}{
+		"serviceId": "srv-123456",
+		"replace":   true,
+		"envVars":   envVarInputsAsParams([]envvar.EnvVarInput{envVarInput("KEY1", "value1")}),
+	}
+
+	tool := updateEnvVars(repo, deployRepo)
+	result, err := tool.Handler(createTestContext(t, "own-other"), request)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.IsError)
+	// The env vars must not be mutated when the workspace check fails.
+	assert.Equal(t, 0, fakeClient.UpdateEnvVarsForServiceWithResponseCallCount())
+	assert.Equal(t, 0, fakeDeployClient.CreateDeployWithResponseCallCount())
 }
 
 func envVarInput(key, value string) envvar.EnvVarInput {

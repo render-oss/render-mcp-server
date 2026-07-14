@@ -99,9 +99,13 @@ func (s *Repo) listEnvVarsPage(ctx context.Context, params *ListEnvParams) ([]*c
 }
 
 func (s *Repo) UpdateEnvVars(ctx context.Context, serviceId string, envVars []envvar.EnvVarInput) (*client.UpdateEnvVarsForServiceResponse, error) {
-	// validate that the service belongs to the workspace
-	_, err := s.GetService(ctx, serviceId)
+	// Validate that the service belongs to the workspace in the current
+	// session before mutating it.
+	service, err := s.GetService(ctx, serviceId)
 	if err != nil {
+		return nil, err
+	}
+	if err := validate.WorkspaceMatches(ctx, service.OwnerId); err != nil {
 		return nil, err
 	}
 
