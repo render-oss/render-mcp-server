@@ -10,6 +10,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	envvar "github.com/render-oss/render-mcp-server/pkg/client/envvar"
+	"github.com/render-oss/render-mcp-server/pkg/deploy"
 	"github.com/render-oss/render-mcp-server/pkg/fakes"
 	"github.com/render-oss/render-mcp-server/pkg/pointers"
 	"github.com/render-oss/render-mcp-server/pkg/session"
@@ -18,7 +19,9 @@ import (
 )
 
 func TestUpdateEnvVarsTool(t *testing.T) {
+	ownerId := "own-123456"
 	serviceId := "srv-123456"
+	deployId := "dep-123456"
 	existingEnvVars := []*client.EnvVar{
 		{Key: "KEY1", Value: "old_value1"},
 		{Key: "KEY2", Value: "old_value2"},
@@ -28,7 +31,6 @@ func TestUpdateEnvVarsTool(t *testing.T) {
 		envVarInput("KEY3", "new_value3"),
 	}
 	expectedResponseIncludes := "Environment variables updated. A new deploy has been triggered to pick up the changes."
-	expectedDeployResponse := "create deploy response"
 	sensitiveInfo := "sensitive information"
 
 	tests := []struct {
@@ -57,8 +59,18 @@ func TestUpdateEnvVarsTool(t *testing.T) {
 			fakeClient := &fakes.FakeServiceRepoClient{}
 			repo := NewRepo(fakeClient)
 
+			fakeDeployClient := &fakes.FakeDeployRepoClient{}
+			deployRepo := deploy.NewRepo(fakeDeployClient)
+
 			fakeClient.RetrieveServiceWithResponseReturns(&client.RetrieveServiceResponse{
 				JSON200: &client.Service{},
+				HTTPResponse: &http.Response{
+					StatusCode: 200,
+				},
+			}, nil)
+
+			fakeDeployClient.RetrieveServiceWithResponseReturns(&client.RetrieveServiceResponse{
+				JSON200: &client.Service{Id: serviceId, OwnerId: ownerId},
 				HTTPResponse: &http.Response{
 					StatusCode: 200,
 				},
@@ -80,11 +92,11 @@ func TestUpdateEnvVarsTool(t *testing.T) {
 				Body: []byte(sensitiveInfo),
 			}, nil)
 
-			fakeClient.CreateDeployWithResponseReturns(&client.CreateDeployResponse{
+			fakeDeployClient.CreateDeployWithResponseReturns(&client.CreateDeployResponse{
+				JSON201: &client.Deploy{Id: deployId},
 				HTTPResponse: &http.Response{
 					StatusCode: 201,
 				},
-				Body: []byte(expectedDeployResponse),
 			}, nil)
 
 			request := mcp.CallToolRequest{}
@@ -94,8 +106,8 @@ func TestUpdateEnvVarsTool(t *testing.T) {
 				"envVars":   envVarInputsAsParams(newEnvVars),
 			}
 
-			tool := updateEnvVars(repo)
-			result, err := tool.Handler(context.Background(), request)
+			tool := updateEnvVars(repo, deployRepo)
+			result, err := tool.Handler(createTestContext(t, ownerId), request)
 
 			assert.NoError(t, err)
 			assert.NotNil(t, result)
@@ -103,7 +115,7 @@ func TestUpdateEnvVarsTool(t *testing.T) {
 			for _, content := range result.Content {
 				if textContent, ok := content.(mcp.TextContent); ok {
 					assert.Contains(t, textContent.Text, expectedResponseIncludes)
-					assert.Contains(t, textContent.Text, expectedDeployResponse)
+					assert.Contains(t, textContent.Text, deployId)
 					// Verify that we don't include sensitive info
 					assert.NotContains(t, textContent.Text, sensitiveInfo)
 				}

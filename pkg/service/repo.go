@@ -15,7 +15,6 @@ type serviceRepoClient interface {
 	ListServicesWithResponse(ctx context.Context, params *client.ListServicesParams, reqEditors ...client.RequestEditorFn) (*client.ListServicesResponse, error)
 	GetEnvVarsForServiceWithResponse(ctx context.Context, serviceId string, params *client.GetEnvVarsForServiceParams, reqEditors ...client.RequestEditorFn) (*client.GetEnvVarsForServiceResponse, error)
 	UpdateEnvVarsForServiceWithResponse(ctx context.Context, serviceId string, body []envvar.EnvVarInput, reqEditors ...client.RequestEditorFn) (*client.UpdateEnvVarsForServiceResponse, error)
-	CreateDeployWithResponse(ctx context.Context, serviceId string, body client.CreateDeployJSONRequestBody, reqEditors ...client.RequestEditorFn) (*client.CreateDeployResponse, error)
 	CreateServiceWithResponse(ctx context.Context, data client.CreateServiceJSONRequestBody, reqEditors ...client.RequestEditorFn) (*client.CreateServiceResponse, error)
 	RetrieveServiceWithResponse(ctx context.Context, id string, reqEditors ...client.RequestEditorFn) (*client.RetrieveServiceResponse, error)
 }
@@ -107,25 +106,6 @@ func (s *Repo) UpdateEnvVars(ctx context.Context, serviceId string, envVars []en
 	}
 
 	resp, err := s.client.UpdateEnvVarsForServiceWithResponse(ctx, serviceId, envVars)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := client.ErrorFromResponse(resp); err != nil {
-		return nil, err
-	}
-
-	return resp, nil
-}
-
-func (s *Repo) DeployService(ctx context.Context, serviceId string) (*client.CreateDeployResponse, error) {
-	// Skip validation of the service belongs to the workspace because it should be done before the
-	// call to DeployService.
-	resp, err := s.client.CreateDeployWithResponse(ctx, serviceId, client.CreateDeployJSONRequestBody{
-		ClearCache: nil,
-		CommitId:   nil,
-		ImageUrl:   nil,
-	})
 	if err != nil {
 		return nil, err
 	}

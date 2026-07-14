@@ -6,26 +6,10 @@ import (
 	"sync"
 
 	"github.com/render-oss/render-mcp-server/pkg/client"
-	envvar "github.com/render-oss/render-mcp-server/pkg/client/envvar"
+	clienta "github.com/render-oss/render-mcp-server/pkg/client/envvar"
 )
 
 type FakeServiceRepoClient struct {
-	CreateDeployWithResponseStub        func(context.Context, string, client.CreateDeployJSONRequestBody, ...client.RequestEditorFn) (*client.CreateDeployResponse, error)
-	createDeployWithResponseMutex       sync.RWMutex
-	createDeployWithResponseArgsForCall []struct {
-		arg1 context.Context
-		arg2 string
-		arg3 client.CreateDeployJSONRequestBody
-		arg4 []client.RequestEditorFn
-	}
-	createDeployWithResponseReturns struct {
-		result1 *client.CreateDeployResponse
-		result2 error
-	}
-	createDeployWithResponseReturnsOnCall map[int]struct {
-		result1 *client.CreateDeployResponse
-		result2 error
-	}
 	CreateServiceWithResponseStub        func(context.Context, client.CreateServiceJSONRequestBody, ...client.RequestEditorFn) (*client.CreateServiceResponse, error)
 	createServiceWithResponseMutex       sync.RWMutex
 	createServiceWithResponseArgsForCall []struct {
@@ -87,12 +71,12 @@ type FakeServiceRepoClient struct {
 		result1 *client.RetrieveServiceResponse
 		result2 error
 	}
-	UpdateEnvVarsForServiceWithResponseStub        func(context.Context, string, []envvar.EnvVarInput, ...client.RequestEditorFn) (*client.UpdateEnvVarsForServiceResponse, error)
+	UpdateEnvVarsForServiceWithResponseStub        func(context.Context, string, []clienta.EnvVarInput, ...client.RequestEditorFn) (*client.UpdateEnvVarsForServiceResponse, error)
 	updateEnvVarsForServiceWithResponseMutex       sync.RWMutex
 	updateEnvVarsForServiceWithResponseArgsForCall []struct {
 		arg1 context.Context
 		arg2 string
-		arg3 []envvar.EnvVarInput
+		arg3 []clienta.EnvVarInput
 		arg4 []client.RequestEditorFn
 	}
 	updateEnvVarsForServiceWithResponseReturns struct {
@@ -105,73 +89,6 @@ type FakeServiceRepoClient struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
-}
-
-func (fake *FakeServiceRepoClient) CreateDeployWithResponse(arg1 context.Context, arg2 string, arg3 client.CreateDeployJSONRequestBody, arg4 ...client.RequestEditorFn) (*client.CreateDeployResponse, error) {
-	fake.createDeployWithResponseMutex.Lock()
-	ret, specificReturn := fake.createDeployWithResponseReturnsOnCall[len(fake.createDeployWithResponseArgsForCall)]
-	fake.createDeployWithResponseArgsForCall = append(fake.createDeployWithResponseArgsForCall, struct {
-		arg1 context.Context
-		arg2 string
-		arg3 client.CreateDeployJSONRequestBody
-		arg4 []client.RequestEditorFn
-	}{arg1, arg2, arg3, arg4})
-	stub := fake.CreateDeployWithResponseStub
-	fakeReturns := fake.createDeployWithResponseReturns
-	fake.recordInvocation("CreateDeployWithResponse", []interface{}{arg1, arg2, arg3, arg4})
-	fake.createDeployWithResponseMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2, arg3, arg4...)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *FakeServiceRepoClient) CreateDeployWithResponseCallCount() int {
-	fake.createDeployWithResponseMutex.RLock()
-	defer fake.createDeployWithResponseMutex.RUnlock()
-	return len(fake.createDeployWithResponseArgsForCall)
-}
-
-func (fake *FakeServiceRepoClient) CreateDeployWithResponseCalls(stub func(context.Context, string, client.CreateDeployJSONRequestBody, ...client.RequestEditorFn) (*client.CreateDeployResponse, error)) {
-	fake.createDeployWithResponseMutex.Lock()
-	defer fake.createDeployWithResponseMutex.Unlock()
-	fake.CreateDeployWithResponseStub = stub
-}
-
-func (fake *FakeServiceRepoClient) CreateDeployWithResponseArgsForCall(i int) (context.Context, string, client.CreateDeployJSONRequestBody, []client.RequestEditorFn) {
-	fake.createDeployWithResponseMutex.RLock()
-	defer fake.createDeployWithResponseMutex.RUnlock()
-	argsForCall := fake.createDeployWithResponseArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
-}
-
-func (fake *FakeServiceRepoClient) CreateDeployWithResponseReturns(result1 *client.CreateDeployResponse, result2 error) {
-	fake.createDeployWithResponseMutex.Lock()
-	defer fake.createDeployWithResponseMutex.Unlock()
-	fake.CreateDeployWithResponseStub = nil
-	fake.createDeployWithResponseReturns = struct {
-		result1 *client.CreateDeployResponse
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeServiceRepoClient) CreateDeployWithResponseReturnsOnCall(i int, result1 *client.CreateDeployResponse, result2 error) {
-	fake.createDeployWithResponseMutex.Lock()
-	defer fake.createDeployWithResponseMutex.Unlock()
-	fake.CreateDeployWithResponseStub = nil
-	if fake.createDeployWithResponseReturnsOnCall == nil {
-		fake.createDeployWithResponseReturnsOnCall = make(map[int]struct {
-			result1 *client.CreateDeployResponse
-			result2 error
-		})
-	}
-	fake.createDeployWithResponseReturnsOnCall[i] = struct {
-		result1 *client.CreateDeployResponse
-		result2 error
-	}{result1, result2}
 }
 
 func (fake *FakeServiceRepoClient) CreateServiceWithResponse(arg1 context.Context, arg2 client.CreateServiceJSONRequestBody, arg3 ...client.RequestEditorFn) (*client.CreateServiceResponse, error) {
@@ -439,10 +356,10 @@ func (fake *FakeServiceRepoClient) RetrieveServiceWithResponseReturnsOnCall(i in
 	}{result1, result2}
 }
 
-func (fake *FakeServiceRepoClient) UpdateEnvVarsForServiceWithResponse(arg1 context.Context, arg2 string, arg3 []envvar.EnvVarInput, arg4 ...client.RequestEditorFn) (*client.UpdateEnvVarsForServiceResponse, error) {
-	var arg3Copy []envvar.EnvVarInput
+func (fake *FakeServiceRepoClient) UpdateEnvVarsForServiceWithResponse(arg1 context.Context, arg2 string, arg3 []clienta.EnvVarInput, arg4 ...client.RequestEditorFn) (*client.UpdateEnvVarsForServiceResponse, error) {
+	var arg3Copy []clienta.EnvVarInput
 	if arg3 != nil {
-		arg3Copy = make([]envvar.EnvVarInput, len(arg3))
+		arg3Copy = make([]clienta.EnvVarInput, len(arg3))
 		copy(arg3Copy, arg3)
 	}
 	fake.updateEnvVarsForServiceWithResponseMutex.Lock()
@@ -450,7 +367,7 @@ func (fake *FakeServiceRepoClient) UpdateEnvVarsForServiceWithResponse(arg1 cont
 	fake.updateEnvVarsForServiceWithResponseArgsForCall = append(fake.updateEnvVarsForServiceWithResponseArgsForCall, struct {
 		arg1 context.Context
 		arg2 string
-		arg3 []envvar.EnvVarInput
+		arg3 []clienta.EnvVarInput
 		arg4 []client.RequestEditorFn
 	}{arg1, arg2, arg3Copy, arg4})
 	stub := fake.UpdateEnvVarsForServiceWithResponseStub
@@ -472,13 +389,13 @@ func (fake *FakeServiceRepoClient) UpdateEnvVarsForServiceWithResponseCallCount(
 	return len(fake.updateEnvVarsForServiceWithResponseArgsForCall)
 }
 
-func (fake *FakeServiceRepoClient) UpdateEnvVarsForServiceWithResponseCalls(stub func(context.Context, string, []envvar.EnvVarInput, ...client.RequestEditorFn) (*client.UpdateEnvVarsForServiceResponse, error)) {
+func (fake *FakeServiceRepoClient) UpdateEnvVarsForServiceWithResponseCalls(stub func(context.Context, string, []clienta.EnvVarInput, ...client.RequestEditorFn) (*client.UpdateEnvVarsForServiceResponse, error)) {
 	fake.updateEnvVarsForServiceWithResponseMutex.Lock()
 	defer fake.updateEnvVarsForServiceWithResponseMutex.Unlock()
 	fake.UpdateEnvVarsForServiceWithResponseStub = stub
 }
 
-func (fake *FakeServiceRepoClient) UpdateEnvVarsForServiceWithResponseArgsForCall(i int) (context.Context, string, []envvar.EnvVarInput, []client.RequestEditorFn) {
+func (fake *FakeServiceRepoClient) UpdateEnvVarsForServiceWithResponseArgsForCall(i int) (context.Context, string, []clienta.EnvVarInput, []client.RequestEditorFn) {
 	fake.updateEnvVarsForServiceWithResponseMutex.RLock()
 	defer fake.updateEnvVarsForServiceWithResponseMutex.RUnlock()
 	argsForCall := fake.updateEnvVarsForServiceWithResponseArgsForCall[i]
@@ -514,8 +431,6 @@ func (fake *FakeServiceRepoClient) UpdateEnvVarsForServiceWithResponseReturnsOnC
 func (fake *FakeServiceRepoClient) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.createDeployWithResponseMutex.RLock()
-	defer fake.createDeployWithResponseMutex.RUnlock()
 	fake.createServiceWithResponseMutex.RLock()
 	defer fake.createServiceWithResponseMutex.RUnlock()
 	fake.getEnvVarsForServiceWithResponseMutex.RLock()

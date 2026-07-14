@@ -9,6 +9,7 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	envvar "github.com/render-oss/render-mcp-server/pkg/client/envvar"
 	"github.com/render-oss/render-mcp-server/pkg/config"
+	"github.com/render-oss/render-mcp-server/pkg/deploy"
 	"github.com/render-oss/render-mcp-server/pkg/mcpserver"
 	"github.com/render-oss/render-mcp-server/pkg/pointers"
 	"github.com/render-oss/render-mcp-server/pkg/session"
@@ -17,6 +18,7 @@ import (
 
 func Tools(c *client.ClientWithResponses) []server.ServerTool {
 	serviceRepo := NewRepo(c)
+	deployRepo := deploy.NewRepo(c)
 
 	return []server.ServerTool{
 		listServices(serviceRepo),
@@ -27,7 +29,7 @@ func Tools(c *client.ClientWithResponses) []server.ServerTool {
 		updateWebService(),
 		updateStaticSite(),
 		updateCronJob(),
-		updateEnvVars(serviceRepo),
+		updateEnvVars(serviceRepo, deployRepo),
 	}
 }
 
@@ -680,7 +682,7 @@ func updateCronJob() server.ServerTool {
 	}
 }
 
-func updateEnvVars(serviceRepo *Repo) server.ServerTool {
+func updateEnvVars(serviceRepo *Repo, deployRepo *deploy.Repo) server.ServerTool {
 	return server.ServerTool{
 		Tool: mcp.NewTool("update_environment_variables",
 			mcp.WithDescription("Update environment variables for a service. "+
@@ -765,13 +767,18 @@ func updateEnvVars(serviceRepo *Repo) server.ServerTool {
 			}
 
 			// Now trigger a deploy so that the updated environment variables are picked up
-			deployResponse, err := serviceRepo.DeployService(ctx, serviceId)
+			triggeredDeploy, err := deployRepo.TriggerDeploy(ctx, serviceId, false)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			deployJSON, err := json.Marshal(triggeredDeploy)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
 			responseText := "Environment variables updated. A new deploy has been triggered to pick up the changes.\n\n"
-			responseText += "Response from deploying service: " + string(deployResponse.Body)
+			responseText += "Response from deploying service: " + string(deployJSON)
 
 			return mcp.NewToolResultText(responseText), nil
 		},
