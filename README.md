@@ -145,7 +145,7 @@ feature requests, bug reports, suggestions, comments, or concerns.
   - `serviceId`: The ID of the service (string, required)
   - `deployId`: The ID of the deployment (string, required)
 
-- **trigger_deploy** - Trigger a new deploy for a service
+- **trigger_deploy** - Trigger a new deploy for a service. Services with autoDeploy enabled deploy automatically on push; use this for deploys that won't happen automatically.
   - `serviceId`: The ID of the service to deploy (string, required)
   - `clearCache`: Whether to clear the build cache before deploying (boolean, optional). Defaults to `false`.
 

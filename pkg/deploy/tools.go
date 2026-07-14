@@ -141,7 +141,12 @@ func getDeploy(deployRepo *Repo) server.ServerTool {
 func triggerDeploy(deployRepo *Repo) server.ServerTool {
 	return server.ServerTool{
 		Tool: mcp.NewTool("trigger_deploy",
-			mcp.WithDescription("Trigger a new deploy for a service. Use this to redeploy a service after making changes."),
+			mcp.WithDescription("Trigger a new deploy for a service. "+
+				"Services with autoDeploy enabled deploy automatically when their branch or image "+
+				"is updated, so do NOT use this tool after pushing code to such a service — the "+
+				"push already triggers a deploy. Use it only when a deploy won't happen "+
+				"automatically: services with autoDeploy disabled, redeploying without a code "+
+				"change, or redeploying with a cleared build cache."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:           "Trigger deploy",
 				ReadOnlyHint:    pointers.From(false),
