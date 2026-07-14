@@ -141,8 +141,13 @@ feature requests, bug reports, suggestions, comments, or concerns.
   - `serviceId`: The ID of the service to get deployments for (string, required)
 
 - **get_deploy** - Get details about a specific deployment
+
   - `serviceId`: The ID of the service (string, required)
   - `deployId`: The ID of the deployment (string, required)
+
+- **trigger_deploy** - Trigger a new deploy for a service
+  - `serviceId`: The ID of the service to deploy (string, required)
+  - `clearCache`: Whether to clear the build cache before deploying (boolean, optional). Defaults to `false`.
 
 ### Logs
 
