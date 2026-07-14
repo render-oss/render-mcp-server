@@ -50,26 +50,24 @@ func (r *Repo) GetDeploy(ctx context.Context, serviceId string, deployId string)
 
 	return resp.JSON200, nil
 }
+
 func (r *Repo) TriggerDeploy(ctx context.Context, serviceId string, clearCache bool) (*client.Deploy, error) {
-    var clearCacheVal *client.CreateDeployJSONBodyClearCache
-    if clearCache {
-        v := client.Clear
-        clearCacheVal = &v
-    } else {
-        v := client.DoNotClear
-        clearCacheVal = &v
-    }
+	clearCacheVal := client.DoNotClear
+	if clearCache {
+		clearCacheVal = client.Clear
+	}
 
-    body := client.CreateDeployJSONRequestBody{
-        ClearCache: clearCacheVal,
-    }
+	body := client.CreateDeployJSONRequestBody{
+		ClearCache: &clearCacheVal,
+	}
 
-    resp, err := r.client.CreateDeployWithResponse(ctx, client.ServiceIdParam(serviceId), body)
-    if err != nil {
-        return nil, err
-    }
-    if err := client.ErrorFromResponse(resp); err != nil {
-        return nil, err
-    }
-    return resp.JSON201, nil
+	resp, err := r.client.CreateDeployWithResponse(ctx, client.ServiceIdParam(serviceId), body)
+	if err != nil {
+		return nil, err
+	}
+	if err := client.ErrorFromResponse(resp); err != nil {
+		return nil, err
+	}
+
+	return resp.JSON201, nil
 }

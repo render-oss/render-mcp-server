@@ -137,6 +137,7 @@ func getDeploy(deployRepo *Repo) server.ServerTool {
 		},
 	}
 }
+
 func triggerDeploy(deployRepo *Repo) server.ServerTool {
 	return server.ServerTool{
 		Tool: mcp.NewTool("trigger_deploy",
