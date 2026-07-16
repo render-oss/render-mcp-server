@@ -1,13 +1,51 @@
 package client_test
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/render-oss/render-mcp-server/pkg/client"
+	"github.com/render-oss/render-mcp-server/pkg/oauth"
 )
+
+func TestAddHeadersOriginToken(t *testing.T) {
+	enableOAuth := func(t *testing.T) {
+		t.Setenv("OAUTH_ENABLED", "true")
+		t.Setenv("OAUTH_AUTHORIZATION_SERVER_URL", "https://api.example.com")
+		t.Setenv("OAUTH_CANONICAL_RESOURCE_URI", "https://mcp.example.com/mcp")
+	}
+
+	t.Run("attaches the origin token when OAuth is enabled", func(t *testing.T) {
+		enableOAuth(t)
+		t.Setenv(oauth.IntrospectionServiceTokenEnv, "origin-secret")
+
+		h := client.AddHeaders(context.Background(), http.Header{}, "user-token")
+
+		require.Equal(t, "origin-secret", h.Get("Render-Origin-Token"))
+		require.Equal(t, "Bearer user-token", h.Get("Authorization"))
+	})
+
+	t.Run("sends no origin header when OAuth is disabled", func(t *testing.T) {
+		t.Setenv("OAUTH_ENABLED", "false")
+		t.Setenv(oauth.IntrospectionServiceTokenEnv, "origin-secret")
+
+		h := client.AddHeaders(context.Background(), http.Header{}, "user-token")
+
+		require.Empty(t, h.Values("Render-Origin-Token"))
+	})
+
+	t.Run("sends no origin header when the token is unset", func(t *testing.T) {
+		enableOAuth(t)
+		t.Setenv(oauth.IntrospectionServiceTokenEnv, "")
+
+		h := client.AddHeaders(context.Background(), http.Header{}, "user-token")
+
+		require.Empty(t, h.Values("Render-Origin-Token"))
+	})
+}
 
 func TestErrorFromResponse(t *testing.T) {
 	t.Run("status code 401", func(t *testing.T) {

@@ -13,10 +13,13 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/httpcontext"
 	"github.com/render-oss/render-mcp-server/pkg/logging"
+	"github.com/render-oss/render-mcp-server/pkg/oauth"
 )
 
 var ErrUnauthorized = errors.New("unauthorized")
 var ErrForbidden = errors.New("forbidden")
+
+const OriginTokenHeader = "Render-Origin-Token"
 
 func NewDefaultClient() (*ClientWithResponses, error) {
 	apiCfg, err := config.DefaultAPIConfig()
@@ -32,6 +35,9 @@ func AddHeaders(ctx context.Context, header http.Header, token string) http.Head
 	header.Add("authorization", fmt.Sprintf("Bearer %s", token))
 	if hc.ForwardedFor != "" {
 		header.Add("X-Forwarded-For", hc.ForwardedFor)
+	}
+	if origin := oauth.OriginToken(); origin != "" {
+		header.Set(OriginTokenHeader, origin)
 	}
 	return header
 }

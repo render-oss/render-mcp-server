@@ -15,6 +15,8 @@ import (
 
 const wellKnownPath = "/.well-known/oauth-protected-resource"
 
+const IntrospectionServiceTokenEnv = "OAUTH_INTROSPECTION_SERVICE_TOKEN"
+
 // Config is the OAuth resource-server configuration, loaded from environment
 // variables by FromEnv.
 type Config struct {
@@ -73,9 +75,17 @@ func FromEnv() (Config, error) {
 		Enabled:                   true,
 		AuthorizationServerURL:    strings.TrimRight(authServer, "/"),
 		CanonicalResourceURI:      canonicalResourceURI(resource),
-		IntrospectionServiceToken: os.Getenv("OAUTH_INTROSPECTION_SERVICE_TOKEN"),
+		IntrospectionServiceToken: os.Getenv(IntrospectionServiceTokenEnv),
 		APIKeyPassthrough:         passthrough,
 	}, nil
+}
+
+func OriginToken() string {
+	cfg, err := FromEnv()
+	if err != nil || !cfg.Enabled {
+		return ""
+	}
+	return cfg.IntrospectionServiceToken
 }
 
 // MetadataPaths returns the request paths that serve the protected-resource
