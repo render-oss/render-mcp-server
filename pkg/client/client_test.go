@@ -1,13 +1,51 @@
 package client_test
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/render-oss/render-mcp-server/pkg/client"
+	"github.com/render-oss/render-mcp-server/pkg/oauth"
 )
+
+func TestAddHeadersAPIAuthToken(t *testing.T) {
+	enableOAuth := func(t *testing.T) {
+		t.Setenv("OAUTH_ENABLED", "true")
+		t.Setenv("OAUTH_AUTHORIZATION_SERVER_URL", "https://api.example.com")
+		t.Setenv("OAUTH_CANONICAL_RESOURCE_URI", "https://mcp.example.com/mcp")
+	}
+
+	t.Run("send the API auth token when OAuth is enabled", func(t *testing.T) {
+		enableOAuth(t)
+		t.Setenv(oauth.AuthTokenEnv, "api-auth-token")
+
+		h := client.AddHeaders(context.Background(), http.Header{}, "user-token")
+
+		require.Equal(t, "api-auth-token", h.Get("Render-MCP-Auth"))
+		require.Equal(t, "Bearer user-token", h.Get("Authorization"))
+	})
+
+	t.Run("doesn't send an API auth header when OAuth is disabled", func(t *testing.T) {
+		t.Setenv("OAUTH_ENABLED", "false")
+		t.Setenv(oauth.AuthTokenEnv, "api-auth-token")
+
+		h := client.AddHeaders(context.Background(), http.Header{}, "user-token")
+
+		require.Empty(t, h.Values("Render-MCP-Auth"))
+	})
+
+	t.Run("doesn't send an API auth header when the token is unset", func(t *testing.T) {
+		enableOAuth(t)
+		t.Setenv(oauth.AuthTokenEnv, "")
+
+		h := client.AddHeaders(context.Background(), http.Header{}, "user-token")
+
+		require.Empty(t, h.Values("Render-MCP-Auth"))
+	})
+}
 
 func TestErrorFromResponse(t *testing.T) {
 	t.Run("status code 401", func(t *testing.T) {

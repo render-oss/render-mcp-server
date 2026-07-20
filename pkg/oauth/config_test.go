@@ -43,7 +43,7 @@ func TestFromEnv(t *testing.T) {
 		require.True(t, cfg.Enabled)
 		require.Equal(t, "https://api.example.com", cfg.AuthorizationServerURL)
 		require.Equal(t, "https://mcp.example.com/mcp", cfg.CanonicalResourceURI)
-		require.Equal(t, "svc-token", cfg.IntrospectionServiceToken)
+		require.Equal(t, "svc-token", cfg.APIAuthToken)
 		require.True(t, cfg.APIKeyPassthrough, "passthrough must default on for the rollout window")
 		require.Equal(t,
 			"https://mcp.example.com/.well-known/oauth-protected-resource/mcp",

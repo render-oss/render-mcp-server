@@ -117,7 +117,7 @@ func Serve(transport string) *server.MCPServer {
 func newHTTPMux(mcpHandler http.Handler, oauthCfg oauth.Config, openAIToken string) *http.ServeMux {
 	oauthMiddleware := oauth.Middleware(oauthCfg, oauth.NewIntrospector(
 		oauthCfg.AuthorizationServerURL,
-		oauthCfg.IntrospectionServiceToken,
+		oauthCfg.APIAuthToken,
 		oauth.DefaultIntrospectionCacheTTL,
 	))
 
