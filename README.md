@@ -134,6 +134,18 @@ feature requests, bug reports, suggestions, comments, or concerns.
   - `serviceId`: The ID of the service to update (string, required)
   - `envVars`: Complete list of environment variables (array, required)
 
+- **update_web_service** - Direct updates to a web service are not supported through the MCP server. This tool returns a link to the service's settings in the Render Dashboard, where changes can be made (or via the [Render API](https://render.com/docs/api-reference)).
+
+  - `serviceId`: The ID of the service to update (string, required)
+
+- **update_static_site** - Direct updates to a static site are not supported through the MCP server. This tool returns a link to the site's settings in the Render Dashboard, where changes can be made (or via the [Render API](https://render.com/docs/api-reference)).
+
+  - `serviceId`: The ID of the service to update (string, required)
+
+- **update_cron_job** - Direct updates to a cron job are not supported through the MCP server. This tool returns a link to the cron job's settings in the Render Dashboard, where changes can be made (or via the [Render API](https://render.com/docs/api-reference)).
+
+  - `serviceId`: The ID of the service to update (string, required)
+
 ### Deployments
 
 - **list_deploys** - List deployment history for a service
