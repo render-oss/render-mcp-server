@@ -26,9 +26,6 @@ func Tools(c *client.ClientWithResponses) []server.ServerTool {
 		createWebService(serviceRepo),
 		createStaticSite(serviceRepo),
 		createCronJob(serviceRepo),
-		updateWebService(),
-		updateStaticSite(),
-		updateCronJob(),
 		updateEnvVars(serviceRepo, deployRepo),
 	}
 }
@@ -41,7 +38,7 @@ func listServices(serviceRepo *Repo) server.ServerTool {
 				Title:           "List services",
 				ReadOnlyHint:    pointers.From(true),
 				DestructiveHint: pointers.From(false),
-				OpenWorldHint:   pointers.From(true),
+				OpenWorldHint:   pointers.From(false),
 			}),
 			mcp.WithBoolean("includePreviews",
 				mcp.Description("Whether to include preview services in the response. Defaults to false."),
@@ -80,7 +77,7 @@ func getService(serviceRepo *Repo) server.ServerTool {
 				Title:           "Get service details",
 				ReadOnlyHint:    pointers.From(true),
 				DestructiveHint: pointers.From(false),
-				OpenWorldHint:   pointers.From(true),
+				OpenWorldHint:   pointers.From(false),
 			}),
 			mcp.WithString("serviceId",
 				mcp.Required(),

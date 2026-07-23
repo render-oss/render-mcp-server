@@ -32,7 +32,7 @@ func listKeyValue(keyValueRepo *Repo) server.ServerTool {
 				ReadOnlyHint:    pointers.From(true),
 				DestructiveHint: pointers.From(false),
 				IdempotentHint:  pointers.From(true),
-				OpenWorldHint:   pointers.From(true),
+				OpenWorldHint:   pointers.From(false),
 			}),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -64,7 +64,7 @@ func getKeyValue(keyValueRepo *Repo) server.ServerTool {
 				ReadOnlyHint:    pointers.From(true),
 				DestructiveHint: pointers.From(false),
 				IdempotentHint:  pointers.From(true),
-				OpenWorldHint:   pointers.From(true),
+				OpenWorldHint:   pointers.From(false),
 			}),
 			mcp.WithString("keyValueId",
 				mcp.Required(),

@@ -35,7 +35,7 @@ func getMetrics(metricsRepo *Repo) server.ServerTool {
 				Title:           "Get resource metrics",
 				ReadOnlyHint:    pointers.From(true),
 				DestructiveHint: pointers.From(false),
-				OpenWorldHint:   pointers.From(true),
+				OpenWorldHint:   pointers.From(false),
 			}),
 			mcp.WithString("resourceId",
 				mcp.Required(),

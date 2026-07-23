@@ -29,10 +29,10 @@ func listWorkspaces(ownerRepo *Repo) server.ServerTool {
 			mcp.WithDescription("List the workspaces that you have access to"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:           "List workspaces",
-				ReadOnlyHint:    pointers.From(true),
+				ReadOnlyHint:    pointers.From(false),
 				DestructiveHint: pointers.From(false),
 				IdempotentHint:  pointers.From(true),
-				OpenWorldHint:   pointers.From(true),
+				OpenWorldHint:   pointers.From(false),
 			}),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -74,7 +74,7 @@ func selectWorkspace() server.ServerTool {
 				ReadOnlyHint:    pointers.From(false),
 				DestructiveHint: pointers.From(false),
 				IdempotentHint:  pointers.From(true),
-				OpenWorldHint:   pointers.From(true),
+				OpenWorldHint:   pointers.From(false),
 			}),
 			mcp.WithString("ownerID",
 				mcp.Required(),
@@ -106,7 +106,7 @@ func getSelectedWorkspace() server.ServerTool {
 				ReadOnlyHint:    pointers.From(true),
 				DestructiveHint: pointers.From(false),
 				IdempotentHint:  pointers.From(true),
-				OpenWorldHint:   pointers.From(true),
+				OpenWorldHint:   pointers.From(false),
 			}),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
