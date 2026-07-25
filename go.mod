@@ -3,7 +3,7 @@ module github.com/render-oss/render-mcp-server
 go 1.26.0
 
 require (
-	github.com/alicebob/miniredis/v2 v2.35.0
+	github.com/alicebob/miniredis/v2 v2.38.0
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/mark3labs/mcp-go v0.32.0
 	github.com/oapi-codegen/runtime v1.2.0
