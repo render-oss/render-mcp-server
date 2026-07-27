@@ -22,8 +22,8 @@ var ErrNoWorkspace = errors.New("no workspace selected. To resolve: " +
 	"(1) call the `list_workspaces` tool to see the workspaces this account has access to, " +
 	"(2) ask the user which workspace to use — do NOT pick one yourself, since acting on the " +
 	"wrong workspace can cause destructive changes to unintended resources, " +
-	"(3) once the user confirms, call the `select_workspace` tool with the matching `ownerID`, " +
-	"then retry the original tool call")
+	"(3) once the user confirms, retry the original tool call with that `workspaceId`. " +
+	"The `select_workspace` tool remains available for clients that rely on MCP session state")
 var ErrLogin = errors.New("not authenticated; either set RENDER_API_KEY or ask your MCP host to authenticate")
 
 type Config struct {

@@ -32,10 +32,18 @@ feature requests, bug reports, suggestions, comments, or concerns.
 
 - **select_workspace** - Select a workspace to use
 
-  - `ownerID`: The ID of the workspace to use (string, required)
+  - `ownerID`: The ID of the workspace to select (string, required). Kept as `ownerID` so
+    existing callers of this deprecated tool keep working; new code should pass `workspaceId`
+    on each resource tool call instead.
 
 - **get_selected_workspace** - Get the currently selected workspace
   - No parameters required
+
+Every resource tool also accepts an optional `workspaceId`. After the user confirms a workspace from
+`list_workspaces`, pass that `workspaceId` on each related tool call. This keeps the target workspace
+explicit across MCP reconnects and transport-session changes. If `workspaceId` is omitted, the server
+temporarily falls back to the workspace selected in the current MCP session. That implicit
+session-based behavior is deprecated and is scheduled for removal.
 
 ### Services
 

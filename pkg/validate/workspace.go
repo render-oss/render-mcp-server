@@ -15,9 +15,9 @@ func WorkspaceMatches(ctx context.Context, workspaceID string) error {
 		return err
 	}
 	if workspace != "" && workspace != workspaceID {
-		return fmt.Errorf("resource in workspace does not match the workspace in the current "+
-			"workspace context %s. You can use the `select_workspace` tool to change contexts to %s "+
-			", but you should only do this after asking the user to confirm", workspace, workspaceID)
+		return fmt.Errorf("resource belongs to workspace %s, but this tool call targets workspace %s. "+
+			"Ask the user to confirm the intended workspace before retrying with the matching `workspaceId`",
+			workspaceID, workspace)
 	}
 	return nil
 }

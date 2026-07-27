@@ -18,7 +18,7 @@ func Tools(c *client.ClientWithResponses) []server.ServerTool {
 
 	return []server.ServerTool{
 		listWorkspaces(ownerRepo),
-		selectWorkspace(),
+		selectWorkspace(ownerRepo),
 		getSelectedWorkspace(),
 	}
 }
@@ -46,29 +46,27 @@ func listWorkspaces(ownerRepo *Repo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			resultText := ""
-
 			if len(workspaces) == 1 {
 				err = session.FromContext(ctx).SetWorkspace(ctx, workspaces[0].Id)
 				if err != nil {
 					return mcp.NewToolResultError(err.Error()), nil
 				}
-				resultText = "Only one workspace found, automatically selected it"
 			}
 
-			resultText += string(respJSON)
-			return mcp.NewToolResultText(resultText), nil
+			return mcp.NewToolResultText(string(respJSON)), nil
 		},
 	}
 }
 
-func selectWorkspace() server.ServerTool {
+func selectWorkspace(ownerRepo *Repo) server.ServerTool {
 	return server.ServerTool{
 		Tool: mcp.NewTool("select_workspace",
-			mcp.WithDescription("Select a workspace to use for all actions. This tool should "+
-				"only be used after explicitly asking the user to select one, it should not be invoked "+
-				"as part of an automated process. Having the wrong workspace selected can lead to "+
-				"destructive actions being performed on unintended resources."),
+			mcp.WithDescription("Deprecated: this tool is scheduled for removal; pass the confirmed "+
+				"workspaceId directly on each tool call instead. Select a workspace for clients that "+
+				"rely on MCP session state. This tool should only be used after explicitly asking the "+
+				"user to select one, it should not be invoked as part of an automated process. Having "+
+				"the wrong workspace selected can lead to destructive actions being performed on "+
+				"unintended resources."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:           "Select workspace",
 				ReadOnlyHint:    pointers.From(false),
@@ -78,21 +76,27 @@ func selectWorkspace() server.ServerTool {
 			}),
 			mcp.WithString("ownerID",
 				mcp.Required(),
-				mcp.Description("The ID of the owner to select"),
+				mcp.Description("The ID of the workspace to select"),
 			),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			ownerID, err := validate.RequiredToolParam[string](request, "ownerID")
+			workspaceID, err := validate.RequiredToolParam[string](request, "ownerID")
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			err = session.FromContext(ctx).SetWorkspace(ctx, ownerID)
+			if _, err = ownerRepo.RetrieveOwner(ctx, workspaceID); err != nil {
+				return mcp.NewToolResultError(
+					fmt.Sprintf("cannot access workspace %s: %s", workspaceID, err),
+				), nil
+			}
+
+			err = session.FromContext(ctx).SetWorkspace(ctx, workspaceID)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			return mcp.NewToolResultText("Workspace selected"), nil
+			return mcp.NewToolResultText(fmt.Sprintf("Workspace %s selected", workspaceID)), nil
 		},
 	}
 }
@@ -100,7 +104,8 @@ func selectWorkspace() server.ServerTool {
 func getSelectedWorkspace() server.ServerTool {
 	return server.ServerTool{
 		Tool: mcp.NewTool("get_selected_workspace",
-			mcp.WithDescription("Get the currently selected workspace"),
+			mcp.WithDescription("Get the workspace stored in the session compatibility fallback. "+
+				"Request-scoped workspaces supplied with an explicit workspaceId are not reflected by this tool."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:           "Get selected workspace",
 				ReadOnlyHint:    pointers.From(true),

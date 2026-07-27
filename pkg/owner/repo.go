@@ -11,11 +11,24 @@ type ListInput struct {
 	Name string
 }
 
-type Repo struct {
-	client *client.ClientWithResponses
+type ownerRepoClient interface {
+	ListOwnersWithResponse(
+		ctx context.Context,
+		params *client.ListOwnersParams,
+		reqEditors ...client.RequestEditorFn,
+	) (*client.ListOwnersResponse, error)
+	RetrieveOwnerWithResponse(
+		ctx context.Context,
+		id string,
+		reqEditors ...client.RequestEditorFn,
+	) (*client.RetrieveOwnerResponse, error)
 }
 
-func NewRepo(client *client.ClientWithResponses) *Repo {
+type Repo struct {
+	client ownerRepoClient
+}
+
+func NewRepo(client ownerRepoClient) *Repo {
 	return &Repo{client: client}
 }
 

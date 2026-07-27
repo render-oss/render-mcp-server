@@ -23,6 +23,7 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/postgres"
 	"github.com/render-oss/render-mcp-server/pkg/service"
 	"github.com/render-oss/render-mcp-server/pkg/session"
+	"github.com/render-oss/render-mcp-server/pkg/workspace"
 )
 
 func Serve(transport string) *server.MCPServer {
@@ -45,12 +46,7 @@ func Serve(transport string) *server.MCPServer {
 	}
 
 	s.AddTools(owner.Tools(c)...)
-	s.AddTools(service.Tools(c)...)
-	s.AddTools(deploy.Tools(c)...)
-	s.AddTools(postgres.Tools(c)...)
-	s.AddTools(keyvalue.Tools(c)...)
-	s.AddTools(logs.Tools(c)...)
-	s.AddTools(metrics.Tools(c)...)
+	s.AddTools(buildWorkspaceScopedTools(c)...)
 
 	if transport == "http" {
 		var sessionStore session.Store
@@ -109,6 +105,19 @@ func Serve(transport string) *server.MCPServer {
 	}
 
 	return s
+}
+
+func buildWorkspaceScopedTools(c *client.ClientWithResponses) []server.ServerTool {
+	var tools []server.ServerTool
+	tools = append(tools, service.Tools(c)...)
+	tools = append(tools, deploy.Tools(c)...)
+	tools = append(tools, postgres.Tools(c)...)
+	tools = append(tools, keyvalue.Tools(c)...)
+	tools = append(tools, logs.Tools(c)...)
+	tools = append(tools, metrics.Tools(c)...)
+
+	tools = workspace.AddWorkspaceIDParam(tools...)
+	return workspace.ScopeTools(workspace.NewResolver(c), tools...)
 }
 
 // newHTTPMux serves /mcp behind the OAuth middleware plus the RFC 9728 metadata

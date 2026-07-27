@@ -60,6 +60,19 @@ func TestNewHTTPMux_OAuthEnabled(t *testing.T) {
 	require.False(t, *called)
 }
 
+func TestWorkspaceScopedToolsAcceptOptionalWorkspaceID(t *testing.T) {
+	tools := buildWorkspaceScopedTools(nil)
+	require.NotEmpty(t, tools)
+
+	for _, tool := range tools {
+		workspaceSchema, ok := tool.Tool.InputSchema.Properties["workspaceId"].(map[string]interface{})
+		require.True(t, ok, "%s does not define workspaceId", tool.Tool.Name)
+		require.Equal(t, "string", workspaceSchema["type"], tool.Tool.Name)
+		require.Contains(t, workspaceSchema["description"], "list_workspaces", tool.Tool.Name)
+		require.NotContains(t, tool.Tool.InputSchema.Required, "workspaceId", tool.Tool.Name)
+	}
+}
+
 func TestNewHTTPMux_OpenAIChallenge(t *testing.T) {
 	mcp, _ := recordingHandler()
 
