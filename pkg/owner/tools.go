@@ -9,6 +9,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	"github.com/render-oss/render-mcp-server/pkg/pointers"
+	"github.com/render-oss/render-mcp-server/pkg/readonly"
 	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
@@ -29,7 +30,7 @@ func listWorkspaces(ownerRepo *Repo) server.ServerTool {
 			mcp.WithDescription("List the workspaces that you have access to"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:           "List workspaces",
-				ReadOnlyHint:    pointers.From(false),
+				ReadOnlyHint:    pointers.From(true),
 				DestructiveHint: pointers.From(false),
 				IdempotentHint:  pointers.From(true),
 				OpenWorldHint:   pointers.From(false),
@@ -46,7 +47,7 @@ func listWorkspaces(ownerRepo *Repo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			if len(workspaces) == 1 {
+			if len(workspaces) == 1 && !readonly.FromContext(ctx) {
 				err = session.FromContext(ctx).SetWorkspace(ctx, workspaces[0].Id)
 				if err != nil {
 					return mcp.NewToolResultError(err.Error()), nil
