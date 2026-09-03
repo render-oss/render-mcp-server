@@ -18,9 +18,10 @@ func NewHooks() *server.Hooks {
 		Info("tool call start name=%s", message.Params.Name)
 	})
 
-	hooks.AddAfterCallTool(func(_ context.Context, _ any, message *mcp.CallToolRequest, result *mcp.CallToolResult) {
-		if result != nil && result.IsError {
-			Error("tool call failed name=%s error=%s", message.Params.Name, toolResultText(result))
+	hooks.AddAfterCallTool(func(_ context.Context, _ any, message *mcp.CallToolRequest, result any) {
+		toolResult, ok := result.(*mcp.CallToolResult)
+		if ok && toolResult.IsError {
+			Error("tool call failed name=%s error=%s", message.Params.Name, toolResultText(toolResult))
 			return
 		}
 		Info("tool call ok name=%s", message.Params.Name)
