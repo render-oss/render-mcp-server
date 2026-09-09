@@ -9,6 +9,51 @@ server that allows you to interact with your Render resources via LLMs.
 
 Get started with the MCP server by following the official docs: https://render.com/docs/mcp-server
 
+### Read-only HTTP access
+
+HTTP clients can opt in to least-privilege tool access by sending
+`X-MCP-Readonly: true` when they initialize the MCP session and on every later request in that
+session. This works with either a Render API key or an OAuth access token:
+
+```json
+{
+  "mcpServers": {
+    "render": {
+      "url": "https://mcp.render.com/mcp",
+      "headers": {
+        "Authorization": "Bearer <YOUR_RENDER_API_KEY>",
+        "X-MCP-Readonly": "true"
+      }
+    }
+  }
+}
+```
+
+For OAuth clients, use the OAuth access token in the same `Authorization` header and keep the
+read-only header unchanged:
+
+```http
+Authorization: Bearer <YOUR_OAUTH_ACCESS_TOKEN>
+X-MCP-Readonly: true
+```
+
+With read-only mode enabled, `tools/list` returns only tools explicitly classified as read-only,
+and the server also rejects direct calls to mutating or unclassified tools before their handlers
+run. `query_render_postgres` accepts only a single read-shaped SQL statement and still executes it
+inside a PostgreSQL `READ ONLY` transaction. In read-only mode, workspace listing does not change
+session state; `select_workspace` remains a mutating compatibility tool and is unavailable in
+read-only mode, so pass an explicit `workspaceId` to resource tools.
+
+The header is strict: the only accepted values are lowercase `true` and `false`, and duplicate,
+combined, differently cased, or whitespace-padded values return an HTTP 400 response. Omitting the
+header or sending `false` preserves normal full-access HTTP behavior. The effective mode is bound
+when a session is initialized, so later attempts to change or omit a read-only session's value are
+rejected. Stdio transport behavior is unchanged and remains full-access.
+
+This boundary limits what the MCP server exposes and invokes; it does not change the permissions of
+the API key or OAuth token outside this server. Read-only database queries can still consume database
+resources, so continue to apply appropriate timeouts and database-level permissions.
+
 ## Use Cases
 
 - Creating and managing web services, static sites, cron jobs, and databases on Render

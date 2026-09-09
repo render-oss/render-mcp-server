@@ -595,7 +595,7 @@ func updateWebService() server.ServerTool {
 			mcp.WithDescription("Update an existing web service in your Render account."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:           "Update web service",
-				ReadOnlyHint:    pointers.From(true),
+				ReadOnlyHint:    pointers.From(false),
 				DestructiveHint: pointers.From(false),
 				IdempotentHint:  pointers.From(true),
 				OpenWorldHint:   pointers.From(false),
@@ -625,7 +625,7 @@ func updateStaticSite() server.ServerTool {
 			mcp.WithDescription("Update an existing static site in your Render account."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:           "Update static site",
-				ReadOnlyHint:    pointers.From(true),
+				ReadOnlyHint:    pointers.From(false),
 				DestructiveHint: pointers.From(false),
 				IdempotentHint:  pointers.From(true),
 				OpenWorldHint:   pointers.From(false),
@@ -655,7 +655,7 @@ func updateCronJob() server.ServerTool {
 			mcp.WithDescription("Update an existing cron job in your Render account."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:           "Update cron job",
-				ReadOnlyHint:    pointers.From(true),
+				ReadOnlyHint:    pointers.From(false),
 				DestructiveHint: pointers.From(false),
 				IdempotentHint:  pointers.From(true),
 				OpenWorldHint:   pointers.From(false),

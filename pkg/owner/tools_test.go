@@ -9,6 +9,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/render-oss/render-mcp-server/pkg/client"
+	"github.com/render-oss/render-mcp-server/pkg/readonly"
 	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -63,8 +64,8 @@ func TestSelectWorkspaceIsMarkedDeprecated(t *testing.T) {
 	assert.Contains(t, tool.Tool.Description, "scheduled for removal")
 }
 
-func TestListWorkspacesReturnsValidJSONWhenItAutoSelectsOneWorkspace(t *testing.T) {
-	ctx := ownerTestContext(t)
+func TestListWorkspacesReturnsValidJSONWithoutChangingSessionState(t *testing.T) {
+	ctx := readonly.ContextWithReadOnly(ownerTestContext(t), true)
 	fakeClient := &fakeOwnerRepoClient{
 		owners: []*client.Owner{
 			{Id: "tea-only", Name: "Only workspace"},
@@ -82,6 +83,22 @@ func TestListWorkspacesReturnsValidJSONWhenItAutoSelectsOneWorkspace(t *testing.
 	require.Len(t, fallbackWorkspaces, 1)
 	assert.Equal(t, "tea-only", fallbackWorkspaces[0].Id)
 
+	_, err = session.FromContext(ctx).GetWorkspace(ctx)
+	require.Error(t, err)
+	require.NotNil(t, tool.Tool.Annotations.ReadOnlyHint)
+	assert.True(t, *tool.Tool.Annotations.ReadOnlyHint)
+}
+
+func TestListWorkspacesPreservesFullAccessAutoSelection(t *testing.T) {
+	ctx := ownerTestContext(t)
+	tool := listWorkspaces(NewRepo(&fakeOwnerRepoClient{
+		owners: []*client.Owner{{Id: "tea-only", Name: "Only workspace"}},
+	}))
+
+	result, err := tool.Handler(ctx, mcp.CallToolRequest{})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
 	selectedWorkspace, err := session.FromContext(ctx).GetWorkspace(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, "tea-only", selectedWorkspace)

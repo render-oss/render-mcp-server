@@ -3,6 +3,7 @@ package cmd
 import (
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"testing"
 
 	"github.com/render-oss/render-mcp-server/pkg/oauth"
@@ -71,6 +72,36 @@ func TestWorkspaceScopedToolsAcceptOptionalWorkspaceID(t *testing.T) {
 		require.Contains(t, workspaceSchema["description"], "list_workspaces", tool.Tool.Name)
 		require.NotContains(t, tool.Tool.InputSchema.Required, "workspaceId", tool.Tool.Name)
 	}
+}
+
+func TestEveryToolHasExpectedReadOnlyClassification(t *testing.T) {
+	tools := buildTools(nil)
+	readOnlyNames := []string{
+		"get_deploy", "get_key_value", "get_metrics", "get_postgres", "get_selected_workspace",
+		"get_service", "list_deploys", "list_key_value", "list_log_label_values", "list_logs",
+		"list_postgres_instances", "list_services", "list_workspaces", "query_render_postgres",
+	}
+	mutatingNames := []string{
+		"create_cron_job", "create_key_value", "create_postgres", "create_static_site", "create_web_service",
+		"select_workspace", "trigger_deploy", "update_environment_variables",
+	}
+
+	actualReadOnly := make([]string, 0, len(readOnlyNames))
+	actualMutating := make([]string, 0, len(mutatingNames))
+	for _, tool := range tools {
+		require.NotNil(t, tool.Tool.Annotations.ReadOnlyHint, "%s is unclassified", tool.Tool.Name)
+		if *tool.Tool.Annotations.ReadOnlyHint {
+			actualReadOnly = append(actualReadOnly, tool.Tool.Name)
+		} else {
+			actualMutating = append(actualMutating, tool.Tool.Name)
+		}
+	}
+	sort.Strings(actualReadOnly)
+	sort.Strings(actualMutating)
+	sort.Strings(readOnlyNames)
+	sort.Strings(mutatingNames)
+	require.Equal(t, readOnlyNames, actualReadOnly)
+	require.Equal(t, mutatingNames, actualMutating)
 }
 
 func TestNewHTTPMux_OpenAIChallenge(t *testing.T) {

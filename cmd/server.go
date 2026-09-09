@@ -21,6 +21,7 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/oauth"
 	"github.com/render-oss/render-mcp-server/pkg/owner"
 	"github.com/render-oss/render-mcp-server/pkg/postgres"
+	"github.com/render-oss/render-mcp-server/pkg/readonly"
 	"github.com/render-oss/render-mcp-server/pkg/service"
 	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/render-oss/render-mcp-server/pkg/workspace"
@@ -32,6 +33,22 @@ func Serve(transport string) *server.MCPServer {
 		mcpServerOpts = append(mcpServerOpts, server.WithHooks(hooks))
 	}
 
+	c, err := client.NewDefaultClient()
+	if err != nil {
+		// TODO: We can't create a client unless we're logged in, so we should handle that error case.
+		panic(err)
+	}
+
+	tools := buildTools(c)
+	readOnlyPolicy, err := readonly.NewPolicy(tools)
+	if err != nil {
+		panic(err)
+	}
+	mcpServerOpts = append(mcpServerOpts,
+		server.WithToolFilter(readOnlyPolicy.Filter),
+		server.WithToolHandlerMiddleware(readOnlyPolicy.Middleware),
+	)
+
 	// Create MCP server
 	s := server.NewMCPServer(
 		"render-mcp-server",
@@ -39,14 +56,7 @@ func Serve(transport string) *server.MCPServer {
 		mcpServerOpts...,
 	)
 
-	c, err := client.NewDefaultClient()
-	if err != nil {
-		// TODO: We can't create a client unless we're logged in, so we should handle that error case.
-		panic(err)
-	}
-
-	s.AddTools(owner.Tools(c)...)
-	s.AddTools(buildWorkspaceScopedTools(c)...)
+	s.AddTools(tools...)
 
 	if transport == "http" {
 		var sessionStore session.Store
@@ -68,6 +78,7 @@ func Serve(transport string) *server.MCPServer {
 				httpcontext.ContextWithHTTPRequest,
 			)),
 		)
+		readOnlyGuard := readonly.NewHTTPGuard()
 
 		// OAuth resource-server support is opt-in via OAUTH_ENABLED;
 		// pkg/oauth owns the gate. Fail at boot on misconfiguration.
@@ -83,7 +94,7 @@ func Serve(transport string) *server.MCPServer {
 		} else {
 			log.Print("OAuth disabled")
 		}
-		mux := newHTTPMux(streamableServer, oauthCfg, os.Getenv("OPENAI_VERIFICATION_TOKEN"))
+		mux := newHTTPMux(readOnlyGuard.Middleware(streamableServer), oauthCfg, os.Getenv("OPENAI_VERIFICATION_TOKEN"))
 
 		httpServer := &http.Server{
 			Addr:        ":10000",
@@ -105,6 +116,11 @@ func Serve(transport string) *server.MCPServer {
 	}
 
 	return s
+}
+
+func buildTools(c *client.ClientWithResponses) []server.ServerTool {
+	tools := owner.Tools(c)
+	return append(tools, buildWorkspaceScopedTools(c)...)
 }
 
 func buildWorkspaceScopedTools(c *client.ClientWithResponses) []server.ServerTool {

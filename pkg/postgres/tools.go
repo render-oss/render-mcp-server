@@ -231,6 +231,9 @@ func queryPostgres(postgresRepo *Repo) server.ServerTool {
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
+			if err = validateReadOnlySQL(sqlQuery); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
 
 			connectionInfo, err := postgresRepo.GetPostgresConnectionInfo(ctx, postgresId)
 			if err != nil {
