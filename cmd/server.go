@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/mark3labs/mcp-go/server"
-	mcputil "github.com/mark3labs/mcp-go/util"
 	"github.com/render-oss/render-mcp-server/pkg/authn"
 	"github.com/render-oss/render-mcp-server/pkg/cfg"
 	"github.com/render-oss/render-mcp-server/pkg/client"
@@ -25,6 +25,8 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/render-oss/render-mcp-server/pkg/workspace"
 )
+
+const streamableHTTPHeartbeatInterval = 20 * time.Second
 
 func Serve(transport string) *server.MCPServer {
 	mcpServerOpts := []server.ServerOption{}
@@ -60,14 +62,7 @@ func Serve(transport string) *server.MCPServer {
 			log.Print("using in-memory session store\n")
 			sessionStore = session.NewInMemoryStore()
 		}
-		streamableServer := server.NewStreamableHTTPServer(s,
-			server.WithLogger(mcputil.DefaultLogger()),
-			server.WithHTTPContextFunc(multicontext.MultiHTTPContextFunc(
-				session.ContextWithHTTPSession(sessionStore),
-				authn.ContextWithAPITokenFromHeader,
-				httpcontext.ContextWithHTTPRequest,
-			)),
-		)
+		streamableServer := newStreamableHTTPServer(s, sessionStore, streamableHTTPHeartbeatInterval)
 
 		// OAuth resource-server support is opt-in via OAUTH_ENABLED;
 		// pkg/oauth owns the gate. Fail at boot on misconfiguration.
@@ -105,6 +100,19 @@ func Serve(transport string) *server.MCPServer {
 	}
 
 	return s
+}
+
+func newStreamableHTTPServer(s *server.MCPServer, sessionStore session.Store, heartbeatInterval time.Duration) *server.StreamableHTTPServer {
+	return server.NewStreamableHTTPServer(s,
+		server.WithStreamableHTTPLogger(slog.Default()),
+		server.WithStateful(true),
+		server.WithHeartbeatInterval(heartbeatInterval),
+		server.WithHTTPContextFunc(multicontext.MultiHTTPContextFunc(
+			session.ContextWithHTTPSession(sessionStore),
+			authn.ContextWithAPITokenFromHeader,
+			httpcontext.ContextWithHTTPRequest,
+		)),
+	)
 }
 
 func buildWorkspaceScopedTools(c *client.ClientWithResponses) []server.ServerTool {
