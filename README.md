@@ -9,6 +9,13 @@ server that allows you to interact with your Render resources via LLMs.
 
 Get started with the MCP server by following the official docs: https://render.com/docs/mcp-server
 
+## Protocol Support
+
+The server supports Streamable HTTP and stdio with MCP protocol versions
+`2025-11-25`, `2025-06-18`, `2025-03-26`, and `2024-11-05`.
+Stdio also supports the sessionless protocol `2026-07-28`. Streamable HTTP
+requires the initialize handshake with one of the versions listed above.
+
 ## Use Cases
 
 - Creating and managing web services, static sites, cron jobs, and databases on Render

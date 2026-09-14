@@ -1,13 +1,18 @@
 package cmd
 
 import (
+	"context"
+	"errors"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
+	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	mcputil "github.com/mark3labs/mcp-go/util"
 	"github.com/render-oss/render-mcp-server/pkg/authn"
 	"github.com/render-oss/render-mcp-server/pkg/cfg"
 	"github.com/render-oss/render-mcp-server/pkg/client"
@@ -26,27 +31,14 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/workspace"
 )
 
+const httpSessionIdleTTL = 30 * time.Minute
+
 func Serve(transport string) *server.MCPServer {
-	mcpServerOpts := []server.ServerOption{}
-	if hooks := logging.NewHooks(); hooks != nil {
-		mcpServerOpts = append(mcpServerOpts, server.WithHooks(hooks))
-	}
-
-	// Create MCP server
-	s := server.NewMCPServer(
-		"render-mcp-server",
-		cfg.Version,
-		mcpServerOpts...,
-	)
-
-	c, err := client.NewDefaultClient()
+	apiClient, err := client.NewDefaultClient()
 	if err != nil {
 		// TODO: We can't create a client unless we're logged in, so we should handle that error case.
 		panic(err)
 	}
-
-	s.AddTools(owner.Tools(c)...)
-	s.AddTools(buildWorkspaceScopedTools(c)...)
 
 	if transport == "http" {
 		var sessionStore session.Store
@@ -60,14 +52,7 @@ func Serve(transport string) *server.MCPServer {
 			log.Print("using in-memory session store\n")
 			sessionStore = session.NewInMemoryStore()
 		}
-		streamableServer := server.NewStreamableHTTPServer(s,
-			server.WithLogger(mcputil.DefaultLogger()),
-			server.WithHTTPContextFunc(multicontext.MultiHTTPContextFunc(
-				session.ContextWithHTTPSession(sessionStore),
-				authn.ContextWithAPITokenFromHeader,
-				httpcontext.ContextWithHTTPRequest,
-			)),
-		)
+		mcpServer, httpTransport := newStreamableHTTPServer(apiClient, sessionStore)
 
 		// OAuth resource-server support is opt-in via OAUTH_ENABLED;
 		// pkg/oauth owns the gate. Fail at boot on misconfiguration.
@@ -83,7 +68,7 @@ func Serve(transport string) *server.MCPServer {
 		} else {
 			log.Print("OAuth disabled")
 		}
-		mux := newHTTPMux(streamableServer, oauthCfg, os.Getenv("OPENAI_VERIFICATION_TOKEN"))
+		mux := newHTTPMux(httpTransport, oauthCfg, os.Getenv("OPENAI_VERIFICATION_TOKEN"))
 
 		httpServer := &http.Server{
 			Addr:        ":10000",
@@ -94,17 +79,80 @@ func Serve(transport string) *server.MCPServer {
 		if err != nil {
 			log.Fatalf("Starting Streamable server: %v\n:", err)
 		}
-	} else {
-		err := server.ServeStdio(s, server.WithStdioContextFunc(multicontext.MultiStdioContextFunc(
-			session.ContextWithStdioSession,
-			authn.ContextWithAPITokenFromConfig,
-		)))
-		if err != nil {
-			log.Fatalf("Starting STDIO server: %v\n", err)
-		}
+		return mcpServer
 	}
 
-	return s
+	mcpServer, stdioTransport := newStdioServer(apiClient)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
+	err = stdioTransport.Listen(ctx, os.Stdin, os.Stdout)
+	if err != nil && !errors.Is(err, context.Canceled) {
+		log.Fatalf("Starting STDIO server: %v\n", err)
+	}
+	return mcpServer
+}
+
+func newMCPServer(apiClient *client.ClientWithResponses) *server.MCPServer {
+	var mcpServerOpts []server.ServerOption
+	hooks := new(server.Hooks)
+	logging.AddHooks(hooks)
+	mcpServerOpts = append(mcpServerOpts, server.WithHooks(hooks))
+
+	mcpServer := server.NewMCPServer(
+		"render-mcp-server",
+		cfg.Version,
+		mcpServerOpts...,
+	)
+	mcpServer.AddTools(owner.Tools(apiClient)...)
+	mcpServer.AddTools(buildWorkspaceScopedTools(apiClient)...)
+	return mcpServer
+}
+
+func newStreamableHTTPServer(apiClient *client.ClientWithResponses, sessionStore session.Store) (*server.MCPServer, *server.StreamableHTTPServer) {
+	mcpServer := newMCPServer(apiClient)
+	transportLogger := slog.Default()
+
+	httpTransport := server.NewStreamableHTTPServer(mcpServer,
+		server.WithStreamableHTTPLogger(transportLogger),
+		// Our HTTP workspace store is keyed by MCP session ID. Under protocol
+		// 2026-07-28 or later, the SDK supplies an empty session ID, so clients
+		// using select_workspace would overwrite one another's stored selection.
+		// Restrict HTTP to session-based protocols until workspace selection
+		// can safely handle sessionless requests.
+		server.WithStreamableHTTPProtocolVersions(mcp.LegacyProtocolVersions()...),
+		// mcp-go SDK v1.0.0 disables idle session expiry by default. Session-based
+		// protocols ask clients to send DELETE when finished, but allow server-side
+		// expiry. Use a provisional 30-minute timeout to reclaim abandoned session
+		// state. Revisit if clients need that state preserved across longer idle periods.
+		server.WithSessionIdleTTL(httpSessionIdleTTL),
+		server.WithHTTPContextFunc(multicontext.MultiHTTPContextFunc(
+			session.ContextWithHTTPSession(sessionStore),
+			authn.ContextWithAPITokenFromHeader,
+			httpcontext.ContextWithHTTPRequest,
+		)),
+	)
+	return mcpServer, httpTransport
+}
+
+func newStdioServer(apiClient *client.ClientWithResponses) (*server.MCPServer, *server.StdioServer) {
+	mcpServer := newMCPServer(apiClient)
+	stdioTransport := server.NewStdioServer(mcpServer)
+
+	opts := []server.StdioOption{
+		// One worker preserves ordering while tool calls fit in the queue.
+		// The SDK executes overflow calls concurrently; clients must wait for
+		// dependent calls to finish before changing the selected workspace.
+		server.WithWorkerPoolSize(1),
+		server.WithStdioContextFunc(multicontext.MultiStdioContextFunc(
+			session.ContextWithStdioSession,
+			authn.ContextWithAPITokenFromConfig,
+		)),
+	}
+	for _, opt := range opts {
+		opt(stdioTransport)
+	}
+
+	return mcpServer, stdioTransport
 }
 
 func buildWorkspaceScopedTools(c *client.ClientWithResponses) []server.ServerTool {
