@@ -73,8 +73,11 @@ session-based behavior is deprecated and is scheduled for removal.
     - `ruby`
     - `elixir`
     - `docker`
-  - `buildCommand`: Command used to build your service (string, required)
-  - `startCommand`: Command used to start your service (string, required)
+  - `buildCommand`: Command used to build your service (string, required unless runtime is `docker`)
+  - `startCommand`: Command used to start your service (string, required unless runtime is `docker`)
+  - `dockerfilePath`: Path to the Dockerfile relative to the repository root (string, optional). Defaults to `./Dockerfile`. Applies when runtime is `docker`.
+  - `dockerContext`: Build context directory relative to the repository root (string, optional). Defaults to `.`. Applies when runtime is `docker`.
+  - `dockerCommand`: Override for the image's startup command (string, optional). When omitted, uses the Dockerfile's `ENTRYPOINT` and `CMD`. An empty string also uses that default. Applies when runtime is `docker`.
   - `repo`: Repository containing source code (string, optional)
   - `branch`: Repository branch to deploy (string, optional)
   - `plan`: Plan for your service (string, optional). Accepted values:
@@ -94,6 +97,8 @@ session-based behavior is deprecated and is scheduled for removal.
     - `ohio`
     - `virginia`
   - `envVars`: Environment variables array (array, optional)
+
+  Deploying prebuilt images from a container registry is not supported.
 
 - **create_static_site** - Create a new static site in your Render account
 
@@ -123,8 +128,11 @@ session-based behavior is deprecated and is scheduled for removal.
     - `ruby`
     - `elixir`
     - `docker`
-  - `buildCommand`: Command used to build your cron job (string, required)
-  - `startCommand`: Command that runs when your cron job executes (string, required)
+  - `buildCommand`: Command used to build your cron job (string, required unless runtime is `docker`)
+  - `startCommand`: Command that runs when your cron job executes (string, required unless runtime is `docker`)
+  - `dockerfilePath`: Path to the Dockerfile relative to the repository root (string, optional). Defaults to `./Dockerfile`. Applies when runtime is `docker`.
+  - `dockerContext`: Build context directory relative to the repository root (string, optional). Defaults to `.`. Applies when runtime is `docker`.
+  - `dockerCommand`: Override for the image's startup command (string, optional). When omitted, uses the Dockerfile's `ENTRYPOINT` and `CMD`. An empty string also uses that default. Applies when runtime is `docker`.
   - `repo`: Repository containing source code (string, optional)
   - `branch`: Repository branch to deploy (string, optional)
   - `plan`: Plan for your cron job (string, optional). Accepted values:
@@ -144,6 +152,8 @@ session-based behavior is deprecated and is scheduled for removal.
     - `ohio`
     - `virginia`
   - `envVars`: Environment variables array (array, optional)
+
+  Deploying prebuilt images from a container registry is not supported.
 
 - **update_environment_variables** - Update all environment variables for a service
   - `serviceId`: The ID of the service to update (string, required)

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -283,6 +284,148 @@ func TestCreateWebServiceTool(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, client.ServiceRuntime(runtime), webServiceDetails.Runtime)
 			assert.Equal(t, tt.expectedPlan, webServiceDetails.Plan)
+		})
+	}
+}
+
+func TestCreateServiceRuntimeSchema(t *testing.T) {
+	for _, tool := range []mcp.Tool{createWebService(nil).Tool, createCronJob(nil).Tool} {
+		t.Run(tool.Name, func(t *testing.T) {
+			for _, param := range []string{"buildCommand", "startCommand", "dockerfilePath", "dockerContext", "dockerCommand"} {
+				assert.NotContains(t, tool.InputSchema.Required, param)
+			}
+			for param, wantDefault := range map[string]string{
+				"dockerfilePath": "./Dockerfile",
+				"dockerContext":  ".",
+				"dockerCommand":  "",
+			} {
+				property, ok := tool.InputSchema.Properties[param].(map[string]any)
+				require.True(t, ok, "missing property %s", param)
+				assert.Equal(t, wantDefault, property["default"], "default for %s", param)
+			}
+		})
+	}
+}
+
+func TestCreateServiceRuntimeDetails(t *testing.T) {
+	tests := []struct {
+		name        string
+		runtime     string
+		params      map[string]any
+		wantDetails string
+	}{
+		{
+			name:        "native commands",
+			runtime:     "node",
+			params:      map[string]any{"buildCommand": "npm install", "startCommand": "npm start"},
+			wantDetails: `{"buildCommand":"npm install","startCommand":"npm start"}`,
+		},
+		{
+			name:        "Docker without overrides",
+			runtime:     "docker",
+			wantDetails: `{"dockerfilePath":"./Dockerfile","dockerContext":".","dockerCommand":""}`,
+		},
+		{
+			name:        "Dockerfile path only",
+			runtime:     "docker",
+			params:      map[string]any{"dockerfilePath": "deploy/Dockerfile"},
+			wantDetails: `{"dockerfilePath":"deploy/Dockerfile","dockerContext":".","dockerCommand":""}`,
+		},
+		{
+			name:        "Docker context only",
+			runtime:     "docker",
+			params:      map[string]any{"dockerContext": "app"},
+			wantDetails: `{"dockerfilePath":"./Dockerfile","dockerContext":"app","dockerCommand":""}`,
+		},
+		{
+			name:        "Docker command only",
+			runtime:     "docker",
+			params:      map[string]any{"dockerCommand": "./run"},
+			wantDetails: `{"dockerfilePath":"./Dockerfile","dockerContext":".","dockerCommand":"./run"}`,
+		},
+		{
+			name:        "all Docker overrides",
+			runtime:     "docker",
+			params:      map[string]any{"dockerfilePath": "deploy/Dockerfile", "dockerContext": "app", "dockerCommand": "./run"},
+			wantDetails: `{"dockerfilePath":"deploy/Dockerfile","dockerContext":"app","dockerCommand":"./run"}`,
+		},
+	}
+
+	for name, buildRequest := range map[string]func(context.Context, mcp.CallToolRequest) (*client.CreateServiceJSONRequestBody, error){
+		"web service": createValidatedWebServiceRequest,
+		"cron job":    createValidatedCronJobRequest,
+	} {
+		t.Run(name, func(t *testing.T) {
+			ctx := createTestContext(t, "own-123")
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					args := map[string]any{"name": "test-service", "runtime": tt.runtime}
+					if name == "cron job" {
+						args["schedule"] = "0 * * * *"
+					}
+					for key, value := range tt.params {
+						args[key] = value
+					}
+					request := mcp.CallToolRequest{}
+					request.Params.Arguments = args
+
+					body, err := buildRequest(ctx, request)
+					require.NoError(t, err)
+					data, err := json.Marshal(body.ServiceDetails)
+					require.NoError(t, err)
+					var decoded struct {
+						Runtime            string          `json:"runtime"`
+						EnvSpecificDetails json.RawMessage `json:"envSpecificDetails"`
+					}
+					require.NoError(t, json.Unmarshal(data, &decoded))
+					assert.Equal(t, tt.runtime, decoded.Runtime)
+					assert.JSONEq(t, tt.wantDetails, string(decoded.EnvSpecificDetails))
+				})
+			}
+		})
+	}
+}
+
+func TestCreateServiceRuntimeValidation(t *testing.T) {
+	tests := []struct {
+		name      string
+		args      map[string]any
+		wantError string
+	}{
+		{
+			name:      "missing build command",
+			args:      map[string]any{"runtime": "node", "startCommand": "npm start"},
+			wantError: "required parameter not present: buildCommand",
+		},
+		{
+			name:      "missing start command",
+			args:      map[string]any{"runtime": "node", "buildCommand": "npm install"},
+			wantError: "required parameter not present: startCommand",
+		},
+	}
+
+	for name, buildRequest := range map[string]func(context.Context, mcp.CallToolRequest) (*client.CreateServiceJSONRequestBody, error){
+		"web service": createValidatedWebServiceRequest,
+		"cron job":    createValidatedCronJobRequest,
+	} {
+		t.Run(name, func(t *testing.T) {
+			ctx := createTestContext(t, "own-123")
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					args := map[string]any{"name": "test-service"}
+					if name == "cron job" {
+						args["schedule"] = "0 * * * *"
+					}
+					for key, value := range tt.args {
+						args[key] = value
+					}
+					request := mcp.CallToolRequest{}
+					request.Params.Arguments = args
+
+					_, err := buildRequest(ctx, request)
+					require.EqualError(t, err, tt.wantError)
+				})
+			}
 		})
 	}
 }

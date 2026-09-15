@@ -111,9 +111,9 @@ func createWebService(serviceRepo *Repo) server.ServerTool {
 			mcp.WithDescription("Create a new web service in your Render account. "+
 				"A web service is a public-facing service that can be accessed by users on the internet. "+
 				"By default, these services are automatically deployed when the specified branch is updated "+
-				"and do not require a manual trigger of a deploy. The user should only be prompted to manually trigger a deploy if auto-deploy is disabled."+
-				"This tool is currently limited to support only a subset of the web service configuration parameters."+
-				"It also only supports web services which don't use Docker, or a container registry."+
+				"and do not require a manual trigger of a deploy. The user should only be prompted to manually trigger a deploy if auto-deploy is disabled. "+
+				"This tool is currently limited to support only a subset of the web service configuration parameters. "+
+				"Deploying prebuilt images from a container registry is not supported. "+
 				"To create a service without those limitations, please use the dashboard at: "+config.DashboardURL()+"/web/new"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:           "Create web service",
@@ -148,12 +148,22 @@ func createWebService(serviceRepo *Repo) server.ServerTool {
 				mcp.DefaultString(string(client.PlanFree)),
 			),
 			mcp.WithString("buildCommand",
-				mcp.Required(),
-				mcp.Description("The command used to build your service. For example, 'npm run build' for Node.js or 'pip install -r requirements.txt' for Python."),
+				mcp.Description("The command used to build your service. For example, 'npm run build' for Node.js or 'pip install -r requirements.txt' for Python. Required unless runtime is 'docker'."),
 			),
 			mcp.WithString("startCommand",
-				mcp.Required(),
-				mcp.Description("The command used to start your service. For example, 'npm start' for Node.js or 'gunicorn app:app' for Python."),
+				mcp.Description("The command used to start your service. For example, 'npm start' for Node.js or 'gunicorn app:app' for Python. Required unless runtime is 'docker'."),
+			),
+			mcp.WithString("dockerfilePath",
+				mcp.Description("Path to the Dockerfile, relative to the repository root. Defaults to './Dockerfile'. Applies when runtime is 'docker'."),
+				mcp.DefaultString("./Dockerfile"),
+			),
+			mcp.WithString("dockerContext",
+				mcp.Description("Build context directory, relative to the repository root. Defaults to '.'. Applies when runtime is 'docker'."),
+				mcp.DefaultString("."),
+			),
+			mcp.WithString("dockerCommand",
+				mcp.Description("Overrides the image's startup command. When omitted, uses the Dockerfile's ENTRYPOINT and CMD. An empty string also uses that default. Applies when runtime is 'docker'."),
+				mcp.DefaultString(""),
 			),
 			mcp.WithString("region",
 				mcp.Description("The geographic region where your service will be deployed. Defaults to Oregon. Choose the region closest to your users for best performance."),
@@ -208,29 +218,14 @@ func createValidatedWebServiceRequest(ctx context.Context, request mcp.CallToolR
 		return nil, err
 	}
 
-	buildCommand, err := validate.RequiredToolParam[string](request, "buildCommand")
+	envSpecificDetails, err := validatedWebServiceRuntimeDetails(request, client.ServiceRuntime(runtime))
 	if err != nil {
-		return nil, err
-	}
-
-	startCommand, err := validate.RequiredToolParam[string](request, "startCommand")
-	if err != nil {
-		return nil, err
-	}
-
-	nativeEnvironmentDetails := client.NativeEnvironmentDetailsPOST{
-		BuildCommand: buildCommand,
-		StartCommand: startCommand,
-	}
-
-	envSpecificDetails := client.EnvSpecificDetailsPOST{}
-	if err = envSpecificDetails.FromNativeEnvironmentDetailsPOST(nativeEnvironmentDetails); err != nil {
 		return nil, err
 	}
 
 	webServiceDetailsPOST := client.WebServiceDetailsPOST{
 		Runtime:            client.ServiceRuntime(runtime),
-		EnvSpecificDetails: &envSpecificDetails,
+		EnvSpecificDetails: envSpecificDetails,
 	}
 
 	if plan, ok, err := validate.OptionalToolParam[string](request, "plan"); err != nil {
@@ -257,6 +252,92 @@ func createValidatedWebServiceRequest(ctx context.Context, request mcp.CallToolR
 	}
 
 	return validatedCreateServiceRequest(ctx, request, client.WebService, &serviceDetails)
+}
+
+func validatedWebServiceRuntimeDetails(
+	request mcp.CallToolRequest,
+	runtime client.ServiceRuntime,
+) (*client.EnvSpecificDetailsPOST, error) {
+	var details client.EnvSpecificDetailsPOST
+	if runtime != client.ServiceRuntimeDocker {
+		commands, err := validatedNativeCommands(request)
+		if err != nil {
+			return nil, err
+		}
+		if err := details.FromNativeEnvironmentDetailsPOST(commands); err != nil {
+			return nil, err
+		}
+		return &details, nil
+	}
+
+	settings, err := validatedDockerSettings(request)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := details.FromDockerDetailsPOST(client.DockerDetailsPOST{
+		DockerfilePath: &settings.dockerfilePath,
+		DockerContext:  &settings.dockerContext,
+		DockerCommand:  &settings.dockerCommand,
+	}); err != nil {
+		return nil, err
+	}
+	return &details, nil
+}
+
+type dockerSettings struct {
+	dockerfilePath string
+	dockerContext  string
+	dockerCommand  string
+}
+
+func validatedDockerSettings(request mcp.CallToolRequest) (dockerSettings, error) {
+	settings := dockerSettings{
+		dockerfilePath: "./Dockerfile",
+		dockerContext:  ".",
+		dockerCommand:  "",
+	}
+
+	path, hasPath, err := validate.OptionalToolParam[string](request, "dockerfilePath")
+	if err != nil {
+		return dockerSettings{}, err
+	}
+	if hasPath {
+		settings.dockerfilePath = path
+	}
+
+	buildContext, hasContext, err := validate.OptionalToolParam[string](request, "dockerContext")
+	if err != nil {
+		return dockerSettings{}, err
+	}
+	if hasContext {
+		settings.dockerContext = buildContext
+	}
+
+	command, hasCommand, err := validate.OptionalToolParam[string](request, "dockerCommand")
+	if err != nil {
+		return dockerSettings{}, err
+	}
+	if hasCommand {
+		settings.dockerCommand = command
+	}
+
+	return settings, nil
+}
+
+func validatedNativeCommands(request mcp.CallToolRequest) (client.NativeEnvironmentDetailsPOST, error) {
+	buildCommand, err := validate.RequiredToolParam[string](request, "buildCommand")
+	if err != nil {
+		return client.NativeEnvironmentDetailsPOST{}, err
+	}
+	startCommand, err := validate.RequiredToolParam[string](request, "startCommand")
+	if err != nil {
+		return client.NativeEnvironmentDetailsPOST{}, err
+	}
+	return client.NativeEnvironmentDetailsPOST{
+		BuildCommand: buildCommand,
+		StartCommand: startCommand,
+	}, nil
 }
 
 func validatedCreateServiceRequest(ctx context.Context, request mcp.CallToolRequest, serviceType client.ServiceType, serviceDetails *client.ServicePOST_ServiceDetails) (*client.CreateServiceJSONRequestBody, error) {
@@ -416,7 +497,7 @@ func createCronJob(serviceRepo *Repo) server.ServerTool {
 				"Cron jobs are ideal for background tasks like data processing, cleanup operations, sending emails, or generating reports. "+
 				"By default, these services are automatically deployed when the specified branch is updated. "+
 				"This tool is currently limited to support only a subset of the cron job configuration parameters. "+
-				"It also only supports cron jobs which don't use Docker, or a container registry. "+
+				"Deploying prebuilt images from a container registry is not supported. "+
 				"To create a cron job without those limitations, please use the dashboard at: "+config.DashboardURL()+"/create"),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:           "Create cron job",
@@ -458,12 +539,22 @@ func createCronJob(serviceRepo *Repo) server.ServerTool {
 				mcp.DefaultString(string(client.PlanStarter)),
 			),
 			mcp.WithString("buildCommand",
-				mcp.Required(),
-				mcp.Description("The command used to build your cron job. For example, 'npm install' for Node.js or 'pip install -r requirements.txt' for Python."),
+				mcp.Description("The command used to build your cron job. For example, 'npm install' for Node.js or 'pip install -r requirements.txt' for Python. Required unless runtime is 'docker'."),
 			),
 			mcp.WithString("startCommand",
-				mcp.Required(),
-				mcp.Description("The command that runs when your cron job executes. For example, 'node scripts/cleanup.js' for Node.js or 'python scripts/process_data.py' for Python."),
+				mcp.Description("The command that runs when your cron job executes. For example, 'node scripts/cleanup.js' for Node.js or 'python scripts/process_data.py' for Python. Required unless runtime is 'docker'."),
+			),
+			mcp.WithString("dockerfilePath",
+				mcp.Description("Path to the Dockerfile, relative to the repository root. Defaults to './Dockerfile'. Applies when runtime is 'docker'."),
+				mcp.DefaultString("./Dockerfile"),
+			),
+			mcp.WithString("dockerContext",
+				mcp.Description("Build context directory, relative to the repository root. Defaults to '.'. Applies when runtime is 'docker'."),
+				mcp.DefaultString("."),
+			),
+			mcp.WithString("dockerCommand",
+				mcp.Description("Overrides the image's startup command. When omitted, uses the Dockerfile's ENTRYPOINT and CMD. An empty string also uses that default. Applies when runtime is 'docker'."),
+				mcp.DefaultString(""),
 			),
 			mcp.WithString("region",
 				mcp.Description("The geographic region where your cron job will be deployed. Defaults to Oregon."),
@@ -518,12 +609,7 @@ func createValidatedCronJobRequest(ctx context.Context, request mcp.CallToolRequ
 		return nil, err
 	}
 
-	buildCommand, err := validate.RequiredToolParam[string](request, "buildCommand")
-	if err != nil {
-		return nil, err
-	}
-
-	startCommand, err := validate.RequiredToolParam[string](request, "startCommand")
+	envSpecificDetails, err := validatedCronJobRuntimeDetails(request, client.ServiceRuntime(runtime))
 	if err != nil {
 		return nil, err
 	}
@@ -533,36 +619,10 @@ func createValidatedCronJobRequest(ctx context.Context, request mcp.CallToolRequ
 		return nil, err
 	}
 
-	nativeEnvironmentDetails := client.NativeEnvironmentDetailsPOST{
-		BuildCommand: buildCommand,
-		StartCommand: startCommand,
-	}
-
-	envSpecificDetailsPOST := client.EnvSpecificDetailsPOST{}
-	if err = envSpecificDetailsPOST.FromNativeEnvironmentDetailsPOST(nativeEnvironmentDetails); err != nil {
-		return nil, err
-	}
-
-	// Convert EnvSpecificDetailsPOST to EnvSpecificDetails
-	envSpecificDetails := client.EnvSpecificDetails{}
-	nativeEnvDetails, err := envSpecificDetailsPOST.AsNativeEnvironmentDetailsPOST()
-	if err != nil {
-		return nil, err
-	}
-	// Convert POST type to regular type
-	regularNativeEnvDetails := client.NativeEnvironmentDetails{
-		BuildCommand:     nativeEnvDetails.BuildCommand,
-		StartCommand:     nativeEnvDetails.StartCommand,
-		PreDeployCommand: nil, // Not available in POST version
-	}
-	if err = envSpecificDetails.FromNativeEnvironmentDetails(regularNativeEnvDetails); err != nil {
-		return nil, err
-	}
-
 	cronJobDetailsPOST := client.CronJobDetailsPOST{
 		Runtime:            client.ServiceRuntime(runtime),
 		Schedule:           schedule,
-		EnvSpecificDetails: &envSpecificDetails,
+		EnvSpecificDetails: envSpecificDetails,
 	}
 
 	if plan, ok, err := validate.OptionalToolParam[string](request, "plan"); err != nil {
@@ -587,6 +647,40 @@ func createValidatedCronJobRequest(ctx context.Context, request mcp.CallToolRequ
 	}
 
 	return validatedCreateServiceRequest(ctx, request, client.CronJob, &serviceDetails)
+}
+
+func validatedCronJobRuntimeDetails(
+	request mcp.CallToolRequest,
+	runtime client.ServiceRuntime,
+) (*client.EnvSpecificDetails, error) {
+	var details client.EnvSpecificDetails
+	if runtime != client.ServiceRuntimeDocker {
+		commands, err := validatedNativeCommands(request)
+		if err != nil {
+			return nil, err
+		}
+		if err := details.FromNativeEnvironmentDetails(client.NativeEnvironmentDetails{
+			BuildCommand: commands.BuildCommand,
+			StartCommand: commands.StartCommand,
+		}); err != nil {
+			return nil, err
+		}
+		return &details, nil
+	}
+
+	settings, err := validatedDockerSettings(request)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := details.FromDockerDetails(client.DockerDetails{
+		DockerfilePath: settings.dockerfilePath,
+		DockerContext:  settings.dockerContext,
+		DockerCommand:  settings.dockerCommand,
+	}); err != nil {
+		return nil, err
+	}
+	return &details, nil
 }
 
 func updateWebService() server.ServerTool {
