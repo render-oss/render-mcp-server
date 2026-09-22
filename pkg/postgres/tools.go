@@ -2,8 +2,10 @@ package postgres
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"net"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -246,7 +248,7 @@ func queryPostgres(postgresRepo *Repo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			config, err := pgx.ParseConfig(connectionInfo.ExternalConnectionString)
+			config, err := parsePostgresConnConfig(connectionInfo.ExternalConnectionString)
 			if err != nil {
 				return mcp.NewToolResultErrorFromErr("Error parsing connection string", err), nil
 			}
@@ -338,4 +340,46 @@ func connectErrorResult(err error, allowList []client.CidrBlockAndDescription) *
 		}
 	}
 	return mcp.NewToolResultError(fmt.Sprintf("Error connecting to database: %v\n\n%s", err, ipRestrictedHint))
+}
+
+// parsePostgresConnConfig parses a Render Postgres connection string and
+// enforces TLS (sslmode=require semantics). Render-managed Postgres always
+// requires SSL, but pgx defaults to sslmode=prefer: the primary config uses
+// TLS with a plaintext fallback, and any TLS hiccup silently downgrades to an
+// unencrypted attempt that the server rejects with FATAL: SSL/TLS required
+// (issue #6). Dropping plaintext fallbacks and upgrading TLS-less configs
+// keeps the failure in the TLS layer and lets IP-allowlisted instances
+// connect the same way psql does.
+func parsePostgresConnConfig(connStr string) (*pgx.ConnConfig, error) {
+	config, err := pgx.ParseConfig(connStr)
+	if err != nil {
+		return nil, err
+	}
+
+	if config.TLSConfig == nil {
+		tlsConfig := &tls.Config{
+			MinVersion:         tls.VersionTLS12,
+			InsecureSkipVerify: true,
+		}
+		if net.ParseIP(config.Host) == nil && config.Host != "" {
+			tlsConfig.ServerName = config.Host
+		}
+		config.TLSConfig = tlsConfig
+	}
+
+	// Keep TLS fallbacks (multi-host HA) but drop any plaintext fallback so
+	// pgx never silently downgrades to an unencrypted connection.
+	kept := config.Fallbacks[:0]
+	for _, fb := range config.Fallbacks {
+		if fb.TLSConfig != nil {
+			kept = append(kept, fb)
+		}
+	}
+	// Zero the tail so dropped *FallbackConfig pointers don't linger.
+	for i := len(kept); i < len(config.Fallbacks); i++ {
+		config.Fallbacks[i] = nil
+	}
+	config.Fallbacks = kept
+
+	return config, nil
 }
