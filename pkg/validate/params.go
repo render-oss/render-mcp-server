@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/render-oss/render-mcp-server/pkg/client"
@@ -175,4 +177,153 @@ func PostgresDiskSizeGb(diskSizeGb int) error {
 		return nil
 	}
 	return fmt.Errorf("diskSizeGb can be 0 for the free plan, otherwise it must be either 1, or a multiple of 5")
+}
+
+// cronFieldBounds describes the allowed numeric range for one cron field.
+type cronFieldBounds struct {
+	min int
+	max int
+}
+
+// CronSchedule validates a 5-field standard cron expression (minute hour
+// day-of-month month day-of-week) as accepted by create_cron_job. It supports
+// wildcards, single values, ranges, steps, and comma-separated lists, plus
+// JAN-DEC month names and SUN-SAT day-of-week names. Day-of-week accepts 0-7
+// (both 0 and 7 mean Sunday).
+func CronSchedule(schedule string) error {
+	const formatHint = "expected 5 fields: minute (0-59) hour (0-23) day of month (1-31) month (1-12) day of week (0-6, Sunday=0)"
+
+	fields := strings.Fields(schedule)
+	if len(fields) != 5 {
+		return fmt.Errorf("invalid schedule expression %q: %s", schedule, formatHint)
+	}
+
+	bounds := []cronFieldBounds{
+		{min: 0, max: 59},
+		{min: 0, max: 23},
+		{min: 1, max: 31},
+		{min: 1, max: 12},
+		{min: 0, max: 7},
+	}
+
+	for i, field := range fields {
+		if err := cronField(field, bounds[i], i == 3, i == 4); err != nil {
+			return fmt.Errorf("invalid schedule expression %q: field %d (%q): %w", schedule, i+1, field, err)
+		}
+	}
+	return nil
+}
+
+func cronField(field string, bounds cronFieldBounds, allowMonthNames, allowDowNames bool) error {
+	if field == "" {
+		return fmt.Errorf("empty field")
+	}
+	for _, item := range strings.Split(field, ",") {
+		if err := cronItem(item, bounds, allowMonthNames, allowDowNames); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func cronItem(item string, bounds cronFieldBounds, allowMonthNames, allowDowNames bool) error {
+	if item == "" {
+		return fmt.Errorf("empty list entry")
+	}
+	base := item
+	if slash := strings.Index(item, "/"); slash >= 0 {
+		base = item[:slash]
+		stepStr := item[slash+1:]
+		if strings.Contains(stepStr, "/") || stepStr == "" {
+			return fmt.Errorf("invalid step in %q", item)
+		}
+		step, err := strconv.Atoi(stepStr)
+		if err != nil || step < 1 {
+			return fmt.Errorf("invalid step in %q: step must be a positive integer", item)
+		}
+		if base == "" {
+			return fmt.Errorf("invalid step in %q: missing base before '/'", item)
+		}
+	}
+	if base == "*" {
+		return nil
+	}
+	if strings.Contains(base, "-") {
+		parts := strings.Split(base, "-")
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid range in %q", item)
+		}
+		lo, err := cronValue(parts[0], bounds, allowMonthNames, allowDowNames)
+		if err != nil {
+			return err
+		}
+		hi, err := cronValue(parts[1], bounds, allowMonthNames, allowDowNames)
+		if err != nil {
+			return err
+		}
+		if lo > hi {
+			return fmt.Errorf("invalid range in %q: start must not exceed end", item)
+		}
+		return nil
+	}
+	_, err := cronValue(base, bounds, allowMonthNames, allowDowNames)
+	return err
+}
+
+func cronValue(token string, bounds cronFieldBounds, allowMonthNames, allowDowNames bool) (int, error) {
+	if token == "" {
+		return 0, fmt.Errorf("empty value")
+	}
+	if v, ok := cronNameValue(token, allowMonthNames, allowDowNames); ok {
+		if v < bounds.min || v > bounds.max {
+			return 0, fmt.Errorf("value %q out of range (%d-%d)", token, bounds.min, bounds.max)
+		}
+		return v, nil
+	}
+	if allowMonthNames || allowDowNames {
+		lower := strings.ToLower(token)
+		if isAlpha(lower) {
+			return 0, fmt.Errorf("unknown name %q", token)
+		}
+	}
+	v, err := strconv.Atoi(token)
+	if err != nil {
+		return 0, fmt.Errorf("invalid value %q: must be an integer, a range, a step, a list, or *", token)
+	}
+	if v < bounds.min || v > bounds.max {
+		return 0, fmt.Errorf("value %q out of range (%d-%d)", token, bounds.min, bounds.max)
+	}
+	return v, nil
+}
+
+func cronNameValue(token string, allowMonthNames, allowDowNames bool) (int, bool) {
+	lower := strings.ToLower(token)
+	if allowMonthNames {
+		if v, ok := map[string]int{
+			"jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+			"jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+		}[lower]; ok {
+			return v, true
+		}
+	}
+	if allowDowNames {
+		if v, ok := map[string]int{
+			"sun": 0, "mon": 1, "tue": 2, "wed": 3, "thu": 4, "fri": 5, "sat": 6,
+		}[lower]; ok {
+			return v, true
+		}
+	}
+	return 0, false
+}
+
+func isAlpha(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') {
+			return false
+		}
+	}
+	return true
 }
