@@ -17,6 +17,7 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/cfg"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	"github.com/render-oss/render-mcp-server/pkg/deploy"
+	"github.com/render-oss/render-mcp-server/pkg/event"
 	"github.com/render-oss/render-mcp-server/pkg/httpcontext"
 	"github.com/render-oss/render-mcp-server/pkg/keyvalue"
 	"github.com/render-oss/render-mcp-server/pkg/logging"
@@ -159,6 +160,7 @@ func buildWorkspaceScopedTools(c *client.ClientWithResponses) []server.ServerToo
 	var tools []server.ServerTool
 	tools = append(tools, service.Tools(c)...)
 	tools = append(tools, deploy.Tools(c)...)
+	tools = append(tools, event.Tools(c)...)
 	tools = append(tools, postgres.Tools(c)...)
 	tools = append(tools, keyvalue.Tools(c)...)
 	tools = append(tools, logs.Tools(c)...)

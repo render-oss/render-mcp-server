@@ -186,6 +186,25 @@ session-based behavior is deprecated and is scheduled for removal.
   - `serviceId`: The ID of the service to deploy (string, required)
   - `clearCache`: Whether to clear the build cache before deploying (boolean, optional). Defaults to `false`.
 
+### Events
+
+- **list_events** - List a service's event history: deploys, builds, restarts, failures, scaling, suspensions, and disk changes. Failure events carry the reason a service went down (out-of-memory kills, non-zero exits, failed health checks, evictions), which does not appear in logs.
+
+  - `serviceId`: The ID of the service to list events for (string, required)
+  - `eventTypes`: Filter to specific event types (array of strings, optional). Returns all types when omitted. Accepted values:
+    - Build and deploy: `build_started`, `build_ended`, `deploy_started`, `deploy_ended`, `pre_deploy_started`, `pre_deploy_ended`, `initial_deploy_hook_started`, `initial_deploy_hook_ended`, `zero_downtime_redeploy_started`, `zero_downtime_redeploy_ended`, `commit_ignored`, `branch_deleted`, `image_pull_failed`, `artifact_fetch_failed`, `artifact_source_changed`, `auto_deploy_enabled`, `auto_deploy_disabled`, `pipeline_minutes_exhausted`
+    - Runtime health: `server_available`, `server_failed`, `server_hardware_failure`, `server_restarted`
+    - Scaling and plan: `autoscaling_started`, `autoscaling_ended`, `autoscaling_config_changed`, `instance_count_changed`, `plan_changed`
+    - Disk: `disk_created`, `disk_updated`, `disk_deleted`, `service_disk_usage_high`, `service_disk_usage_recovered`
+    - Lifecycle and maintenance: `service_suspended`, `service_resumed`, `suspender_added`, `suspender_removed`, `maintenance_started`, `maintenance_ended`, `maintenance_mode_enabled`, `maintenance_mode_uri_updated`
+    - Job runs: `cron_job_run_started`, `cron_job_run_ended`, `job_run_ended`
+  - `startTime`: Start of the time range (RFC3339 format) (string, optional). Defaults to 7 days ago on the first page. Set it to reach events older than that.
+  - `endTime`: End of the time range (RFC3339 format) (string, optional). Defaults to the current time.
+  - `limit`: Maximum number of events to return, newest first (number, optional, min 1, max 100). Defaults to `20`.
+  - `cursor`: A unique string that corresponds to a position in the result list. If provided, the endpoint returns results that appear after the corresponding position. To fetch the first page of results, set to the empty string (string, optional).
+
+  Events cover services only, not Postgres or Key Value instances. The 7 day default applies to the first page only. For older events, page with the `cursor` from the previous call; if the first page comes back empty there is no cursor to follow, so set an earlier `startTime` instead.
+
 ### Logs
 
 - **list_logs** - List logs matching the provided filters

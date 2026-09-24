@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -370,6 +371,69 @@ func TestWorkspaceScopedToolsAcceptOptionalWorkspaceID(t *testing.T) {
 	}
 }
 
+// Exercises list_events over the real HTTP transport, covering tool
+// registration, workspace scoping, filter encoding, and event details reaching
+// the caller.
+func TestListEventsToolOverHTTP(t *testing.T) {
+	httpTransport, renderAPI := newWorkspaceHTTPTestServer(t)
+	renderAPI.serviceOwnerID = "tea-events"
+
+	sessionID := initializeHTTPSession(t, httpTransport)
+
+	result := callHTTPTool(t, httpTransport, sessionID, "list_events", map[string]any{
+		"serviceId":   "srv-123456",
+		"workspaceId": "tea-events",
+		"eventTypes":  []any{"server_failed", "deploy_ended"},
+	})
+	require.False(t, result.IsError, "%+v", result.Content)
+
+	require.Len(t, renderAPI.eventQueries, 1)
+	query := renderAPI.eventQueries[0]
+	require.Equal(t, []string{"server_failed,deploy_ended"}, query["type"])
+	require.Equal(t, "20", query.Get("limit"))
+	require.NotEmpty(t, query.Get("startTime"))
+
+	content, ok := result.Content[0].(mcp.TextContent)
+	require.True(t, ok)
+	require.Contains(t, content.Text, "evt-abc")
+	require.Contains(t, content.Text, "oomKilled")
+	require.Contains(t, content.Text, "512MB")
+	require.True(t, strings.HasSuffix(content.Text, "\n\n cursor: evt-abc-cursor"), content.Text)
+}
+
+// Paging over HTTP forwards the cursor to the API as a query param.
+func TestListEventsToolForwardsCursorOverHTTP(t *testing.T) {
+	httpTransport, renderAPI := newWorkspaceHTTPTestServer(t)
+	renderAPI.serviceOwnerID = "tea-events"
+
+	sessionID := initializeHTTPSession(t, httpTransport)
+
+	result := callHTTPTool(t, httpTransport, sessionID, "list_events", map[string]any{
+		"serviceId":   "srv-123456",
+		"workspaceId": "tea-events",
+		"cursor":      "evt-abc-cursor",
+	})
+	require.False(t, result.IsError, "%+v", result.Content)
+
+	require.Len(t, renderAPI.eventQueries, 1)
+	require.Equal(t, "evt-abc-cursor", renderAPI.eventQueries[0].Get("cursor"))
+}
+
+// A service owned by another workspace must not return events.
+func TestListEventsToolRejectsForeignWorkspace(t *testing.T) {
+	httpTransport, renderAPI := newWorkspaceHTTPTestServer(t)
+	renderAPI.serviceOwnerID = "tea-owner"
+
+	sessionID := initializeHTTPSession(t, httpTransport)
+
+	result := callHTTPTool(t, httpTransport, sessionID, "list_events", map[string]any{
+		"serviceId":   "srv-123456",
+		"workspaceId": "tea-intruder",
+	})
+	require.True(t, result.IsError)
+	require.Empty(t, renderAPI.eventQueries)
+}
+
 func newSessionlessStdioTestClient(t *testing.T, apiClient *client.ClientWithResponses) *mcpclient.Client {
 	t.Helper()
 	_, stdioTransport := newStdioServer(apiClient)
@@ -428,6 +492,8 @@ func newTestRenderClient(t *testing.T) (*client.ClientWithResponses, *fakeRender
 type fakeRenderAPI struct {
 	workspaceIDs      []string
 	servicesCallCount int
+	serviceOwnerID    string
+	eventQueries      []url.Values
 }
 
 func (f *fakeRenderAPI) Do(r *http.Request) (*http.Response, error) {
@@ -444,6 +510,16 @@ func (f *fakeRenderAPI) Do(r *http.Request) (*http.Response, error) {
 		// selection. Service contents are irrelevant, so return an empty list.
 		f.workspaceIDs = append(f.workspaceIDs, r.URL.Query().Get("ownerId"))
 		body = "[]"
+	case strings.HasSuffix(r.URL.Path, "/events"):
+		// Record the query so tests can verify the filters the tool sent.
+		f.eventQueries = append(f.eventQueries, r.URL.Query())
+		body = `[{"cursor":"evt-abc-cursor","event":{"id":"evt-abc","serviceId":"srv-123456",` +
+			`"type":"server_failed","timestamp":"2026-09-20T00:00:00Z",` +
+			`"details":{"reason":{"evicted":false,"oomKilled":{"memoryLimit":"512MB"}}}}}]`
+	case strings.HasPrefix(r.URL.Path, "/v1/services/"):
+		// Service lookup used by the workspace-ownership check.
+		id := strings.TrimPrefix(r.URL.Path, "/v1/services/")
+		body = `{"id":"` + id + `","ownerId":"` + f.serviceOwnerID + `","type":"web_service"}`
 	default:
 		return nil, fmt.Errorf("unexpected API request: %s", r.URL.Path)
 	}
