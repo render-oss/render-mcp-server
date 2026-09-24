@@ -362,5 +362,5 @@ type RecoveryInput struct {
 	RestoreName *string `json:"restoreName,omitempty"`
 
 	// RestoreTime The point in time to restore the database to. See `/recovery-info` for restore availability
-	RestoreTime time.Time `json:"restoreTime"`
+	RestoreTime *time.Time `json:"restoreTime,omitempty"`
 }

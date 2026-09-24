@@ -123,14 +123,17 @@ func (e SandboxLogEventStream) Valid() bool {
 
 // Defines values for SandboxNetworkPolicyDefault.
 const (
-	AllowAll SandboxNetworkPolicyDefault = "allow-all"
-	DenyAll  SandboxNetworkPolicyDefault = "deny-all"
+	AllowAll  SandboxNetworkPolicyDefault = "allow-all"
+	AllowList SandboxNetworkPolicyDefault = "allow-list"
+	DenyAll   SandboxNetworkPolicyDefault = "deny-all"
 )
 
 // Valid indicates whether the value is a known member of the SandboxNetworkPolicyDefault enum.
 func (e SandboxNetworkPolicyDefault) Valid() bool {
 	switch e {
 	case AllowAll:
+		return true
+	case AllowList:
 		return true
 	case DenyAll:
 		return true
@@ -154,6 +157,45 @@ func (e SandboxPlan) Valid() bool {
 	case Standard:
 		return true
 	case Starter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SandboxSnapshotKind.
+const (
+	Filesystem SandboxSnapshotKind = "filesystem"
+	Runtime    SandboxSnapshotKind = "runtime"
+)
+
+// Valid indicates whether the value is a known member of the SandboxSnapshotKind enum.
+func (e SandboxSnapshotKind) Valid() bool {
+	switch e {
+	case Filesystem:
+		return true
+	case Runtime:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SandboxSnapshotStatus.
+const (
+	SandboxSnapshotStatusAvailable SandboxSnapshotStatus = "available"
+	SandboxSnapshotStatusCreating  SandboxSnapshotStatus = "creating"
+	SandboxSnapshotStatusFailed    SandboxSnapshotStatus = "failed"
+)
+
+// Valid indicates whether the value is a known member of the SandboxSnapshotStatus enum.
+func (e SandboxSnapshotStatus) Valid() bool {
+	switch e {
+	case SandboxSnapshotStatusAvailable:
+		return true
+	case SandboxSnapshotStatusCreating:
+		return true
+	case SandboxSnapshotStatusFailed:
 		return true
 	default:
 		return false
@@ -416,6 +458,18 @@ type SandboxLogEventStream string
 
 // SandboxNetworkPolicy defines model for sandboxNetworkPolicy.
 type SandboxNetworkPolicy struct {
+	// AllowedDomains Domains the sandbox may reach, required when `default` is
+	// `allow-list` and rejected otherwise.
+	//
+	// Matching is exact: `foo.local` does not cover `api.foo.local`,
+	// leftmost-only wildcarding e.g. `*.foo.local` is allowed. Only HTTP
+	// and HTTPS traffic is matched against this list; under
+	// `allow-list` all other outbound TCP is dropped.
+	//
+	//
+	// Example: ["foo.local","*.bar.local"]
+	AllowedDomains *[]string `json:"allowedDomains,omitempty"`
+
 	// Default Default action for outbound traffic.
 	Default SandboxNetworkPolicyDefault `json:"default"`
 }
@@ -436,12 +490,96 @@ type SandboxPOST struct {
 	// Region Render region. Defaults to the workspace default.
 	Region *string `json:"region,omitempty"`
 
+	// SnapshotId Start from this snapshot instead of the base image. Must be `available`
+	// and in the same sandbox group. For a `runtime` snapshot, `plan` must
+	// match the snapshot's plan.
+	SnapshotId *SandboxSnapshotId `json:"snapshotId,omitempty"`
+
+	// SnapshotName Start from the snapshot this name currently resolves to in the sandbox
+	// group. Mutually exclusive with `snapshotId`. Same restore rules as
+	// `snapshotId`.
+	SnapshotName *SandboxSnapshotName `json:"snapshotName,omitempty"`
+
 	// TimeoutSeconds Maximum sandbox lifetime in seconds. Sandbox is terminated when reached.
 	TimeoutSeconds *int `json:"timeoutSeconds,omitempty"`
 }
 
 // SandboxPlan Compute plan. Sizing matches Workflow plans of the same name.
 type SandboxPlan string
+
+// SandboxSnapshot defines model for sandboxSnapshot.
+type SandboxSnapshot struct {
+	// CapturedAt When the sandbox was frozen for capture. Null until `available`.
+	CapturedAt *time.Time `json:"capturedAt,omitempty"`
+
+	// Error Null unless `failed`.
+	Error *string `json:"error,omitempty"`
+
+	// ExpiresAt The time after which the snapshot can no longer be retrieved or restored.
+	// Set by Render when the create request did not specify one.
+	ExpiresAt time.Time `json:"expiresAt"`
+
+	// Id Example: snp-cph1rs3idesc73a2b2mg
+	Id SandboxSnapshotId `json:"id"`
+
+	// Kind `filesystem` captures the writable filesystem and restores onto any plan.
+	// `runtime` also captures memory and CPU state and restores only onto the
+	// plan of the source sandbox.
+	Kind SandboxSnapshotKind `json:"kind"`
+
+	// Name Set at create. Never changes. Null when created without a name.
+	Name *SandboxSnapshotName `json:"name,omitempty"`
+
+	// Plan Plan of the source sandbox at capture time.
+	Plan        SandboxPlan `json:"plan"`
+	RequestedAt time.Time   `json:"requestedAt"`
+
+	// SandboxGroupId Example: sbg-cph1rs3idesc73a2b2mg
+	SandboxGroupId SandboxGroupId `json:"sandboxGroupId"`
+
+	// SizeBytes Null until `available`.
+	SizeBytes *int64 `json:"sizeBytes,omitempty"`
+
+	// SourceSandboxId The sandbox this snapshot was captured from. Lineage only.
+	SourceSandboxId SandboxId             `json:"sourceSandboxId"`
+	Status          SandboxSnapshotStatus `json:"status"`
+}
+
+// SandboxSnapshotId Example: snp-cph1rs3idesc73a2b2mg
+type SandboxSnapshotId = string
+
+// SandboxSnapshotKind `filesystem` captures the writable filesystem and restores onto any plan.
+// `runtime` also captures memory and CPU state and restores only onto the
+// plan of the source sandbox.
+type SandboxSnapshotKind string
+
+// SandboxSnapshotName Case sensitive. Scoped to the sandbox group. Must not start with `snp-`
+// so clients can tell a name from a snapshot ID. Several snapshots may
+// share a name; the most recently available one is the one the name
+// resolves to.
+//
+// Example: gold
+type SandboxSnapshotName = string
+
+// SandboxSnapshotPOST defines model for sandboxSnapshotPOST.
+type SandboxSnapshotPOST struct {
+	// ExpiresAt The time after which the snapshot can no longer be retrieved or restored.
+	// Must be in the future. Omit to use Render's default snapshot lifetime.
+	ExpiresAt *time.Time           `json:"expiresAt,omitempty"`
+	Kind      *SandboxSnapshotKind `json:"kind,omitempty"`
+
+	// Name Case sensitive. Scoped to the sandbox group. Must not start with `snp-`
+	// so clients can tell a name from a snapshot ID. Several snapshots may
+	// share a name; the most recently available one is the one the name
+	// resolves to.
+	//
+	//
+	// Example: gold
+	Name *SandboxSnapshotName `json:"name,omitempty"`
+}
+
+// SandboxSnapshotStatus defines model for sandboxSnapshotStatus.
+type SandboxSnapshotStatus string
 
 // SandboxStatus defines model for sandboxStatus.
 type SandboxStatus string
@@ -451,3 +589,9 @@ type ExecId = ExecutionId
 
 // OwnerId defines model for ownerId.
 type OwnerId = string
+
+// OwnerIdGroupScoped defines model for ownerIdGroupScoped.
+type OwnerIdGroupScoped = string
+
+// SnapshotId Example: snp-cph1rs3idesc73a2b2mg
+type SnapshotId = SandboxSnapshotId

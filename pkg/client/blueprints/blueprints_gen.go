@@ -12,10 +12,28 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for ExistingResourceMode.
+const (
+	AdoptExisting ExistingResourceMode = "adopt"
+	CreateNew     ExistingResourceMode = "create_new"
+)
+
+// Valid indicates whether the value is a known member of the ExistingResourceMode enum.
+func (e ExistingResourceMode) Valid() bool {
+	switch e {
+	case AdoptExisting:
+		return true
+	case CreateNew:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ResourceRefType.
 const (
-	ArtifactSource   ResourceRefType = "artifact_source"
 	BackgroundWorker ResourceRefType = "background_worker"
+	BuildSource      ResourceRefType = "build_source"
 	CronJob          ResourceRefType = "cron_job"
 	EnvironmentGroup ResourceRefType = "environment_group"
 	KeyValue         ResourceRefType = "key_value"
@@ -24,14 +42,15 @@ const (
 	Redis            ResourceRefType = "redis"
 	StaticSite       ResourceRefType = "static_site"
 	WebService       ResourceRefType = "web_service"
+	Workflow         ResourceRefType = "workflow"
 )
 
 // Valid indicates whether the value is a known member of the ResourceRefType enum.
 func (e ResourceRefType) Valid() bool {
 	switch e {
-	case ArtifactSource:
-		return true
 	case BackgroundWorker:
+		return true
+	case BuildSource:
 		return true
 	case CronJob:
 		return true
@@ -48,6 +67,8 @@ func (e ResourceRefType) Valid() bool {
 	case StaticSite:
 		return true
 	case WebService:
+		return true
+	case Workflow:
 		return true
 	default:
 		return false
@@ -108,12 +129,16 @@ func (e SyncState) Valid() bool {
 	}
 }
 
-// AutoSync Automatically sync changes to render.yaml
+// AutoSync Configuration value that controls whether or not this blueprint will be re-synced on each git push to the configured branch.
+// Even when true, autoSync will not apply when the blueprint has the Created status, which indicates its first sync has not yet been approved.
+// Other conditions, such as a locked workspace, can also prevent automatic syncing even when this is true.
 type AutoSync = bool
 
 // Blueprint defines model for blueprint.
 type Blueprint struct {
-	// AutoSync Automatically sync changes to render.yaml
+	// AutoSync Configuration value that controls whether or not this blueprint will be re-synced on each git push to the configured branch.
+	// Even when true, autoSync will not apply when the blueprint has the Created status, which indicates its first sync has not yet been approved.
+	// Other conditions, such as a locked workspace, can also prevent automatic syncing even when this is true.
 	AutoSync AutoSync `json:"autoSync"`
 	Branch   string   `json:"branch"`
 
@@ -125,14 +150,18 @@ type Blueprint struct {
 	// Path Path to the Blueprint file in the repository
 	//
 	// Example: render.yaml
-	Path   BlueprintPath `json:"path"`
-	Repo   string        `json:"repo"`
-	Status Status        `json:"status"`
+	Path BlueprintPath `json:"path"`
+	Repo string        `json:"repo"`
+
+	// Status A Blueprint has status `created` until its first Sync is approved.
+	Status Status `json:"status"`
 }
 
 // BlueprintDetail defines model for blueprintDetail.
 type BlueprintDetail struct {
-	// AutoSync Automatically sync changes to render.yaml
+	// AutoSync Configuration value that controls whether or not this blueprint will be re-synced on each git push to the configured branch.
+	// Even when true, autoSync will not apply when the blueprint has the Created status, which indicates its first sync has not yet been approved.
+	// Other conditions, such as a locked workspace, can also prevent automatic syncing even when this is true.
 	AutoSync AutoSync `json:"autoSync"`
 	Branch   string   `json:"branch"`
 
@@ -147,7 +176,9 @@ type BlueprintDetail struct {
 	Path      BlueprintPath `json:"path"`
 	Repo      string        `json:"repo"`
 	Resources []ResourceRef `json:"resources"`
-	Status    Status        `json:"status"`
+
+	// Status A Blueprint has status `created` until its first Sync is approved.
+	Status Status `json:"status"`
 }
 
 // BlueprintId Example: exs-cph1rs3idesc73a2b2mg
@@ -155,7 +186,9 @@ type BlueprintId = string
 
 // BlueprintPATCH defines model for blueprintPATCH.
 type BlueprintPATCH struct {
-	// AutoSync Automatically sync changes to render.yaml
+	// AutoSync Configuration value that controls whether or not this blueprint will be re-synced on each git push to the configured branch.
+	// Even when true, autoSync will not apply when the blueprint has the Created status, which indicates its first sync has not yet been approved.
+	// Other conditions, such as a locked workspace, can also prevent automatic syncing even when this is true.
 	AutoSync *AutoSync `json:"autoSync,omitempty"`
 	Name     *string   `json:"name,omitempty"`
 
@@ -170,10 +203,56 @@ type BlueprintPATCH struct {
 // Example: render.yaml
 type BlueprintPath = string
 
+// BlueprintSource defines model for blueprintSource.
+type BlueprintSource struct {
+	// Branch Branch to read. Defaults to the repository default branch.
+	Branch *string `json:"branch,omitempty"`
+
+	// Path Path to the Blueprint file in the repository.
+	Path *string `json:"path,omitempty"`
+
+	// Repo URL of the connected Git repository.
+	//
+	// Example: https://github.com/my-username/my-repository
+	Repo string `json:"repo"`
+}
+
 // CommitRef defines model for commitRef.
 type CommitRef struct {
 	Id string `json:"id"`
 }
+
+// CreateBlueprintRequest defines model for createBlueprintRequest.
+type CreateBlueprintRequest struct {
+	AutoSync *AutoSync `json:"autoSync,omitempty"`
+
+	// ExistingResources How Sync planning should handle existing resources.
+	// `adopt` brings matching existing resources under this Blueprint's management
+	// and updates their configuration to match the Blueprint file.
+	// `create_new` creates a separate set of resources, leaving existing resources unchanged.
+	ExistingResources *ExistingResourceMode `json:"existingResources,omitempty"`
+
+	// Name Name for the Blueprint. Defaults to an empty name.
+	Name *string `json:"name,omitempty"`
+
+	// OwnerId ID of the workspace in which to create the Blueprint.
+	//
+	// Example: tea-cjnxpkdhshc73d12t9i0
+	OwnerId string          `json:"ownerId"`
+	Source  BlueprintSource `json:"source"`
+}
+
+// CreateBlueprintResponse The newly created Blueprint
+type CreateBlueprintResponse struct {
+	Blueprint Blueprint `json:"blueprint"`
+	Sync      Sync      `json:"sync"`
+}
+
+// ExistingResourceMode How Sync planning should handle existing resources.
+// `adopt` brings matching existing resources under this Blueprint's management
+// and updates their configuration to match the Blueprint file.
+// `create_new` creates a separate set of resources, leaving existing resources unchanged.
+type ExistingResourceMode string
 
 // ResourceRef defines model for resourceRef.
 type ResourceRef struct {
@@ -187,7 +266,7 @@ type ResourceRef struct {
 // ResourceRefType type of the resource (ex. web_service or postgres)
 type ResourceRefType string
 
-// Status defines model for status.
+// Status A Blueprint has status `created` until its first Sync is approved.
 type Status string
 
 // Sync defines model for sync.

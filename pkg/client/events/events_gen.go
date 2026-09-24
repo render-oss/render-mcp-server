@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/oapi-codegen/runtime"
-	externalRef1 "github.com/render-oss/render-mcp-server/pkg/client/autodeploy"
-	externalRef2 "github.com/render-oss/render-mcp-server/pkg/client/autoscaling"
+	externalRef0 "github.com/render-oss/render-mcp-server/pkg/client/autodeploy"
+	externalRef1 "github.com/render-oss/render-mcp-server/pkg/client/autoscaling"
 	externalRef4 "github.com/render-oss/render-mcp-server/pkg/client/disks"
 	externalRef7 "github.com/render-oss/render-mcp-server/pkg/client/eventstatuses"
 	externalRef8 "github.com/render-oss/render-mcp-server/pkg/client/eventtypes"
@@ -21,23 +21,24 @@ import (
 
 // ArtifactFetchFailedEvent defines model for artifactFetchFailedEvent.
 type ArtifactFetchFailedEvent struct {
-	ArtifactId string `json:"artifactId"`
-	Message    string `json:"message"`
+	// BuildId The build published by the build source that could not be fetched.
+	BuildId string `json:"buildId"`
+	Message string `json:"message"`
 }
 
 // ArtifactSourceChangedEvent defines model for artifactSourceChangedEvent.
 type ArtifactSourceChangedEvent struct {
-	// FromArtifactSourceId The previously linked artifact source. Absent when the service was newly attached.
-	FromArtifactSourceId *string `json:"fromArtifactSourceId,omitempty"`
+	// FromBuildSourceId The previously linked build source. Absent when the service was newly attached.
+	FromBuildSourceId *string `json:"fromBuildSourceId,omitempty"`
 
-	// ToArtifactSourceId The newly linked artifact source. Absent when the service was detached.
-	ToArtifactSourceId *string `json:"toArtifactSourceId,omitempty"`
+	// ToBuildSourceId The newly linked build source. Absent when the service was detached.
+	ToBuildSourceId *string `json:"toBuildSourceId,omitempty"`
 }
 
 // AutoDeployDisabledEvent defines model for autoDeployDisabledEvent.
 type AutoDeployDisabledEvent struct {
 	// FromTrigger Controls autodeploy behavior. commit deploys when a commit is pushed to a branch. checksPass waits for the branch to be green.
-	FromTrigger *externalRef1.AutoDeployTrigger `json:"fromTrigger,omitempty"`
+	FromTrigger *externalRef0.AutoDeployTrigger `json:"fromTrigger,omitempty"`
 
 	// Reason Why auto-deploy was disabled (manual_deploy, rollback, or setting_change)
 	Reason string `json:"reason"`
@@ -46,13 +47,13 @@ type AutoDeployDisabledEvent struct {
 // AutoDeployEnabledEvent defines model for autoDeployEnabledEvent.
 type AutoDeployEnabledEvent struct {
 	// NewTrigger Controls autodeploy behavior. commit deploys when a commit is pushed to a branch. checksPass waits for the branch to be green.
-	NewTrigger *externalRef1.AutoDeployTrigger `json:"newTrigger,omitempty"`
+	NewTrigger *externalRef0.AutoDeployTrigger `json:"newTrigger,omitempty"`
 }
 
 // AutoscalingConfigChangedEvent defines model for autoscalingConfigChangedEvent.
 type AutoscalingConfigChangedEvent struct {
-	FromConfig *externalRef2.AutoscalingConfig `json:"fromConfig,omitempty"`
-	ToConfig   externalRef2.AutoscalingConfig  `json:"toConfig"`
+	FromConfig *externalRef1.AutoscalingConfig `json:"fromConfig,omitempty"`
+	ToConfig   externalRef1.AutoscalingConfig  `json:"toConfig"`
 }
 
 // AutoscalingEndedEvent defines model for autoscalingEndedEvent.
@@ -164,8 +165,8 @@ type CronJobRunStartedEvent struct {
 
 // DeployEndedEvent defines model for deployEndedEvent.
 type DeployEndedEvent struct {
-	// ArtifactId Set when the deploy shipped an artifact published by the service's linked artifact source.
-	ArtifactId   *string                  `json:"artifactId,omitempty"`
+	// BuildId Set when the deploy shipped a build published by the service's linked build source.
+	BuildId      *string                  `json:"buildId,omitempty"`
 	DeployId     string                   `json:"deployId"`
 	DeployStatus externalRef7.EventStatus `json:"deployStatus"`
 	Reason       BuildDeployEndReason     `json:"reason"`
@@ -175,10 +176,10 @@ type DeployEndedEvent struct {
 
 // DeployStartedEvent defines model for deployStartedEvent.
 type DeployStartedEvent struct {
-	// ArtifactId Set when the deploy ships an artifact published by the service's linked artifact source.
-	ArtifactId *string            `json:"artifactId,omitempty"`
-	DeployId   string             `json:"deployId"`
-	Trigger    BuildDeployTrigger `json:"trigger"`
+	// BuildId Set when the deploy ships a build published by the service's linked build source.
+	BuildId  *string            `json:"buildId,omitempty"`
+	DeployId string             `json:"deployId"`
+	Trigger  BuildDeployTrigger `json:"trigger"`
 }
 
 // DiskCreatedEvent defines model for diskCreatedEvent.
