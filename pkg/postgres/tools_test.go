@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"fmt"
+	"net"
 	"net/http"
 	"path/filepath"
 	"regexp"
@@ -94,6 +96,99 @@ func TestCreatePostgresTool(t *testing.T) {
 			assert.Equal(t, tt.expectedPlan, requestBody.Plan)
 		})
 	}
+}
+
+func TestQueryPostgresToolIPAllowList(t *testing.T) {
+	office := client.CidrBlockAndDescription{CidrBlock: "203.0.113.0/24", Description: "office"}
+	anyIP := client.CidrBlockAndDescription{CidrBlock: "0.0.0.0/0", Description: "everywhere"}
+
+	tests := []struct {
+		name        string
+		ipAllowList []client.CidrBlockAndDescription
+		wantConnect bool
+		wantHint    bool
+	}{
+		{
+			name:        "empty allowlist skips the connection",
+			ipAllowList: []client.CidrBlockAndDescription{},
+		},
+		{
+			name:        "missing allowlist skips the connection",
+			ipAllowList: nil,
+		},
+		{
+			name:        "restricted allowlist explains a failed connection",
+			ipAllowList: []client.CidrBlockAndDescription{office},
+			wantConnect: true,
+			wantHint:    true,
+		},
+		{
+			name:        "open allowlist reports the connection error alone",
+			ipAllowList: []client.CidrBlockAndDescription{anyIP},
+			wantConnect: true,
+		},
+		{
+			name:        "open entry among others reports the connection error alone",
+			ipAllowList: []client.CidrBlockAndDescription{office, anyIP},
+			wantConnect: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeClient := &fakes.FakePostgresRepoClient{}
+			fakeClient.RetrievePostgresWithResponseReturns(&client.RetrievePostgresResponse{
+				JSON200:      &client.PostgresDetail{Id: "dpg-123", IpAllowList: tt.ipAllowList},
+				HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+			}, nil)
+			fakeClient.RetrievePostgresConnectionInfoWithResponseReturns(&client.RetrievePostgresConnectionInfoResponse{
+				JSON200:      &client.PostgresConnectionInfo{ExternalConnectionString: droppingPostgresURL(t)},
+				HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+			}, nil)
+
+			request := mcp.CallToolRequest{}
+			request.Params.Arguments = map[string]any{"postgresId": "dpg-123", "sql": "SELECT 1"}
+
+			result, err := queryPostgres(NewRepo(fakeClient)).Handler(createTestContext(t, "own-123"), request)
+			require.NoError(t, err)
+			require.True(t, result.IsError)
+			require.NotEmpty(t, result.Content)
+			content, ok := result.Content[0].(mcp.TextContent)
+			require.True(t, ok, "expected text content, got %T", result.Content[0])
+			text := content.Text
+
+			if !tt.wantConnect {
+				assert.Equal(t, externalAccessBlockedMessage, text)
+				assert.Zero(t, fakeClient.RetrievePostgresConnectionInfoWithResponseCallCount())
+				return
+			}
+			assert.Equal(t, 1, fakeClient.RetrievePostgresConnectionInfoWithResponseCallCount())
+			assert.Contains(t, text, "Error connecting to database")
+			if tt.wantHint {
+				assert.Contains(t, text, ipRestrictedHint)
+			} else {
+				assert.NotContains(t, text, "allowlist")
+			}
+		})
+	}
+}
+
+// droppingPostgresURL returns a connection string for a local server that closes every connection it accepts.
+func droppingPostgresURL(t *testing.T) string {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = listener.Close() })
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			_ = conn.Close()
+		}
+	}()
+	return fmt.Sprintf("postgresql://user:pass@%s/db?sslmode=disable", listener.Addr())
 }
 
 func createTestContext(t *testing.T, workspaceID string) context.Context {

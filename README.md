@@ -275,6 +275,8 @@ session-based behavior is deprecated and is scheduled for removal.
   - `postgresId`: The ID of the Postgres instance to query (string, required)
   - `sql`: The SQL query to run (string, required)
 
+  The tool connects over the database's external URL, so the database's IP allowlist applies. If the allowlist is empty, the tool reports that external connections are blocked instead of trying to connect. The hosted MCP server doesn't have IP addresses you can allowlist yet; to query an IP-restricted database, run the MCP server locally and add your IP address to the allowlist.
+
 - **list_postgres_instances** - List all PostgreSQL databases in your Render account
 
   - No parameters required

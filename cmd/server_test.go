@@ -358,6 +358,53 @@ func TestNewHTTPMux_OpenAIChallenge(t *testing.T) {
 	})
 }
 
+func TestHTTPQueryPostgresExplainsIPAllowList(t *testing.T) {
+	tests := []struct {
+		name                    string
+		ipAllowList             string
+		wantMessage             string
+		wantConnectionInfoCalls int
+	}{
+		{
+			name:                    "empty allowlist skips the connection",
+			ipAllowList:             `[]`,
+			wantMessage:             "blocks all external connections because its IP allowlist is empty",
+			wantConnectionInfoCalls: 0,
+		},
+		{
+			name:                    "restricted allowlist explains a failed connection",
+			ipAllowList:             `[{"cidrBlock":"203.0.113.0/24","description":"office"}]`,
+			wantMessage:             "only accepts external connections from IP addresses on its allowlist",
+			wantConnectionInfoCalls: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// A port nothing listens on, so the connection is refused.
+			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			require.NoError(t, err)
+			require.NoError(t, listener.Close())
+
+			httpTransport, renderAPI := newWorkspaceHTTPTestServer(t)
+			renderAPI.postgres = `{"id":"dpg-test","ipAllowList":` + tt.ipAllowList + `}`
+			renderAPI.connectionInfo = `{"externalConnectionString":"postgresql://user:pass@` + listener.Addr().String() + `/db?sslmode=disable&connect_timeout=5"}`
+
+			sessionID := initializeHTTPSession(t, httpTransport)
+			result := callHTTPTool(t, httpTransport, sessionID, "query_render_postgres", map[string]any{
+				"postgresId": "dpg-test",
+				"sql":        "SELECT 1",
+			})
+
+			require.True(t, result.IsError)
+			text, ok := result.Content[0].(mcp.TextContent)
+			require.True(t, ok)
+			require.Contains(t, text.Text, tt.wantMessage)
+			require.Equal(t, tt.wantConnectionInfoCalls, renderAPI.connectionInfoCallCount)
+		})
+	}
+}
+
 func TestWorkspaceScopedToolsAcceptOptionalWorkspaceID(t *testing.T) {
 	tools := buildWorkspaceScopedTools(nil)
 	require.NotEmpty(t, tools)
@@ -487,13 +534,16 @@ func newTestRenderClient(t *testing.T) (*client.ClientWithResponses, *fakeRender
 	return apiClient, renderAPI
 }
 
-// fakeRenderAPI is a stub that tracks the workspace IDs that the mcp server presents to the render API when listing
-// services associated with the workspace ID. This stub is not intended for concurrent use.
+// fakeRenderAPI is a stub that records the workspace IDs and event filters the mcp server sends to the render API,
+// and serves the service and Postgres bodies tests set. This stub is not intended for concurrent use.
 type fakeRenderAPI struct {
-	workspaceIDs      []string
-	servicesCallCount int
-	serviceOwnerID    string
-	eventQueries      []url.Values
+	workspaceIDs            []string
+	servicesCallCount       int
+	serviceOwnerID          string
+	eventQueries            []url.Values
+	postgres                string
+	connectionInfo          string
+	connectionInfoCallCount int
 }
 
 func (f *fakeRenderAPI) Do(r *http.Request) (*http.Response, error) {
@@ -520,6 +570,11 @@ func (f *fakeRenderAPI) Do(r *http.Request) (*http.Response, error) {
 		// Service lookup used by the workspace-ownership check.
 		id := strings.TrimPrefix(r.URL.Path, "/v1/services/")
 		body = `{"id":"` + id + `","ownerId":"` + f.serviceOwnerID + `","type":"web_service"}`
+	case strings.HasPrefix(r.URL.Path, "/v1/postgres/") && strings.HasSuffix(r.URL.Path, "/connection-info"):
+		f.connectionInfoCallCount++
+		body = f.connectionInfo
+	case strings.HasPrefix(r.URL.Path, "/v1/postgres/"):
+		body = f.postgres
 	default:
 		return nil, fmt.Errorf("unexpected API request: %s", r.URL.Path)
 	}

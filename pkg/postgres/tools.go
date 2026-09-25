@@ -232,6 +232,15 @@ func queryPostgres(postgresRepo *Repo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
+			postgres, err := postgresRepo.GetPostgres(ctx, postgresId)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			// An empty allowlist blocks every external connection, so don't try.
+			if len(postgres.IpAllowList) == 0 {
+				return mcp.NewToolResultError(externalAccessBlockedMessage), nil
+			}
+
 			connectionInfo, err := postgresRepo.GetPostgresConnectionInfo(ctx, postgresId)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
@@ -243,7 +252,7 @@ func queryPostgres(postgresRepo *Repo) server.ServerTool {
 			}
 			conn, err := pgx.ConnectConfig(ctx, config)
 			if err != nil {
-				return mcp.NewToolResultErrorFromErr("Error connecting to database", err), nil
+				return connectErrorResult(err, postgres.IpAllowList), nil
 			}
 			defer conn.Close(ctx)
 
@@ -308,4 +317,25 @@ func queryPostgres(postgresRepo *Repo) server.ServerTool {
 			return mcp.NewToolResultText(string(respJSON)), nil
 		},
 	}
+}
+
+const (
+	allowlistAdvice = "To query it, add the IP address you connect from to the database's IP allowlist " +
+		"in the Networking section of its page in the Render Dashboard. " +
+		"If you're using the hosted Render MCP server, it doesn't have IP addresses you can allowlist yet, " +
+		"so run the Render MCP server locally instead."
+	externalAccessBlockedMessage = "This database blocks all external connections because its IP allowlist is empty, " +
+		"so this tool can't reach it. " + allowlistAdvice
+	ipRestrictedHint = "This database only accepts external connections from IP addresses on its allowlist, " +
+		"which may not include the address this MCP server connects from. " + allowlistAdvice
+)
+
+// connectErrorResult reports a failed connection, adding allowlist advice unless the database accepts any IP.
+func connectErrorResult(err error, allowList []client.CidrBlockAndDescription) *mcp.CallToolResult {
+	for _, block := range allowList {
+		if block.CidrBlock == "0.0.0.0/0" {
+			return mcp.NewToolResultErrorFromErr("Error connecting to database", err)
+		}
+	}
+	return mcp.NewToolResultError(fmt.Sprintf("Error connecting to database: %v\n\n%s", err, ipRestrictedHint))
 }
