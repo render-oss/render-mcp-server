@@ -223,3 +223,45 @@ func TestCreatePostgresToolPlanEnumIsAccepted(t *testing.T) {
 	assert.True(t, slices.ContainsFunc(plans, specBased.MatchString),
 		"no spec-based plan name advertised, got %v", plans)
 }
+
+// TestParsePostgresConnConfigEnforcesTLS locks require-TLS semantics for
+// Render-managed Postgres (issue #6). pgx defaults to sslmode=prefer, so a
+// connection string without an explicit sslmode parses to a TLS primary plus
+// a plaintext fallback; any TLS hiccup then downgrades to the unencrypted
+// fallback that Render rejects with FATAL: SSL/TLS required. The helper must
+// leave no plaintext path: primary TLS present and every fallback TLS-only.
+func TestParsePostgresConnConfigEnforcesTLS(t *testing.T) {
+	cases := []struct {
+		name    string
+		connStr string
+	}{
+		{
+			name:    "no sslmode (Render default)",
+			connStr: "postgres://user:pass@myhost.ohio-postgres.render.com:5432/mydb",
+		},
+		{
+			name:    "explicit prefer",
+			connStr: "postgres://user:pass@myhost.ohio-postgres.render.com:5432/mydb?sslmode=prefer",
+		},
+		{
+			name:    "explicit require",
+			connStr: "postgres://user:pass@myhost.ohio-postgres.render.com:5432/mydb?sslmode=require",
+		},
+		{
+			name:    "explicit disable is upgraded",
+			connStr: "postgres://user:pass@myhost.ohio-postgres.render.com:5432/mydb?sslmode=disable",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg, err := parsePostgresConnConfig(tc.connStr)
+			require.NoError(t, err)
+			require.NotNil(t, cfg.TLSConfig, "primary connection must use TLS")
+			for i, fb := range cfg.Fallbacks {
+				require.NotNil(t, fb, "fallback %d must not be nil", i)
+				assert.NotNil(t, fb.TLSConfig, "fallback %d must use TLS, no plaintext downgrade", i)
+			}
+		})
+	}
+}
