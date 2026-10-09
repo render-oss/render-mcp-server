@@ -11,6 +11,9 @@ services:
   buildCommand: go build -tags netgo -ldflags '-s -w' -o app
   startCommand: ./app --transport http
   envVars:
+  # Let Go download the toolchain that go.mod requires when Render's is older.
+  - key: GOTOOLCHAIN
+    value: auto
   - key: OPENAI_VERIFICATION_TOKEN
     sync: false
   - key: OAUTH_INTROSPECTION_SERVICE_TOKEN
