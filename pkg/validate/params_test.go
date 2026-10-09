@@ -89,3 +89,42 @@ func TestPostgresPlan(t *testing.T) {
 		assert.Contains(t, err.Error(), "invalid Postgres plan")
 	})
 }
+
+func TestCronSchedule(t *testing.T) {
+	for _, schedule := range []string{
+		"0 0 * * *",
+		"*/15 * * * *",
+		"0 9 * * 1-5",
+		"0 0 1 * *",
+		"30 2 1 JAN *",
+		"0 12 * * MON-FRI",
+		"5/15 0 * * *",
+		"0,30 9-17 * * *",
+		"0 0 * * * ",
+	} {
+		t.Run("valid/"+schedule, func(t *testing.T) {
+			assert.NoError(t, validate.CronSchedule(schedule))
+		})
+	}
+
+	for _, schedule := range []string{
+		"",
+		"every day",
+		"0 0 * *",
+		"0 0 * * * *",
+		"99 99 * * *",
+		"60 0 * * *",
+		"0 24 * * *",
+		"0 0 0 * *",
+		"0 0 * 13 *",
+		"0 0 * * 8",
+		"*/0 * * * *",
+		"5-2 * * * *",
+	} {
+		t.Run("invalid/"+schedule, func(t *testing.T) {
+			err := validate.CronSchedule(schedule)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "invalid schedule expression")
+		})
+	}
+}

@@ -619,6 +619,10 @@ func createValidatedCronJobRequest(ctx context.Context, request mcp.CallToolRequ
 		return nil, err
 	}
 
+	if err := validate.CronSchedule(schedule); err != nil {
+		return nil, err
+	}
+
 	cronJobDetailsPOST := client.CronJobDetailsPOST{
 		Runtime:            client.ServiceRuntime(runtime),
 		Schedule:           schedule,

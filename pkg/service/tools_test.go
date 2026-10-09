@@ -430,6 +430,37 @@ func TestCreateServiceRuntimeValidation(t *testing.T) {
 	}
 }
 
+func TestCreateCronJobScheduleValidation(t *testing.T) {
+	ctx := createTestContext(t, "own-123")
+
+	valid := map[string]any{
+		"name":         "test-service",
+		"runtime":      "node",
+		"buildCommand": "npm install",
+		"startCommand": "npm start",
+		"schedule":     "*/15 * * * *",
+	}
+	request := mcp.CallToolRequest{}
+	request.Params.Arguments = valid
+	_, err := createValidatedCronJobRequest(ctx, request)
+	require.NoError(t, err)
+
+	for _, schedule := range []string{"every day", "99 99 * * *", "0 0 * *", "*/0 * * * *"} {
+		args := map[string]any{
+			"name":         "test-service",
+			"runtime":      "node",
+			"buildCommand": "npm install",
+			"startCommand": "npm start",
+			"schedule":     schedule,
+		}
+		request := mcp.CallToolRequest{}
+		request.Params.Arguments = args
+		_, err := createValidatedCronJobRequest(ctx, request)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid schedule expression")
+	}
+}
+
 func TestCreateCronJobTool(t *testing.T) {
 	ownerId := "own-123456"
 	cronJobName := "test-cron-job"
