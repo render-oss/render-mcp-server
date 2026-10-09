@@ -172,33 +172,28 @@ func TestStdioProtocolCompatibility(t *testing.T) {
 		wantVersion := mcp.ProtocolVersion20251125
 		require.Greater(t, givenVersion, wantVersion)
 
-		requests := []mcp.JSONRPCRequest{
-			{
-				JSONRPC: mcp.JSONRPC_VERSION,
-				ID:      mcp.NewRequestId(1),
-				Method:  string(mcp.MethodInitialize),
-				Params: mcp.InitializeParams{
-					ProtocolVersion: givenVersion,
-					Capabilities:    mcp.ClientCapabilities{},
-					ClientInfo:      mcp.Implementation{Name: "test", Version: "1"},
-				},
-			},
-			{
-				JSONRPC: mcp.JSONRPC_VERSION,
-				ID:      mcp.NewRequestId(2),
-				Method:  string(mcp.MethodToolsCall),
-				Params:  mcp.CallToolParams{Name: "get_selected_workspace"},
-			},
-		}
-		var input, output bytes.Buffer
-		encoder := json.NewEncoder(&input)
-		for _, request := range requests {
-			require.NoError(t, encoder.Encode(request))
-		}
+		// The server handles requests concurrently, so wait for each response
+		// before sending the next request, like a real client.
+		stdinReader, stdinWriter := io.Pipe()
+		stdoutReader, stdoutWriter := io.Pipe()
+		listenErr := make(chan error, 1)
+		go func() {
+			listenErr <- stdioTransport.Listen(t.Context(), stdinReader, stdoutWriter)
+			stdoutWriter.Close()
+		}()
+		encoder := json.NewEncoder(stdinWriter)
+		decoder := json.NewDecoder(stdoutReader)
 
-		require.NoError(t, stdioTransport.Listen(t.Context(), &input, &output))
-
-		decoder := json.NewDecoder(&output)
+		require.NoError(t, encoder.Encode(mcp.JSONRPCRequest{
+			JSONRPC: mcp.JSONRPC_VERSION,
+			ID:      mcp.NewRequestId(1),
+			Method:  string(mcp.MethodInitialize),
+			Params: mcp.InitializeParams{
+				ProtocolVersion: givenVersion,
+				Capabilities:    mcp.ClientCapabilities{},
+				ClientInfo:      mcp.Implementation{Name: "test", Version: "1"},
+			},
+		}))
 		var initialized struct {
 			ID     int
 			Result mcp.InitializeResult
@@ -208,6 +203,13 @@ func TestStdioProtocolCompatibility(t *testing.T) {
 		require.Equal(t, 1, initialized.ID)
 		require.Nil(t, initialized.Error)
 		require.Equal(t, wantVersion, initialized.Result.ProtocolVersion)
+
+		require.NoError(t, encoder.Encode(mcp.JSONRPCRequest{
+			JSONRPC: mcp.JSONRPC_VERSION,
+			ID:      mcp.NewRequestId(2),
+			Method:  string(mcp.MethodToolsCall),
+			Params:  mcp.CallToolParams{Name: "get_selected_workspace"},
+		}))
 		var response struct {
 			ID     int
 			Result mcp.CallToolResult
@@ -221,6 +223,11 @@ func TestStdioProtocolCompatibility(t *testing.T) {
 		text, ok := response.Result.Content[0].(mcp.TextContent)
 		require.True(t, ok)
 		require.Contains(t, text.Text, "tea-stdio")
+
+		// Drain any late writes so Listen can return.
+		go io.Copy(io.Discard, stdoutReader)
+		require.NoError(t, stdinWriter.Close())
+		require.NoError(t, <-listenErr)
 	})
 }
 
