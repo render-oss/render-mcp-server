@@ -357,3 +357,139 @@ session-based behavior is deprecated and is scheduled for removal.
     - `journal_snapshot`: Append all writes to a journal and periodically save a snapshot to disk
     - `snapshot`: Periodically save a snapshot to disk
     - `off`: Disable persistence completely to prioritize write performance
+
+### Workflows
+
+`create_workflow` and `create_workflow_version` are disabled by default. To enable them,
+set `WORKFLOW_WRITES_ENABLED=true` in the MCP server's environment and restart the server.
+Leaving it unset or false keeps the read tools available; an invalid value prevents startup.
+
+- **list_workflows** - List workflows in the selected workspace
+
+  - `name`: Filter by workflow name (string, optional)
+  - `environmentId`: Filter by environment ID (string, optional)
+  - `limit`: Maximum number of workflows to return (number, optional, min 1, max 100). Defaults to `20`.
+  - `cursor`: Cursor from the previous page (string, optional). Omit for the first page.
+
+- **get_workflow** - Get a workflow's configuration
+
+  - `workflowId`: The ID of the workflow to retrieve (string, required)
+
+- **list_workflow_versions** - List workflow versions and their build and task-registration status
+
+  - `workflowId`: Filter by workflow ID (string, optional)
+  - `limit`: Maximum number of versions to return (number, optional, min 1, max 100). Defaults to `20`.
+  - `cursor`: Cursor from the previous page (string, optional). Omit for the first page.
+
+- **get_workflow_version** - Get details and status for a workflow version
+
+  - `workflowVersionId`: The ID of the workflow version to retrieve (string, required)
+
+- **list_workflow_tasks** - List registered tasks and their IDs and versions
+
+  - `workflowId`: Filter by workflow ID (string, optional)
+  - `workflowVersionId`: Filter by workflow version ID (string, optional)
+  - `taskSlug`: Filter by task slug, in the form `workflow-slug/task-name` or `workflow-slug/task-name:version` (string, optional)
+  - `limit`: Maximum number of tasks to return (number, optional, min 1, max 100). Defaults to `20`.
+  - `cursor`: Cursor from the previous page (string, optional). Omit for the first page.
+
+- **get_workflow_task** - Get details about a registered task
+
+  - `taskId`: The ID of the task to retrieve (string, required)
+
+- **list_workflow_runs** - List task runs and their parent/child relationships
+
+  - `workflowId`: Filter by workflow ID (string, optional)
+  - `workflowVersionId`: Filter by workflow version ID (string, optional)
+  - `taskSlug`: Filter by task slug, in the form `workflow-slug/task-name` or `workflow-slug/task-name:version` (string, optional)
+  - `rootTaskRunId`: Filter to runs with this root run ID (string, optional)
+  - `limit`: Maximum number of runs to return (number, optional, min 1, max 100). Defaults to `20`.
+  - `cursor`: Cursor from the previous page (string, optional). Omit for the first page.
+
+  Status and time filters are not supported. When counting runs across pages, count each
+  run ID once because the API can return duplicate records.
+
+- **get_workflow_run** - Get a task run's status, errors, and attempts
+
+  - `taskRunId`: The ID of the task run to retrieve (string, required)
+
+  Attempts are numbered from 0. Use the returned attempts to count how many ran; the
+  `retries` field and timestamps alone do not establish the attempt count or queue time.
+  Inputs and results are omitted. Errors are limited to 4 KiB each, with
+  `errorTruncated: true` when shortened. A failed task returns its status in a successful
+  tool response; API and workspace access failures return tool errors.
+
+- **get_workflow_run_results** - Read a task run's or attempt's results as pages of JSON text
+
+  - `taskRunId`: The ID of the task run to retrieve results for (string, required)
+  - `attempt`: Attempt number, starting at 0 (number, optional). Omit to retrieve the run's results.
+  - `offset`: UTF-8 byte offset from the previous page's `nextOffset` (number, optional). Defaults to `0`.
+  - `limit`: Maximum result bytes per page (number, optional, min 4, max 32768). Defaults to `32768` (32 KiB).
+  - `sha256`: Result hash from the first page (string, required when `offset` is greater than 0). Used to check that the result has not changed between pages.
+
+  Runs or attempts still in progress return `ready: false`. Finished runs return
+  `ready: true`; check `status` to distinguish success from failure or cancellation.
+  Follow `nextOffset` until it is null, then join the `content` strings before parsing
+  the JSON. Pages preserve UTF-8 characters, arrays, and numbers as returned by the API.
+  For identifiers that require exact decimal values, return strings from the task to
+  avoid rounding in the API. Each page fetches the full run again, so paging reduces
+  tool output size, not the API download.
+
+- **create_workflow** - Create a workflow in the selected workspace
+
+  - `name`: Name of the workflow (string, required)
+  - `repo`: Git repository URL Render can clone (string, required). Pass the branch separately; do not include credentials in the URL.
+  - `runtime`: Runtime environment for the workflow (string, required). Accepted values:
+    - `node`
+    - `python`
+    - `go`
+    - `ruby`
+    - `elixir`
+  - `buildCommand`: Command that installs dependencies and builds the workflow (string, required)
+  - `runCommand`: Command that registers the workflow's tasks (string, required)
+  - `branch`: Repository branch to deploy (string, optional). Defaults to the repository's default branch.
+  - `rootDir`: Repository subdirectory containing the workflow (string, optional). Defaults to the repository root.
+  - `region`: Geographic region for deployment (string, optional). Defaults to `oregon`. Accepted values:
+    - `oregon`
+    - `frankfurt`
+    - `singapore`
+    - `ohio`
+    - `virginia`
+  - `autoDeploy`: When to deploy automatically (string, optional). Defaults to `commit`. Accepted values:
+    - `commit`: Deploy on pushes to the linked branch
+    - `checksPass`: Deploy after repository checks pass
+    - `off`: Deploy manually
+  - `envVars`: Environment variables as key/value objects (array, optional), for example `[{"key":"MODE","value":"test"}]`. Keys must be nonblank and unique. Empty values are allowed; database references and generated values are not supported.
+
+  Creation starts the first build unless `autoDeploy` is `off`, including when set to
+  `checksPass`. Check `list_workflow_versions` before requesting another deployment.
+  Configuration requests are limited to 256 KiB. The response omits environment-variable
+  values. A `plan` parameter is not supported.
+
+- **create_workflow_version** - Deploy a new version of an existing workflow
+
+  - `workflowId`: The ID of the workflow to deploy (string, required)
+  - `commit`: Git commit to deploy (string, optional). Defaults to the linked branch's current commit.
+
+  Use for manual deployment, an explicitly requested redeploy, or a specific commit.
+  Wait for automatic deployments after creation or a push before requesting another.
+  The response's `accepted: true` means Render accepted the request. Check build and
+  task-registration status with `get_workflow_version`, or `list_workflow_versions`
+  if no version was returned. This tool does not start a task run. A `clearCache`
+  parameter is not supported.
+
+List tools return `items` and `nextCursor`. Pass `nextCursor` as the next call's `cursor`
+until it is null or a page is empty. Unsupported parameters return an error.
+
+Workflows tools have a 30-second request deadline, including workspace lookup, and reject
+API responses over 16 MiB or tool output over 256 KiB. Use narrower list filters or the
+REST API for larger responses. Canceling a request stops pending API calls; task runs
+continue independently.
+
+Creation and deployment requests are not retried automatically. After a timeout, lost
+connection, or invalid response, check `list_workflows` or `list_workflow_versions` before
+retrying because Render may have accepted the request. API error bodies are not returned
+or logged.
+
+Starting or canceling tasks, updating or deleting workflows, and changing their environment
+variables are not supported through these tools.
