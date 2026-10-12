@@ -178,11 +178,6 @@ func PostgresDiskSizeGb(diskSizeGb int) error {
 	return fmt.Errorf("diskSizeGb can be 0 for the free plan, otherwise it must be either 1, or a multiple of 5")
 }
 
-type cronFieldBounds struct {
-	min int
-	max int
-}
-
 // CronSchedule checks a cron expression with the same parser the Render API uses.
 func CronSchedule(schedule string) error {
 	if _, err := cron.ParseStandard(schedule); err != nil {
