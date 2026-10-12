@@ -8,6 +8,7 @@ require (
 	github.com/mark3labs/mcp-go v1.1.1
 	github.com/oapi-codegen/runtime v1.7.0
 	github.com/redis/go-redis/v9 v9.23.0
+	github.com/robfig/cron v1.2.0
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.12.1
 	gopkg.in/yaml.v3 v3.0.1

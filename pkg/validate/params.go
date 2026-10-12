@@ -12,6 +12,7 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/mcpserver"
 	"github.com/render-oss/render-mcp-server/pkg/pointers"
+	"github.com/robfig/cron"
 )
 
 func RequiredToolParam[T any](request mcp.CallToolRequest, param string) (T, error) {
@@ -175,4 +176,17 @@ func PostgresDiskSizeGb(diskSizeGb int) error {
 		return nil
 	}
 	return fmt.Errorf("diskSizeGb can be 0 for the free plan, otherwise it must be either 1, or a multiple of 5")
+}
+
+type cronFieldBounds struct {
+	min int
+	max int
+}
+
+// CronSchedule checks a cron expression with the same parser the Render API uses.
+func CronSchedule(schedule string) error {
+	if _, err := cron.ParseStandard(schedule); err != nil {
+		return fmt.Errorf("invalid schedule expression %q: %w (expected 5 fields: minute hour day-of-month month day-of-week)", schedule, err)
+	}
+	return nil
 }
