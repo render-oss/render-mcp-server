@@ -3,6 +3,8 @@ package logs
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"math"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -201,18 +203,16 @@ func listLogs(logRepo *LogRepo) server.ServerTool {
 				llParams.EndTime = &endTimeParam
 			}
 
-			if direction, ok, err := validate.OptionalToolParam[string](request, "direction"); err != nil {
+			if direction, err := parseLogDirection(request); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
-			} else if ok {
-				directionParam := logsclient.LogDirection(direction)
-				llParams.Direction = &directionParam
+			} else if direction != nil {
+				llParams.Direction = direction
 			}
 
-			if limit, ok, err := validate.OptionalToolParam[float64](request, "limit"); err != nil {
+			if limit, err := parseLogsLimit(request); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
-			} else if ok {
-				limitInt := int(limit)
-				llParams.Limit = &limitInt
+			} else if limit != nil {
+				llParams.Limit = limit
 			}
 
 			response, err := logRepo.ListLogs(ctx, llParams)
@@ -413,11 +413,10 @@ func listLogLabelValues(logRepo *LogRepo) server.ServerTool {
 				params.EndTime = &endTimeParam
 			}
 
-			if direction, ok, err := validate.OptionalToolParam[string](request, "direction"); err != nil {
+			if direction, err := parseLogDirection(request); err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
-			} else if ok {
-				directionParam := logsclient.LogDirection(direction)
-				params.Direction = &directionParam
+			} else if direction != nil {
+				params.Direction = direction
 			}
 
 			values, err := logRepo.ListLogLabelValues(ctx, params)
@@ -433,4 +432,39 @@ func listLogLabelValues(logRepo *LogRepo) server.ServerTool {
 			return mcp.NewToolResultText(string(respJSON)), nil
 		},
 	}
+}
+
+// parseLogsLimit returns the limit parameter, which must be a whole number from 1 to 100. It returns nil when absent.
+func parseLogsLimit(request mcp.CallToolRequest) (*int, error) {
+	limit, ok, err := validate.OptionalToolParam[float64](request, "limit")
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, nil
+	}
+	if math.Trunc(limit) != limit {
+		return nil, fmt.Errorf("invalid limit %v: must be a whole number between 1 and 100", limit)
+	}
+	limitInt := int(limit)
+	if limitInt < 1 || limitInt > 100 {
+		return nil, fmt.Errorf("invalid limit %d: must be between 1 and 100", limitInt)
+	}
+	return &limitInt, nil
+}
+
+// parseLogDirection returns the direction parameter, which must be backward or forward. It returns nil when absent.
+func parseLogDirection(request mcp.CallToolRequest) (*logsclient.LogDirection, error) {
+	direction, ok, err := validate.OptionalToolParam[string](request, "direction")
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, nil
+	}
+	parsed := logsclient.LogDirection(direction)
+	if !parsed.Valid() {
+		return nil, fmt.Errorf("invalid direction %q: must be one of: backward, forward", direction)
+	}
+	return &parsed, nil
 }
