@@ -37,7 +37,11 @@ type ArtifactSourceChangedEvent struct {
 
 // AutoDeployDisabledEvent defines model for autoDeployDisabledEvent.
 type AutoDeployDisabledEvent struct {
-	// FromTrigger Controls autodeploy behavior. commit deploys when a commit is pushed to a branch. checksPass waits for the branch to be green.
+	// FromTrigger Controls autodeploy behavior.
+	//
+	// - `commit`: Deploy each time a commit is pushed to the service's linked branch.
+	// - `checksPass`: Deploy each time a commit is pushed to the linked branch, but only after the commit's CI checks pass.
+	// - `off`: Disable autodeploys.
 	FromTrigger *externalRef0.AutoDeployTrigger `json:"fromTrigger,omitempty"`
 
 	// Reason Why auto-deploy was disabled (manual_deploy, rollback, or setting_change)
@@ -46,7 +50,11 @@ type AutoDeployDisabledEvent struct {
 
 // AutoDeployEnabledEvent defines model for autoDeployEnabledEvent.
 type AutoDeployEnabledEvent struct {
-	// NewTrigger Controls autodeploy behavior. commit deploys when a commit is pushed to a branch. checksPass waits for the branch to be green.
+	// NewTrigger Controls autodeploy behavior.
+	//
+	// - `commit`: Deploy each time a commit is pushed to the service's linked branch.
+	// - `checksPass`: Deploy each time a commit is pushed to the linked branch, but only after the commit's CI checks pass.
+	// - `off`: Disable autodeploys.
 	NewTrigger *externalRef0.AutoDeployTrigger `json:"newTrigger,omitempty"`
 }
 

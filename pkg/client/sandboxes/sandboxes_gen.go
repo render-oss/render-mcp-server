@@ -52,6 +52,21 @@ func (e ExecutionType) Valid() bool {
 	}
 }
 
+// Defines values for SandboxEgressRuleProtocol.
+const (
+	Https SandboxEgressRuleProtocol = "https"
+)
+
+// Valid indicates whether the value is a known member of the SandboxEgressRuleProtocol enum.
+func (e SandboxEgressRuleProtocol) Valid() bool {
+	switch e {
+	case Https:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SandboxFileEntryType.
 const (
 	Directory SandboxFileEntryType = "directory"
@@ -80,6 +95,7 @@ const (
 	SandboxLifecycleEventTypeResuming   SandboxLifecycleEventType = "resuming"
 	SandboxLifecycleEventTypeRunning    SandboxLifecycleEventType = "running"
 	SandboxLifecycleEventTypeSuspended  SandboxLifecycleEventType = "suspended"
+	SandboxLifecycleEventTypeSuspending SandboxLifecycleEventType = "suspending"
 	SandboxLifecycleEventTypeTerminated SandboxLifecycleEventType = "terminated"
 )
 
@@ -95,6 +111,8 @@ func (e SandboxLifecycleEventType) Valid() bool {
 	case SandboxLifecycleEventTypeRunning:
 		return true
 	case SandboxLifecycleEventTypeSuspended:
+		return true
+	case SandboxLifecycleEventTypeSuspending:
 		return true
 	case SandboxLifecycleEventTypeTerminated:
 		return true
@@ -121,15 +139,15 @@ func (e SandboxLogEventStream) Valid() bool {
 	}
 }
 
-// Defines values for SandboxNetworkPolicyDefault.
+// Defines values for SandboxNetworkPolicyType.
 const (
-	AllowAll  SandboxNetworkPolicyDefault = "allow-all"
-	AllowList SandboxNetworkPolicyDefault = "allow-list"
-	DenyAll   SandboxNetworkPolicyDefault = "deny-all"
+	AllowAll  SandboxNetworkPolicyType = "allow-all"
+	AllowList SandboxNetworkPolicyType = "allow-list"
+	DenyAll   SandboxNetworkPolicyType = "deny-all"
 )
 
-// Valid indicates whether the value is a known member of the SandboxNetworkPolicyDefault enum.
-func (e SandboxNetworkPolicyDefault) Valid() bool {
+// Valid indicates whether the value is a known member of the SandboxNetworkPolicyType enum.
+func (e SandboxNetworkPolicyType) Valid() bool {
 	switch e {
 	case AllowAll:
 		return true
@@ -209,6 +227,7 @@ const (
 	SandboxStatusResuming   SandboxStatus = "resuming"
 	SandboxStatusRunning    SandboxStatus = "running"
 	SandboxStatusSuspended  SandboxStatus = "suspended"
+	SandboxStatusSuspending SandboxStatus = "suspending"
 	SandboxStatusTerminated SandboxStatus = "terminated"
 )
 
@@ -224,6 +243,8 @@ func (e SandboxStatus) Valid() bool {
 	case SandboxStatusRunning:
 		return true
 	case SandboxStatusSuspended:
+		return true
+	case SandboxStatusSuspending:
 		return true
 	case SandboxStatusTerminated:
 		return true
@@ -295,7 +316,7 @@ type Sandbox struct {
 
 	// TimeoutSeconds Maximum sandbox lifetime in seconds.
 	//
-	// Example: 7200
+	// Example: 86400
 	TimeoutSeconds int `json:"timeoutSeconds"`
 }
 
@@ -344,6 +365,25 @@ type SandboxDirectoryListing struct {
 	// Example: /app
 	Path string `json:"path"`
 }
+
+// SandboxEgressRule defines model for sandboxEgressRule.
+type SandboxEgressRule struct {
+	// Domain Hostname to apply the rule to. Matching is exact: `foo.local` does not
+	// cover `api.foo.local`, which needs its own rule or `*.foo.local`. A
+	// wildcard is only allowed as the leftmost label.
+	//
+	//
+	// Example: *.bar.local
+	Domain string `json:"domain"`
+
+	// Protocol Protocol this rule admits. Only `https` is accepted:
+	// under `allow-list` every other outbound protocol is dropped.
+	Protocol *SandboxEgressRuleProtocol `json:"protocol,omitempty"`
+}
+
+// SandboxEgressRuleProtocol Protocol this rule admits. Only `https` is accepted:
+// under `allow-list` every other outbound protocol is dropped.
+type SandboxEgressRuleProtocol string
 
 // SandboxExecUpdateRequest Client-reported completion of a sandbox execution.
 type SandboxExecUpdateRequest struct {
@@ -458,30 +498,51 @@ type SandboxLogEventStream string
 
 // SandboxNetworkPolicy defines model for sandboxNetworkPolicy.
 type SandboxNetworkPolicy struct {
-	// AllowedDomains Domains the sandbox may reach, required when `default` is
-	// `allow-list` and rejected otherwise.
-	//
-	// Matching is exact: `foo.local` does not cover `api.foo.local`,
-	// leftmost-only wildcarding e.g. `*.foo.local` is allowed. Only HTTP
-	// and HTTPS traffic is matched against this list; under
-	// `allow-list` all other outbound TCP is dropped.
-	//
-	//
-	// Example: ["foo.local","*.bar.local"]
-	AllowedDomains *[]string `json:"allowedDomains,omitempty"`
+	// Default Deprecated alias for `type`, always returned with the same value.
+	// To be removed before GA; read `type` instead.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Default *SandboxNetworkPolicyType `json:"default,omitempty"`
 
-	// Default Default action for outbound traffic.
-	Default SandboxNetworkPolicyDefault `json:"default"`
+	// Rules Destinations the sandbox may reach, present when `type` is
+	// `allow-list` and absent otherwise. Each domain may be listed once.
+	Rules *[]SandboxEgressRule `json:"rules,omitempty"`
+
+	// Type How outbound traffic is handled. `allow-all`, `deny-all`, or
+	// `allow-list` (requires additional `rules`).
+	Type SandboxNetworkPolicyType `json:"type"`
 }
 
-// SandboxNetworkPolicyDefault Default action for outbound traffic.
-type SandboxNetworkPolicyDefault string
+// SandboxNetworkPolicyPOST Set either `type` or its deprecated alias `default`. Sending both is
+// only accepted when they name the same policy.
+type SandboxNetworkPolicyPOST struct {
+	// Default Deprecated alias for `type`, accepted so that clients built against
+	// the earlier schema keep working. To be removed before GA.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Default *SandboxNetworkPolicyType `json:"default,omitempty"`
+
+	// Rules Destinations the sandbox may reach, required when the policy is
+	// `allow-list` and rejected otherwise. Each domain may be listed once.
+	Rules *[]SandboxEgressRule `json:"rules,omitempty"`
+
+	// Type How outbound traffic is handled. `allow-all`, `deny-all`, or
+	// `allow-list` (requires additional `rules`). Either `type` or `default`
+	// is required when `networkPolicy` is provided. Omitting
+	// `networkPolicy` defaults to `allow-all`.
+	Type *SandboxNetworkPolicyType `json:"type,omitempty"`
+}
+
+// SandboxNetworkPolicyType How outbound traffic is handled. `allow-all`, `deny-all`, or
+// `allow-list` (requires additional `rules`).
+type SandboxNetworkPolicyType string
 
 // SandboxPOST defines model for sandboxPOST.
 type SandboxPOST struct {
 	// Env Inline environment variables injected into the sandbox at creation.
-	Env           *map[string]string    `json:"env,omitempty"`
-	NetworkPolicy *SandboxNetworkPolicy `json:"networkPolicy,omitempty"`
+	Env *map[string]string `json:"env,omitempty"`
+
+	// NetworkPolicy Set either `type` or its deprecated alias `default`. Sending both is
+	// only accepted when they name the same policy.
+	NetworkPolicy *SandboxNetworkPolicyPOST `json:"networkPolicy,omitempty"`
 
 	// OwnerId The ID of the workspace the sandbox belongs to.
 	OwnerId string       `json:"ownerId"`

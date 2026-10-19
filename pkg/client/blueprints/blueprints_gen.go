@@ -12,6 +12,24 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for BlueprintNoticeSeverity.
+const (
+	BlueprintNoticeSeverityError   BlueprintNoticeSeverity = "error"
+	BlueprintNoticeSeverityWarning BlueprintNoticeSeverity = "warning"
+)
+
+// Valid indicates whether the value is a known member of the BlueprintNoticeSeverity enum.
+func (e BlueprintNoticeSeverity) Valid() bool {
+	switch e {
+	case BlueprintNoticeSeverityError:
+		return true
+	case BlueprintNoticeSeverityWarning:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ExistingResourceMode.
 const (
 	AdoptExisting ExistingResourceMode = "adopt"
@@ -24,6 +42,36 @@ func (e ExistingResourceMode) Valid() bool {
 	case AdoptExisting:
 		return true
 	case CreateNew:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ManualEnvVarTargetType.
+const (
+	ManualEnvVarTargetTypeBuildSource ManualEnvVarTargetType = "buildSource"
+	ManualEnvVarTargetTypeCron        ManualEnvVarTargetType = "cron"
+	ManualEnvVarTargetTypePserv       ManualEnvVarTargetType = "pserv"
+	ManualEnvVarTargetTypeWeb         ManualEnvVarTargetType = "web"
+	ManualEnvVarTargetTypeWorker      ManualEnvVarTargetType = "worker"
+	ManualEnvVarTargetTypeWorkflow    ManualEnvVarTargetType = "workflow"
+)
+
+// Valid indicates whether the value is a known member of the ManualEnvVarTargetType enum.
+func (e ManualEnvVarTargetType) Valid() bool {
+	switch e {
+	case ManualEnvVarTargetTypeBuildSource:
+		return true
+	case ManualEnvVarTargetTypeCron:
+		return true
+	case ManualEnvVarTargetTypePserv:
+		return true
+	case ManualEnvVarTargetTypeWeb:
+		return true
+	case ManualEnvVarTargetTypeWorker:
+		return true
+	case ManualEnvVarTargetTypeWorkflow:
 		return true
 	default:
 		return false
@@ -129,6 +177,27 @@ func (e SyncState) Valid() bool {
 	}
 }
 
+// ApproveBlueprintRequest defines model for approveBlueprintRequest.
+type ApproveBlueprintRequest struct {
+	// ManualEnvVars Values for the sync's required manual environment variables.
+	// Each (serviceType, serviceName, key) combination can appear only once.
+	ManualEnvVars *[]SuppliedManualEnvVar `json:"manualEnvVars,omitempty"`
+}
+
+// ApprovedSync defines model for approvedSync.
+type ApprovedSync struct {
+	Commit      CommitRef  `json:"commit"`
+	CompletedAt *time.Time `json:"completedAt,omitempty"`
+
+	// DashboardUrl Link to the sync in the Render Dashboard.
+	DashboardUrl string `json:"dashboardUrl"`
+
+	// Id Example: exe-cph1rs3idesc73a2b2mg
+	Id        SyncId     `json:"id"`
+	StartedAt *time.Time `json:"startedAt,omitempty"`
+	State     SyncState  `json:"state"`
+}
+
 // AutoSync Configuration value that controls whether or not this blueprint will be re-synced on each git push to the configured branch.
 // Even when true, autoSync will not apply when the blueprint has the Created status, which indicates its first sync has not yet been approved.
 // Other conditions, such as a locked workspace, can also prevent automatic syncing even when this is true.
@@ -184,6 +253,18 @@ type BlueprintDetail struct {
 // BlueprintId Example: exs-cph1rs3idesc73a2b2mg
 type BlueprintId = string
 
+// BlueprintNotice defines model for blueprintNotice.
+type BlueprintNotice struct {
+	Column   *int                    `json:"column,omitempty"`
+	Line     *int                    `json:"line,omitempty"`
+	Message  string                  `json:"message"`
+	Path     *string                 `json:"path,omitempty"`
+	Severity BlueprintNoticeSeverity `json:"severity"`
+}
+
+// BlueprintNoticeSeverity defines model for BlueprintNotice.Severity.
+type BlueprintNoticeSeverity string
+
 // BlueprintPATCH defines model for blueprintPATCH.
 type BlueprintPATCH struct {
 	// AutoSync Configuration value that controls whether or not this blueprint will be re-synced on each git push to the configured branch.
@@ -230,10 +311,12 @@ type CreateBlueprintRequest struct {
 	// `adopt` brings matching existing resources under this Blueprint's management
 	// and updates their configuration to match the Blueprint file.
 	// `create_new` creates a separate set of resources, leaving existing resources unchanged.
+	// Separation is achieved via a random suffix that is assigned to this Blueprint
+	// and appended to the name of all resources this Blueprint manages.
 	ExistingResources *ExistingResourceMode `json:"existingResources,omitempty"`
 
-	// Name Name for the Blueprint. Defaults to an empty name.
-	Name *string `json:"name,omitempty"`
+	// Name Name for the Blueprint. Must be unique among approved Blueprints in the workspace, ignoring case.
+	Name string `json:"name"`
 
 	// OwnerId ID of the workspace in which to create the Blueprint.
 	//
@@ -242,17 +325,51 @@ type CreateBlueprintRequest struct {
 	Source  BlueprintSource `json:"source"`
 }
 
-// CreateBlueprintResponse The newly created Blueprint
+// CreateBlueprintResponse The newly created Blueprint and the result of planning its first Sync.
+// A persisted failed Sync is included with state error and error notices.
+// When sync is null, check notices for errors to distinguish planning errors from no changes.
 type CreateBlueprintResponse struct {
 	Blueprint Blueprint `json:"blueprint"`
-	Sync      Sync      `json:"sync"`
+
+	// Notices Planning errors and warnings. Error notices indicate planning failed, whether or not a Sync was persisted.
+	Notices []BlueprintNotice `json:"notices"`
+
+	// Sync The persisted Sync, including a failed Sync in the error state, or null when no Sync was persisted.
+	Sync *SyncWithPlan `json:"sync"`
+}
+
+// CreateBlueprintSyncResponse The result of planning a Sync. If a Sync was persisted, sync contains it in the created or error state.
+// Otherwise, sync is null. Error notices indicate planning failed, including when no Sync record was saved.
+type CreateBlueprintSyncResponse struct {
+	// Notices Planning errors and warnings. Error notices indicate planning failed, whether or not a Sync was persisted.
+	Notices []BlueprintNotice `json:"notices"`
+
+	// Sync The persisted Sync, including a failed Sync in the error state, or null when no Sync was persisted.
+	Sync *SyncWithPlan `json:"sync"`
 }
 
 // ExistingResourceMode How Sync planning should handle existing resources.
 // `adopt` brings matching existing resources under this Blueprint's management
 // and updates their configuration to match the Blueprint file.
 // `create_new` creates a separate set of resources, leaving existing resources unchanged.
+// Separation is achieved via a random suffix that is assigned to this Blueprint
+// and appended to the name of all resources this Blueprint manages.
 type ExistingResourceMode string
+
+// ManualEnvVarTargetType Blueprint resource type for a manual environment variable.
+type ManualEnvVarTargetType string
+
+// RequiredManualEnvVar defines model for requiredManualEnvVar.
+type RequiredManualEnvVar struct {
+	// Key Environment variable name.
+	Key string `json:"key"`
+
+	// ServiceName Name of the service, workflow, or build source.
+	ServiceName string `json:"serviceName"`
+
+	// ServiceType Blueprint resource type for a manual environment variable.
+	ServiceType ManualEnvVarTargetType `json:"serviceType"`
+}
 
 // ResourceRef defines model for resourceRef.
 type ResourceRef struct {
@@ -268,6 +385,21 @@ type ResourceRefType string
 
 // Status A Blueprint has status `created` until its first Sync is approved.
 type Status string
+
+// SuppliedManualEnvVar defines model for suppliedManualEnvVar.
+type SuppliedManualEnvVar struct {
+	// Key Environment variable name.
+	Key string `json:"key"`
+
+	// ServiceName Name of the service, workflow, or build source.
+	ServiceName string `json:"serviceName"`
+
+	// ServiceType Blueprint resource type for a manual environment variable.
+	ServiceType ManualEnvVarTargetType `json:"serviceType"`
+
+	// Value Environment variable value.
+	Value *string `json:"value"`
+}
 
 // Sync defines model for sync.
 type Sync struct {
@@ -285,6 +417,24 @@ type SyncId = string
 
 // SyncState defines model for syncState.
 type SyncState string
+
+// SyncWithPlan The result of a persisted planning attempt. A Sync in the created state can be reviewed and approved; a Sync in the error state records a planning failure.
+type SyncWithPlan struct {
+	Commit      CommitRef  `json:"commit"`
+	CompletedAt *time.Time `json:"completedAt,omitempty"`
+
+	// DashboardUrl Link to this Sync in the Render Dashboard.
+	DashboardUrl string `json:"dashboardUrl"`
+
+	// Id Example: exe-cph1rs3idesc73a2b2mg
+	Id SyncId `json:"id"`
+
+	// RequiredManualEnvVars Environment variables whose values must be supplied separately when approving this Sync, for resources it creates.
+	// Declared with `sync: false` in the Blueprint file.
+	RequiredManualEnvVars []RequiredManualEnvVar `json:"requiredManualEnvVars"`
+	StartedAt             *time.Time             `json:"startedAt,omitempty"`
+	State                 SyncState              `json:"state"`
+}
 
 // ValidateBlueprintRequest defines model for validateBlueprintRequest.
 type ValidateBlueprintRequest struct {

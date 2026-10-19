@@ -35,6 +35,78 @@ func (e AutoDeployTrigger) Valid() bool {
 	}
 }
 
+// Defines values for FlowRunStatus.
+const (
+	FlowRunStatusCanceled  FlowRunStatus = "canceled"
+	FlowRunStatusFailed    FlowRunStatus = "failed"
+	FlowRunStatusPaused    FlowRunStatus = "paused"
+	FlowRunStatusPending   FlowRunStatus = "pending"
+	FlowRunStatusRunning   FlowRunStatus = "running"
+	FlowRunStatusSucceeded FlowRunStatus = "succeeded"
+)
+
+// Valid indicates whether the value is a known member of the FlowRunStatus enum.
+func (e FlowRunStatus) Valid() bool {
+	switch e {
+	case FlowRunStatusCanceled:
+		return true
+	case FlowRunStatusFailed:
+		return true
+	case FlowRunStatusPaused:
+		return true
+	case FlowRunStatusPending:
+		return true
+	case FlowRunStatusRunning:
+		return true
+	case FlowRunStatusSucceeded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FlowRunStepStatus.
+const (
+	FlowRunStepStatusFailed    FlowRunStepStatus = "failed"
+	FlowRunStepStatusRunning   FlowRunStepStatus = "running"
+	FlowRunStepStatusSucceeded FlowRunStepStatus = "succeeded"
+)
+
+// Valid indicates whether the value is a known member of the FlowRunStepStatus enum.
+func (e FlowRunStepStatus) Valid() bool {
+	switch e {
+	case FlowRunStepStatusFailed:
+		return true
+	case FlowRunStepStatusRunning:
+		return true
+	case FlowRunStepStatusSucceeded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FlowRunStepType.
+const (
+	FlowRunStepTypeDetached FlowRunStepType = "detached"
+	FlowRunStepTypeInline   FlowRunStepType = "inline"
+	FlowRunStepTypeSleep    FlowRunStepType = "sleep"
+)
+
+// Valid indicates whether the value is a known member of the FlowRunStepType enum.
+func (e FlowRunStepType) Valid() bool {
+	switch e {
+	case FlowRunStepTypeDetached:
+		return true
+	case FlowRunStepTypeInline:
+		return true
+	case FlowRunStepTypeSleep:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Region.
 const (
 	Frankfurt Region = "frankfurt"
@@ -197,6 +269,186 @@ type CreateVersion struct {
 	WorkflowId string  `json:"workflowId"`
 }
 
+// Flow defines model for Flow.
+type Flow struct {
+	CreatedAt time.Time `json:"createdAt"`
+
+	// Id Example: flw-d0hp8fs9c44c73a6f1qg
+	Id                string  `json:"id"`
+	Name              string  `json:"name"`
+	WorkflowId        *string `json:"workflowId,omitempty"`
+	WorkflowVersionId *string `json:"workflowVersionId,omitempty"`
+}
+
+// FlowInput Input data for a flow. Can be either an array (for positional arguments) or an object (for named parameters).
+type FlowInput struct {
+	union json.RawMessage
+}
+
+// FlowInput0 Positional arguments passed to the flow function
+type FlowInput0 = []interface{}
+
+// FlowInput1 Named parameters passed to the flow function as keyword arguments
+type FlowInput1 map[string]interface{}
+
+// FlowRun defines model for FlowRun.
+type FlowRun struct {
+	CompletedAt *time.Time `json:"completedAt,omitempty"`
+
+	// FlowId Example: flw-d0hp8fs9c44c73a6f1qg
+	FlowId string `json:"flowId"`
+
+	// Id Example: frn-d0hp8fs9c44c73a6f1qg
+	Id        string     `json:"id"`
+	StartedAt *time.Time `json:"startedAt,omitempty"`
+
+	// Status The status of a flow run.
+	Status FlowRunStatus `json:"status"`
+}
+
+// FlowRunAttempt defines model for FlowRunAttempt.
+type FlowRunAttempt struct {
+	// Attempt The 0-indexed attempt number.
+	Attempt     int        `json:"attempt"`
+	CompletedAt *time.Time `json:"completedAt,omitempty"`
+
+	// Error Error message if the attempt failed.
+	Error     *string    `json:"error,omitempty"`
+	StartedAt *time.Time `json:"startedAt,omitempty"`
+
+	// Status The status of a flow run.
+	Status FlowRunStatus `json:"status"`
+}
+
+// FlowRunDetails defines model for FlowRunDetails.
+type FlowRunDetails struct {
+	// Attempts The flow run's attempts. A flow run gets a new attempt when it resumes after its process is interrupted; it replays completed steps instead of rerunning them.
+	Attempts    []FlowRunAttempt `json:"attempts"`
+	CompletedAt *time.Time       `json:"completedAt,omitempty"`
+
+	// Error Error message if the flow run failed.
+	Error *string `json:"error,omitempty"`
+
+	// FlowId Example: flw-d0hp8fs9c44c73a6f1qg
+	FlowId string `json:"flowId"`
+
+	// Id Example: frn-d0hp8fs9c44c73a6f1qg
+	Id string `json:"id"`
+
+	// Input Input data for a flow. Can be either an array (for positional arguments) or an object (for named parameters).
+	Input     FlowInput     `json:"input"`
+	Results   FlowRunResult `json:"results"`
+	StartedAt *time.Time    `json:"startedAt,omitempty"`
+
+	// Status The status of a flow run.
+	Status FlowRunStatus `json:"status"`
+}
+
+// FlowRunResult defines model for FlowRunResult.
+type FlowRunResult = []interface{}
+
+// FlowRunStatus The status of a flow run.
+type FlowRunStatus string
+
+// FlowRunStep defines model for FlowRunStep.
+type FlowRunStep struct {
+	// ChildTaskRunId For detached steps, the ID of the task run the step started.
+	//
+	// Example: trn-d0hp8fs9c44c73a6f1qg
+	ChildTaskRunId *string    `json:"childTaskRunId,omitempty"`
+	CompletedAt    *time.Time `json:"completedAt,omitempty"`
+
+	// FlowRunAttempt The 0-indexed flow run attempt that recorded the step.
+	FlowRunAttempt int `json:"flowRunAttempt"`
+
+	// Name For inline steps, the function's name. For detached steps, the task's registered name. Omitted for sleep steps.
+	Name *string `json:"name,omitempty"`
+
+	// Seq The step's position in the flow run. Steps are numbered densely in the order the flow started them.
+	Seq       int       `json:"seq"`
+	StartedAt time.Time `json:"startedAt"`
+
+	// Status `running` until the step records an outcome, then `succeeded` or `failed`.
+	Status FlowRunStepStatus `json:"status"`
+
+	// StepKey The SDK's key for the step.
+	StepKey string `json:"stepKey"`
+
+	// Type The kind of step. `inline` runs a function inside the flow's process and retries in place. `detached` runs a registered task as its own task run. `sleep` is a durable sleep.
+	Type FlowRunStepType `json:"type"`
+
+	// WakeAt For sleep steps, when the sleep ends.
+	WakeAt *time.Time `json:"wakeAt,omitempty"`
+}
+
+// FlowRunStepAttempt defines model for FlowRunStepAttempt.
+type FlowRunStepAttempt struct {
+	// Attempt The step's attempt number. It continues across flow run attempts.
+	Attempt     int       `json:"attempt"`
+	CompletedAt time.Time `json:"completedAt"`
+
+	// Error Error message of the failed attempt.
+	Error string `json:"error"`
+
+	// FlowRunAttempt The 0-indexed flow run attempt this step attempt ran in.
+	FlowRunAttempt int       `json:"flowRunAttempt"`
+	StartedAt      time.Time `json:"startedAt"`
+}
+
+// FlowRunStepDetails defines model for FlowRunStepDetails.
+type FlowRunStepDetails struct {
+	// Attempts Failed attempts of an inline step, in attempt order. Empty for other step types.
+	Attempts []FlowRunStepAttempt `json:"attempts"`
+
+	// ChildTaskRunId For detached steps, the ID of the task run the step started.
+	//
+	// Example: trn-d0hp8fs9c44c73a6f1qg
+	ChildTaskRunId *string    `json:"childTaskRunId,omitempty"`
+	CompletedAt    *time.Time `json:"completedAt,omitempty"`
+
+	// Error Error message if the step failed.
+	Error *string `json:"error,omitempty"`
+
+	// FlowRunAttempt The 0-indexed flow run attempt that recorded the step.
+	FlowRunAttempt int `json:"flowRunAttempt"`
+
+	// Input The step's input. For detached steps, the input of the child task run.
+	Input interface{} `json:"input,omitempty"`
+
+	// Name For inline steps, the function's name. For detached steps, the task's registered name. Omitted for sleep steps.
+	Name *string `json:"name,omitempty"`
+
+	// Result The step's result. Present only when the step succeeded; null when the step returned no value.
+	Result *json.RawMessage `json:"result,omitempty"`
+
+	// Seq The step's position in the flow run. Steps are numbered densely in the order the flow started them.
+	Seq       int       `json:"seq"`
+	StartedAt time.Time `json:"startedAt"`
+
+	// Status `running` until the step records an outcome, then `succeeded` or `failed`.
+	Status FlowRunStepStatus `json:"status"`
+
+	// StepKey The SDK's key for the step.
+	StepKey string `json:"stepKey"`
+
+	// Type The kind of step. `inline` runs a function inside the flow's process and retries in place. `detached` runs a registered task as its own task run. `sleep` is a durable sleep.
+	Type FlowRunStepType `json:"type"`
+
+	// WakeAt For sleep steps, when the sleep ends.
+	WakeAt *time.Time `json:"wakeAt,omitempty"`
+}
+
+// FlowRunStepStatus `running` until the step records an outcome, then `succeeded` or `failed`.
+type FlowRunStepStatus string
+
+// FlowRunStepType The kind of step. `inline` runs a function inside the flow's process and retries in place. `detached` runs a registered task as its own task run. `sleep` is a durable sleep.
+type FlowRunStepType string
+
+// FlowSlug A flow slug in the format workflow-slug/flow-name. An optional version can be appended (workflow-slug/flow-name:version). If no version is provided, the latest version is used. Cannot be blank.
+//
+// Example: my-workflow-slug/my-flow
+type FlowSlug = string
+
 // IdempotencyKey A client-generated key that makes starting a task run safe to retry. Repeating a request with the same key within 24 hours returns the task run that the first request started instead of starting another one; the repeated request's input is ignored. Keys are scoped to a single workflow version, so the same key used against a different version starts a separate run. Omit the key to always start a new run.
 //
 // Example: 6b2f1f7a-6a0e-4f6f-9d1a-2b1d0d5f6c11
@@ -244,6 +496,22 @@ type RunTask struct {
 
 // Runtime The runtime environment for the workflow (e.g., node, python, etc.).
 type Runtime string
+
+// StartFlowRun defines model for StartFlowRun.
+type StartFlowRun struct {
+	// Flow A flow slug in the format workflow-slug/flow-name. An optional version can be appended (workflow-slug/flow-name:version). If no version is provided, the latest version is used. Cannot be blank.
+	//
+	// Example: my-workflow-slug/my-flow
+	Flow FlowSlug `json:"flow"`
+
+	// IdempotencyKey A client-generated key that makes starting a task run safe to retry. Repeating a request with the same key within 24 hours returns the task run that the first request started instead of starting another one; the repeated request's input is ignored. Keys are scoped to a single workflow version, so the same key used against a different version starts a separate run. Omit the key to always start a new run.
+	//
+	// Example: 6b2f1f7a-6a0e-4f6f-9d1a-2b1d0d5f6c11
+	IdempotencyKey *IdempotencyKey `json:"idempotencyKey,omitempty"`
+
+	// Input Input data for a flow. Can be either an array (for positional arguments) or an object (for named parameters).
+	Input FlowInput `json:"input"`
+}
 
 // Task defines model for Task.
 type Task struct {
@@ -406,6 +674,24 @@ type WorkflowVersion struct {
 // WorkflowVersionStatus defines model for WorkflowVersionStatus.
 type WorkflowVersionStatus string
 
+// FlowIDFilterParam defines model for FlowIDFilterParam.
+type FlowIDFilterParam = []string
+
+// FlowIDParam defines model for FlowIDParam.
+type FlowIDParam = string
+
+// FlowRunIDParam defines model for FlowRunIDParam.
+type FlowRunIDParam = string
+
+// FlowRunStatusFilterParam defines model for FlowRunStatusFilterParam.
+type FlowRunStatusFilterParam = []FlowRunStatus
+
+// FlowRunStepSeqParam defines model for FlowRunStepSeqParam.
+type FlowRunStepSeqParam = int
+
+// FlowSlugFilterParam defines model for FlowSlugFilterParam.
+type FlowSlugFilterParam = []string
+
 // RootTaskRunIDFilterParam defines model for RootTaskRunIDFilterParam.
 type RootTaskRunIDFilterParam = []string
 
@@ -429,6 +715,68 @@ type WorkflowVersionIDFilterParam = []string
 
 // WorkflowVersionIDParam defines model for WorkflowVersionIDParam.
 type WorkflowVersionIDParam = string
+
+// AsFlowInput0 returns the union data inside the FlowInput as a FlowInput0
+func (t FlowInput) AsFlowInput0() (FlowInput0, error) {
+	var body FlowInput0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromFlowInput0 overwrites any union data inside the FlowInput as the provided FlowInput0
+func (t *FlowInput) FromFlowInput0(v FlowInput0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeFlowInput0 performs a merge with any union data inside the FlowInput, using the provided FlowInput0
+func (t *FlowInput) MergeFlowInput0(v FlowInput0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsFlowInput1 returns the union data inside the FlowInput as a FlowInput1
+func (t FlowInput) AsFlowInput1() (FlowInput1, error) {
+	var body FlowInput1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromFlowInput1 overwrites any union data inside the FlowInput as the provided FlowInput1
+func (t *FlowInput) FromFlowInput1(v FlowInput1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeFlowInput1 performs a merge with any union data inside the FlowInput, using the provided FlowInput1
+func (t *FlowInput) MergeFlowInput1(v FlowInput1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t FlowInput) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *FlowInput) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // AsTaskData0 returns the union data inside the TaskData as a TaskData0
 func (t TaskData) AsTaskData0() (TaskData0, error) {
