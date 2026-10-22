@@ -267,7 +267,11 @@ func queryPostgres(postgresRepo *Repo) server.ServerTool {
 				_ = tx.Rollback(ctx) // Ignore error from rollback, as it might already be committed/rolled back
 			}()
 
-			rows, err := tx.Query(ctx, sqlQuery)
+			// Canceling queryCtx after an early stop makes pgx drop the
+			// connection instead of draining the unread rows.
+			queryCtx, cancelQuery := context.WithCancel(ctx)
+			defer cancelQuery()
+			rows, err := tx.Query(queryCtx, sqlQuery)
 			if err != nil {
 				return mcp.NewToolResultErrorFromErr("Error executing query", err), nil
 			}
@@ -280,43 +284,89 @@ func queryPostgres(postgresRepo *Repo) server.ServerTool {
 				columnNames[i] = string(fd.Name)
 			}
 
-			results := []map[string]interface{}{}
-
-			for rows.Next() {
-				values, err := rows.Values()
-				if err != nil {
-					return mcp.NewToolResultErrorFromErr("Error reading row values", err), nil
-				}
-
-				rowMap := make(map[string]interface{})
-				for i, col := range columnNames {
-					// Handle pgx types appropriately
-					val := values[i]
-					switch v := val.(type) {
-					case []byte:
-						// Convert byte arrays to string
-						rowMap[col] = string(v)
-					default:
-						// For other types, use as-is
-						rowMap[col] = v
-					}
-				}
-				results = append(results, rowMap)
-			}
-
-			// Check for any errors encountered during iteration
-			if err := rows.Err(); err != nil {
-				return mcp.NewToolResultErrorFromErr("Error iterating rows", err), nil
-			}
-
-			respJSON, err := json.Marshal(results)
+			respJSON, rowCount, truncated, err := collectRows(rows, columnNames, maxQueryResultBytes)
 			if err != nil {
-				return mcp.NewToolResultErrorFromErr("Error marshaling results", err), nil
+				return mcp.NewToolResultErrorFromErr("Error reading query results", err), nil
 			}
-
-			return mcp.NewToolResultText(string(respJSON)), nil
+			result := mcp.NewToolResultText(string(respJSON))
+			if truncated {
+				cancelQuery()
+				result.Content = append(result.Content, mcp.NewTextContent(truncatedResultMessage(rowCount)))
+			}
+			return result, nil
 		},
 	}
+}
+
+// maxQueryResultBytes bounds the JSON that query_render_postgres holds in
+// memory. Without it, one large SELECT can exhaust the hosted server's memory
+// and crash it for every user. 5 MB is already more than a model can read.
+const maxQueryResultBytes = 5 << 20
+
+// rowSource is the part of pgx.Rows that collectRows reads.
+type rowSource interface {
+	Next() bool
+	Values() ([]any, error)
+	Err() error
+}
+
+// collectRows encodes rows as a JSON array of objects keyed by column name.
+// It stops before the array would exceed maxBytes bytes, and reports how many
+// rows it kept and whether it stopped early.
+func collectRows(rows rowSource, columnNames []string, maxBytes int) (out []byte, rowCount int, truncated bool, err error) {
+	out = []byte{'['}
+	for rows.Next() {
+		values, err := rows.Values()
+		if err != nil {
+			return nil, 0, false, fmt.Errorf("read row values: %w", err)
+		}
+
+		rowMap := make(map[string]any, len(columnNames))
+		for i, col := range columnNames {
+			// Handle pgx types appropriately
+			switch v := values[i].(type) {
+			case []byte:
+				// Convert byte arrays to string
+				rowMap[col] = string(v)
+			default:
+				// For other types, use as-is
+				rowMap[col] = v
+			}
+		}
+		rowJSON, err := json.Marshal(rowMap)
+		if err != nil {
+			return nil, 0, false, fmt.Errorf("marshal row: %w", err)
+		}
+
+		// One byte for the separating comma, one for the closing bracket.
+		if len(out)+len(rowJSON)+2 > maxBytes {
+			return append(out, ']'), rowCount, true, nil
+		}
+		if rowCount > 0 {
+			out = append(out, ',')
+		}
+		out = append(out, rowJSON...)
+		rowCount++
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, false, fmt.Errorf("iterate rows: %w", err)
+	}
+	return append(out, ']'), rowCount, false, nil
+}
+
+func truncatedResultMessage(rowCount int) string {
+	// Paging can't help when one row is over the limit on its own.
+	if rowCount == 0 {
+		return fmt.Sprintf("Results truncated: the first row alone is over %d MB of JSON, so no rows are shown. "+
+			"Select fewer columns, or trim large values in SQL, for example with left(column, 1000).",
+			maxQueryResultBytes>>20)
+	}
+	// Without ORDER BY, Postgres can return rows in a different order on
+	// each run, so OFFSET pages could skip or repeat rows.
+	return fmt.Sprintf("Results truncated: showing the first %d rows. "+
+		"This tool returns at most %d MB of JSON per query. "+
+		"To see the rest, rerun the query with an ORDER BY plus LIMIT and OFFSET, select fewer columns, or aggregate in SQL.",
+		rowCount, maxQueryResultBytes>>20)
 }
 
 const (

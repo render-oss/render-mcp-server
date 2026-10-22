@@ -223,3 +223,134 @@ func TestCreatePostgresToolPlanEnumIsAccepted(t *testing.T) {
 	assert.True(t, slices.ContainsFunc(plans, specBased.MatchString),
 		"no spec-based plan name advertised, got %v", plans)
 }
+
+// fakeRows is a rowSource over fixed values.
+type fakeRows struct {
+	values  [][]any
+	next    int
+	valsErr error
+	iterErr error
+}
+
+func (f *fakeRows) Next() bool {
+	if f.next >= len(f.values) {
+		return false
+	}
+	f.next++
+	return true
+}
+
+func (f *fakeRows) Values() ([]any, error) {
+	if f.valsErr != nil {
+		return nil, f.valsErr
+	}
+	return f.values[f.next-1], nil
+}
+
+func (f *fakeRows) Err() error { return f.iterErr }
+
+func idRows(n int) [][]any {
+	rows := make([][]any, n)
+	for i := range rows {
+		rows[i] = []any{i}
+	}
+	return rows
+}
+
+func TestCollectRows(t *testing.T) {
+	// `{"id":N}` for one digit N is 8 bytes.
+	tests := []struct {
+		name          string
+		rows          [][]any
+		maxBytes      int
+		wantJSON      string
+		wantCount     int
+		wantTruncated bool
+	}{
+		{
+			name:     "empty result is an empty array",
+			maxBytes: 1 << 20,
+			wantJSON: `[]`,
+		},
+		{
+			name:      "rows within the limit are all returned",
+			rows:      idRows(3),
+			maxBytes:  1 << 20,
+			wantJSON:  `[{"id":0},{"id":1},{"id":2}]`,
+			wantCount: 3,
+		},
+		{
+			name:      "row count alone does not truncate",
+			rows:      idRows(5000),
+			maxBytes:  1 << 20,
+			wantCount: 5000,
+		},
+		{
+			name:      "result of exactly maxBytes fits",
+			rows:      idRows(2),
+			maxBytes:  len(`[{"id":0},{"id":1}]`),
+			wantJSON:  `[{"id":0},{"id":1}]`,
+			wantCount: 2,
+		},
+		{
+			name:          "byte limit stops before the row that would exceed it",
+			rows:          idRows(3),
+			maxBytes:      len(`[{"id":0},{"id":1}]`),
+			wantJSON:      `[{"id":0},{"id":1}]`,
+			wantCount:     2,
+			wantTruncated: true,
+		},
+		{
+			name:          "one row over the byte limit returns no rows",
+			rows:          [][]any{{"a long value"}},
+			maxBytes:      8,
+			wantJSON:      `[]`,
+			wantTruncated: true,
+		},
+		{
+			name:      "byte slices become strings",
+			rows:      [][]any{{[]byte("abc")}},
+			maxBytes:  1 << 20,
+			wantJSON:  `[{"id":"abc"}]`,
+			wantCount: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out, count, truncated, err := collectRows(&fakeRows{values: tt.rows}, []string{"id"}, tt.maxBytes)
+			require.NoError(t, err)
+			if tt.wantJSON != "" {
+				assert.Equal(t, tt.wantJSON, string(out))
+			}
+			assert.LessOrEqual(t, len(out), tt.maxBytes)
+			assert.Equal(t, tt.wantCount, count)
+			assert.Equal(t, tt.wantTruncated, truncated)
+		})
+	}
+}
+
+func TestCollectRowsErrors(t *testing.T) {
+	t.Run("row values error", func(t *testing.T) {
+		_, _, _, err := collectRows(&fakeRows{values: idRows(1), valsErr: fmt.Errorf("bad row")}, []string{"id"}, 1<<20)
+		require.ErrorContains(t, err, "bad row")
+	})
+	t.Run("iteration error", func(t *testing.T) {
+		_, _, _, err := collectRows(&fakeRows{values: idRows(1), iterErr: fmt.Errorf("conn lost")}, []string{"id"}, 1<<20)
+		require.ErrorContains(t, err, "conn lost")
+	})
+}
+
+func TestTruncatedResultMessage(t *testing.T) {
+	t.Run("rows shown asks for an ordered rerun", func(t *testing.T) {
+		msg := truncatedResultMessage(23)
+		assert.Contains(t, msg, "first 23 rows")
+		assert.Contains(t, msg, "ORDER BY plus LIMIT and OFFSET")
+	})
+	t.Run("no rows shown explains the first row is too large", func(t *testing.T) {
+		msg := truncatedResultMessage(0)
+		assert.Contains(t, msg, "first row alone is over 5 MB")
+		assert.Contains(t, msg, "left(column, 1000)")
+		assert.NotContains(t, msg, "OFFSET", "paging can't help when one row is over the limit")
+	})
+}
