@@ -3,10 +3,11 @@ services:
 - type: web
   name: mcp
   runtime: go
-  plan: standard
+  plan: 2c-8g
   scaling:
-    minInstances: 1
-    maxInstances: 3
+    minInstances: 3
+    maxInstances: 10
+    targetCPUPercent: 60
     targetMemoryPercent: 60
   buildCommand: go build -tags netgo -ldflags '-s -w' -o app
   startCommand: ./app --transport http
