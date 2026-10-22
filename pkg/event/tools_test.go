@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -55,21 +56,64 @@ func TestListEventsToolReturnsEventsWithDetails(t *testing.T) {
 }
 
 func TestListEventsToolDefaults(t *testing.T) {
-	fakeClient, repo := newTestRepo()
-	fakeClient.ListEventsWithResponseReturns(emptyResponse(), nil)
+	// synctest keeps time fixed while the handler computes its defaults.
+	synctest.Test(t, func(t *testing.T) {
+		fakeClient, repo := newTestRepo()
+		fakeClient.ListEventsWithResponseReturns(emptyResponse(), nil)
 
-	before := time.Now()
-	result := callListEvents(t, repo, map[string]any{"serviceId": testServiceID})
-	require.False(t, result.IsError)
+		wantSevenDaysAgo := time.Now().UTC().Add(-7 * 24 * time.Hour)
+		result := callListEvents(t, repo, map[string]any{"serviceId": testServiceID})
 
-	_, _, params, _ := fakeClient.ListEventsWithResponseArgsForCall(0)
-	require.NotNil(t, params.StartTime)
-	require.NotNil(t, params.Limit)
+		require.False(t, result.IsError)
+		require.Equal(t, 1, fakeClient.ListEventsWithResponseCallCount())
+		_, _, params, _ := fakeClient.ListEventsWithResponseArgsForCall(0)
+		require.NotNil(t, params.StartTime)
+		assert.Same(t, time.UTC, params.StartTime.Location())
 
-	assert.Equal(t, defaultLimit, *params.Limit)
-	assert.WithinDuration(t, before.Add(-defaultLookback), *params.StartTime, time.Minute)
-	assert.Nil(t, params.EndTime)
-	assert.Nil(t, params.Type)
+		req, err := client.NewListEventsRequest("https://api.render.com/v1", testServiceID, params)
+		require.NoError(t, err)
+		assert.Equal(t, "20", req.URL.Query().Get("limit"))
+		assert.Equal(t, wantSevenDaysAgo.Format(time.RFC3339), req.URL.Query().Get("startTime"))
+		assert.NotContains(t, req.URL.Query(), "endTime")
+		assert.NotContains(t, req.URL.Query(), "type")
+	})
+}
+
+func TestListEventsToolTimeEncoding(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{name: "UTC", input: "2026-10-12T21:30:22Z", want: "2026-10-12T21:30:22Z"},
+		{name: "negative offset", input: "2026-10-12T15:30:22-06:00", want: "2026-10-12T21:30:22Z"},
+		{name: "positive offset", input: "2026-10-13T03:00:22+05:30", want: "2026-10-12T21:30:22Z"},
+		{name: "UTC fractional seconds", input: "2026-10-12T21:30:22.812368Z", want: "2026-10-12T21:30:22.812368Z"},
+		{name: "offset fractional seconds", input: "2026-10-12T15:30:22.812368-06:00", want: "2026-10-12T21:30:22.812368Z"},
+	}
+
+	for _, param := range []string{"startTime", "endTime"} {
+		t.Run(param, func(t *testing.T) {
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					fakeClient, repo := newTestRepo()
+					fakeClient.ListEventsWithResponseReturns(emptyResponse(), nil)
+
+					result := callListEvents(t, repo, map[string]any{
+						"serviceId": testServiceID,
+						param:       tt.input,
+					})
+					require.False(t, result.IsError)
+
+					require.Equal(t, 1, fakeClient.ListEventsWithResponseCallCount())
+					_, _, params, _ := fakeClient.ListEventsWithResponseArgsForCall(0)
+					req, err := client.NewListEventsRequest("https://api.render.com/v1", testServiceID, params)
+					require.NoError(t, err)
+					assert.Equal(t, tt.want, req.URL.Query().Get(param))
+				})
+			}
+		})
+	}
 }
 
 func TestListEventsToolExplicitParams(t *testing.T) {
@@ -315,16 +359,35 @@ func TestListEventsToolTransportError(t *testing.T) {
 }
 
 func TestListEventsToolInvalidTimestamp(t *testing.T) {
-	fakeClient, repo := newTestRepo()
+	tests := []struct {
+		name  string
+		input any
+	}{
+		{name: "relative time", input: "yesterday"},
+		{name: "date only", input: "2026-10-12"},
+		{name: "missing timezone", input: "2026-10-12T15:30:22"},
+		{name: "compact offset", input: "2026-10-12T15:30:22-0600"},
+		{name: "Unix timestamp string", input: "1704067200"},
+		{name: "numeric input", input: float64(1704067200)},
+	}
 
-	result := callListEvents(t, repo, map[string]any{
-		"serviceId": testServiceID,
-		"startTime": "yesterday",
-	})
+	for _, param := range []string{"startTime", "endTime"} {
+		t.Run(param, func(t *testing.T) {
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					fakeClient, repo := newTestRepo()
+					result := callListEvents(t, repo, map[string]any{
+						"serviceId": testServiceID,
+						param:       tt.input,
+					})
 
-	require.True(t, result.IsError)
-	assert.Contains(t, textContent(t, result), "startTime")
-	assert.Equal(t, 0, fakeClient.ListEventsWithResponseCallCount())
+					require.True(t, result.IsError)
+					assert.Contains(t, textContent(t, result), param)
+					assert.Equal(t, 0, fakeClient.ListEventsWithResponseCallCount())
+				})
+			}
+		})
+	}
 }
 
 // serviceEventTypes comes from the generated ServiceEventTypeValues, so the

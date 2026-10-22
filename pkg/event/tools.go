@@ -149,7 +149,7 @@ func parseListEventsParams(request mcp.CallToolRequest) (*client.ListEventsParam
 		// The default window only applies to a first page. A cursor already
 		// pins the position, and the API applies both, so re-applying the
 		// window would stop paging at the lookback.
-		startTime = pointers.From(time.Now().Add(-defaultLookback))
+		startTime = pointers.From(time.Now().UTC().Add(-defaultLookback))
 	}
 	params.StartTime = startTime
 
@@ -191,5 +191,6 @@ func optionalTimeParam(request mcp.CallToolRequest, param string) (*time.Time, e
 			"invalid %s, expected RFC3339 (e.g. 2024-01-01T12:00:00Z): %w", param, err)
 	}
 
-	return &parsed, nil
+	// Normalize timestamps to UTC for compatibility with the events API.
+	return pointers.From(parsed.UTC()), nil
 }
