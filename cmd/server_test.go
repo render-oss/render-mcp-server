@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -283,10 +284,91 @@ func TestStdioSessionlessWorkspaceSelection(t *testing.T) {
 	})
 }
 
+func TestWithMiddleware_Order(t *testing.T) {
+	var calls []string
+	recordMiddleware := func(name string) func(http.Handler) http.Handler {
+		return func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls = append(calls, name+":before")
+				next.ServeHTTP(w, r)
+				calls = append(calls, name+":after")
+			})
+		}
+	}
+	handler := withMiddleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		calls = append(calls, "handler")
+	}), recordMiddleware("first"), recordMiddleware("second"))
+
+	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+
+	require.Equal(t, []string{"first:before", "second:before", "handler", "second:after", "first:after"}, calls)
+}
+
+func TestRequestBodyLimitMiddleware(t *testing.T) {
+	const wantLimitBytes = 256
+	readBody := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := io.ReadAll(r.Body); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	})
+
+	t.Run("at limit", func(t *testing.T) {
+		var output bytes.Buffer
+		logger := slog.New(slog.NewTextHandler(&output, nil))
+		handler := requestBodyLimitMiddleware(wantLimitBytes, logger)(readBody)
+		body := strings.Repeat("x", wantLimitBytes)
+		req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(body))
+		// ensure max bytes is measured, not believed from content length
+		req.ContentLength = -1
+		rec := httptest.NewRecorder()
+
+		handler.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.Empty(t, output.String())
+	})
+
+	t.Run("over limit propagates read error", func(t *testing.T) {
+		var output bytes.Buffer
+		logger := slog.New(slog.NewTextHandler(&output, nil))
+		handler := requestBodyLimitMiddleware(wantLimitBytes, logger)(readBody)
+		body := strings.Repeat("x", wantLimitBytes+64)
+		reader := strings.NewReader(body)
+		req := httptest.NewRequest(http.MethodPost, "/mcp", reader)
+		// ensure max bytes is measured, not believed from content length
+		req.ContentLength = -1
+		rec := httptest.NewRecorder()
+
+		handler.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusInternalServerError, rec.Code)
+		require.Contains(t, rec.Body.String(), "http: request body too large")
+		require.LessOrEqual(t, len(body)-reader.Len(), wantLimitBytes+1)
+		require.Contains(t, output.String(), "HTTP request body limit exceeded")
+	})
+
+	t.Run("over limit SDK returns bad request", func(t *testing.T) {
+		apiClient, _ := newTestRenderClient(t)
+		_, httpTransport := newStreamableHTTPServer(apiClient, session.NewInMemoryStore())
+		t.Cleanup(func() { require.NoError(t, httpTransport.Shutdown(t.Context())) })
+		handler := requestBodyLimitMiddleware(wantLimitBytes, slog.New(slog.DiscardHandler))(httpTransport)
+		req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(strings.Repeat("x", wantLimitBytes+1)))
+		req.ContentLength = -1
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+
+		handler.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusBadRequest, rec.Code)
+		require.Contains(t, rec.Body.String(), "read request body error: http: request body too large")
+	})
+}
+
 func TestNewHTTPMux_OAuth(t *testing.T) {
+	logger := slog.New(slog.DiscardHandler)
 	t.Run("disabled allows MCP requests without a challenge", func(t *testing.T) {
 		mcp, called := recordingHandler()
-		mux := newHTTPMux(mcp, oauth.Config{}, "")
+		mux := newHTTPMux(mcp, oauth.Config{}, "", logger)
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/mcp", nil))
@@ -298,7 +380,7 @@ func TestNewHTTPMux_OAuth(t *testing.T) {
 
 	t.Run("disabled does not advertise metadata", func(t *testing.T) {
 		mcp, _ := recordingHandler()
-		mux := newHTTPMux(mcp, oauth.Config{}, "")
+		mux := newHTTPMux(mcp, oauth.Config{}, "", logger)
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/.well-known/oauth-protected-resource", nil))
@@ -314,7 +396,7 @@ func TestNewHTTPMux_OAuth(t *testing.T) {
 			APIKeyPassthrough:      true,
 		}
 		mcp, _ := recordingHandler()
-		mux := newHTTPMux(mcp, cfg, "")
+		mux := newHTTPMux(mcp, cfg, "", logger)
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/.well-known/oauth-protected-resource/mcp", nil))
@@ -331,21 +413,24 @@ func TestNewHTTPMux_OAuth(t *testing.T) {
 			APIKeyPassthrough:      true,
 		}
 		mcp, called := recordingHandler()
-		mux := newHTTPMux(mcp, cfg, "")
+		mux := newHTTPMux(mcp, cfg, "", logger)
+		body := strings.NewReader(strings.Repeat("x", 1024))
 		rec := httptest.NewRecorder()
 
-		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/mcp", nil))
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/mcp", body))
 
 		require.Equal(t, http.StatusUnauthorized, rec.Code)
 		require.Contains(t, rec.Header().Get("WWW-Authenticate"), "resource_metadata=")
 		require.False(t, *called)
+		require.Equal(t, 1024, body.Len(), "authentication must reject the request without reading its body")
 	})
 }
 
 func TestNewHTTPMux_OpenAIChallenge(t *testing.T) {
+	logger := slog.New(slog.DiscardHandler)
 	t.Run("configured token is served", func(t *testing.T) {
 		mcp, _ := recordingHandler()
-		mux := newHTTPMux(mcp, oauth.Config{}, "verify-token")
+		mux := newHTTPMux(mcp, oauth.Config{}, "verify-token", logger)
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/.well-known/openai-apps-challenge", nil))
@@ -356,7 +441,7 @@ func TestNewHTTPMux_OpenAIChallenge(t *testing.T) {
 
 	t.Run("route is absent without a token", func(t *testing.T) {
 		mcp, _ := recordingHandler()
-		mux := newHTTPMux(mcp, oauth.Config{}, "")
+		mux := newHTTPMux(mcp, oauth.Config{}, "", logger)
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/.well-known/openai-apps-challenge", nil))

@@ -3,11 +3,13 @@ package cmd
 import (
 	"context"
 	"errors"
+	"io"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"slices"
 	"syscall"
 	"time"
 
@@ -32,7 +34,10 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/workspace"
 )
 
-const httpSessionIdleTTL = 30 * time.Minute
+const (
+	httpSessionIdleTTL      = 30 * time.Minute
+	maxHTTPRequestBodyBytes = 5 << 20
+)
 
 func Serve(transport string) *server.MCPServer {
 	apiClient, err := client.NewDefaultClient()
@@ -42,6 +47,8 @@ func Serve(transport string) *server.MCPServer {
 	}
 
 	if transport == "http" {
+		log.Printf("HTTP request body limit: max-bytes=%d", maxHTTPRequestBodyBytes)
+
 		var sessionStore session.Store
 		if redisURL, ok := os.LookupEnv("REDIS_URL"); ok {
 			log.Print("using Redis session store\n")
@@ -69,7 +76,7 @@ func Serve(transport string) *server.MCPServer {
 		} else {
 			log.Print("OAuth disabled")
 		}
-		mux := newHTTPMux(httpTransport, oauthCfg, os.Getenv("OPENAI_VERIFICATION_TOKEN"))
+		mux := newHTTPMux(httpTransport, oauthCfg, os.Getenv("OPENAI_VERIFICATION_TOKEN"), slog.Default())
 
 		httpServer := &http.Server{
 			Addr:        ":10000",
@@ -170,10 +177,16 @@ func buildWorkspaceScopedTools(c *client.ClientWithResponses) []server.ServerToo
 	return workspace.ScopeTools(workspace.NewResolver(c), tools...)
 }
 
-// newHTTPMux serves /mcp behind the OAuth middleware plus the RFC 9728 metadata
-// routes. When OAuth is disabled the middleware is identity and metadata 404s,
-// so /mcp is unchanged. openAIToken, when set, serves the OpenAI app challenge.
-func newHTTPMux(mcpHandler http.Handler, oauthCfg oauth.Config, openAIToken string) *http.ServeMux {
+// newHTTPMux serves /mcp behind OAuth middleware and a request body limit,
+// alongside the RFC 9728 metadata routes. With OAuth disabled, authentication
+// passes through and metadata routes return 404.
+// openAIToken, when set, serves the OpenAI app challenge.
+func newHTTPMux(
+	mcpHandler http.Handler,
+	oauthCfg oauth.Config,
+	openAIToken string,
+	logger *slog.Logger,
+) *http.ServeMux {
 	oauthMiddleware := oauth.Middleware(oauthCfg, oauth.NewIntrospector(
 		oauthCfg.AuthorizationServerURL,
 		oauthCfg.APIAuthToken,
@@ -181,7 +194,11 @@ func newHTTPMux(mcpHandler http.Handler, oauthCfg oauth.Config, openAIToken stri
 	))
 
 	mux := http.NewServeMux()
-	mux.Handle("/mcp", oauthMiddleware(mcpHandler))
+	mux.Handle("/mcp", withMiddleware(
+		mcpHandler,
+		oauthMiddleware,
+		requestBodyLimitMiddleware(maxHTTPRequestBodyBytes, logger),
+	))
 	metadata := oauth.HandleProtectedResourceMetadata(oauthCfg)
 	for _, path := range oauthCfg.MetadataPaths() {
 		mux.HandleFunc(path, metadata)
@@ -193,4 +210,45 @@ func newHTTPMux(mcpHandler http.Handler, oauthCfg oauth.Config, openAIToken stri
 		})
 	}
 	return mux
+}
+
+// withMiddleware applies middleware in request execution order.
+// withMiddleware(handler, A, B, C): request -> A -> B -> C -> handler
+func withMiddleware(handler http.Handler, middleware ...func(http.Handler) http.Handler) http.Handler {
+	for _, wrap := range slices.Backward(middleware) {
+		handler = wrap(handler)
+	}
+	return handler
+}
+
+func requestBodyLimitMiddleware(limitBytes int64, logger *slog.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body := &limitedRequestBody{ReadCloser: http.MaxBytesReader(w, r.Body, limitBytes)}
+			r.Body = body
+			next.ServeHTTP(w, r)
+			if body.exceeded {
+				logger.WarnContext(r.Context(),
+					"HTTP request body limit exceeded",
+					"method", r.Method,
+					"path", r.URL.Path,
+					"limit_bytes", limitBytes,
+					"content_length", r.ContentLength,
+				)
+			}
+		})
+	}
+}
+
+type limitedRequestBody struct {
+	io.ReadCloser
+	exceeded bool
+}
+
+func (b *limitedRequestBody) Read(p []byte) (int, error) {
+	n, err := b.ReadCloser.Read(p)
+	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+		b.exceeded = true
+	}
+	return n, err
 }
