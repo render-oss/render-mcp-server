@@ -397,7 +397,7 @@ func TestListEventsToolInvalidTimestamp(t *testing.T) {
 func TestServiceEventTypesEnum(t *testing.T) {
 	types := serviceEventTypes()
 
-	assert.Len(t, types, 43, "filterable event types changed; update the eventTypes list in README.md")
+	assert.Len(t, types, 44, "filterable event types changed; update the eventTypes list in README.md")
 	assert.Contains(t, types, "server_failed")
 	assert.Contains(t, types, "deploy_ended")
 	// Not every event type is filterable, so the enum must stay narrower than

@@ -24,6 +24,7 @@ func ServiceEventTypeValues() []ServiceEventType {
 		ServiceEventType("disk_created"),
 		ServiceEventType("disk_updated"),
 		ServiceEventType("disk_deleted"),
+		ServiceEventType("disk_snapshot_restored"),
 		ServiceEventType("service_disk_usage_high"),
 		ServiceEventType("service_disk_usage_recovered"),
 		ServiceEventType("image_pull_failed"),

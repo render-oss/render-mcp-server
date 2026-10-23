@@ -203,6 +203,19 @@ type DiskDeletedEvent struct {
 	DiskId externalRef4.DiskId `json:"diskId"`
 }
 
+// DiskSnapshotRestoredEvent defines model for diskSnapshotRestoredEvent.
+type DiskSnapshotRestoredEvent struct {
+	// DiskId Example: dsk-cph1rs3idesc73a2b2mg
+	DiskId externalRef4.DiskId `json:"diskId"`
+
+	// InstanceId The instance whose disk was restored, when the restore named one. A service instance ID, or the service ID for an older single disk.
+	InstanceId *string `json:"instanceId,omitempty"`
+
+	// SnapshotCreatedAt When the restored snapshot was taken
+	SnapshotCreatedAt *time.Time `json:"snapshotCreatedAt,omitempty"`
+	TriggeredByUser   *string    `json:"triggeredByUser"`
+}
+
 // DiskUpdatedEvent defines model for diskUpdatedEvent.
 type DiskUpdatedEvent struct {
 	// DiskId Example: dsk-cph1rs3idesc73a2b2mg
@@ -1698,6 +1711,32 @@ func (t *ServiceEventDetails) FromDiskDeletedEvent(v DiskDeletedEvent) error {
 
 // MergeDiskDeletedEvent performs a merge with any union data inside the ServiceEventDetails, using the provided DiskDeletedEvent
 func (t *ServiceEventDetails) MergeDiskDeletedEvent(v DiskDeletedEvent) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsDiskSnapshotRestoredEvent returns the union data inside the ServiceEventDetails as a DiskSnapshotRestoredEvent
+func (t ServiceEventDetails) AsDiskSnapshotRestoredEvent() (DiskSnapshotRestoredEvent, error) {
+	var body DiskSnapshotRestoredEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromDiskSnapshotRestoredEvent overwrites any union data inside the ServiceEventDetails as the provided DiskSnapshotRestoredEvent
+func (t *ServiceEventDetails) FromDiskSnapshotRestoredEvent(v DiskSnapshotRestoredEvent) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeDiskSnapshotRestoredEvent performs a merge with any union data inside the ServiceEventDetails, using the provided DiskSnapshotRestoredEvent
+func (t *ServiceEventDetails) MergeDiskSnapshotRestoredEvent(v DiskSnapshotRestoredEvent) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err

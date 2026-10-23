@@ -271,7 +271,12 @@ type BlueprintPATCH struct {
 	// Even when true, autoSync will not apply when the blueprint has the Created status, which indicates its first sync has not yet been approved.
 	// Other conditions, such as a locked workspace, can also prevent automatic syncing even when this is true.
 	AutoSync *AutoSync `json:"autoSync,omitempty"`
-	Name     *string   `json:"name,omitempty"`
+
+	// Branch The Git branch to read the Blueprint file from. Requires Blueprint onboarding early access.
+	// The branch must contain a Blueprint file at the configured path.
+	// Updating this field does not plan a sync.
+	Branch *string `json:"branch,omitempty"`
+	Name   *string `json:"name,omitempty"`
 
 	// Path Path to the Blueprint file in the repository
 	//
@@ -428,6 +433,12 @@ type SyncWithPlan struct {
 
 	// Id Example: exe-cph1rs3idesc73a2b2mg
 	Id SyncId `json:"id"`
+
+	// RawPlan Internal plan output with environment variable values replaced by `[REDACTED]`.
+	// This is not a stable contract and will be removed when the structured `plan` field ships.
+	// Null when no plan is available.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	RawPlan *map[string]interface{} `json:"rawPlan"`
 
 	// RequiredManualEnvVars Environment variables whose values must be supplied separately when approving this Sync, for resources it creates.
 	// Declared with `sync: false` in the Blueprint file.

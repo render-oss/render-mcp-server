@@ -195,7 +195,7 @@ session-based behavior is deprecated and is scheduled for removal.
     - Build and deploy: `build_started`, `build_ended`, `deploy_started`, `deploy_ended`, `pre_deploy_started`, `pre_deploy_ended`, `initial_deploy_hook_started`, `initial_deploy_hook_ended`, `zero_downtime_redeploy_started`, `zero_downtime_redeploy_ended`, `commit_ignored`, `branch_deleted`, `image_pull_failed`, `artifact_fetch_failed`, `artifact_source_changed`, `auto_deploy_enabled`, `auto_deploy_disabled`, `pipeline_minutes_exhausted`
     - Runtime health: `server_available`, `server_failed`, `server_hardware_failure`, `server_restarted`
     - Scaling and plan: `autoscaling_started`, `autoscaling_ended`, `autoscaling_config_changed`, `instance_count_changed`, `plan_changed`
-    - Disk: `disk_created`, `disk_updated`, `disk_deleted`, `service_disk_usage_high`, `service_disk_usage_recovered`
+    - Disk: `disk_created`, `disk_updated`, `disk_deleted`, `disk_snapshot_restored`, `service_disk_usage_high`, `service_disk_usage_recovered`
     - Lifecycle and maintenance: `service_suspended`, `service_resumed`, `suspender_added`, `suspender_removed`, `maintenance_started`, `maintenance_ended`, `maintenance_mode_enabled`, `maintenance_mode_uri_updated`
     - Job runs: `cron_job_run_started`, `cron_job_run_ended`, `job_run_ended`
   - `startTime`: Start of the time range (RFC3339 format) (string, optional). Defaults to 7 days ago on the first page. Set it to reach events older than that.

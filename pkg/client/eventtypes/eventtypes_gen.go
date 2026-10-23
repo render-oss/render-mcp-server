@@ -25,6 +25,7 @@ const (
 	EventTypeDeployStarted                         EventType = "deploy_started"
 	EventTypeDiskCreated                           EventType = "disk_created"
 	EventTypeDiskDeleted                           EventType = "disk_deleted"
+	EventTypeDiskSnapshotRestored                  EventType = "disk_snapshot_restored"
 	EventTypeDiskUpdated                           EventType = "disk_updated"
 	EventTypeEdgeCacheDisabled                     EventType = "edge_cache_disabled"
 	EventTypeEdgeCacheEnabled                      EventType = "edge_cache_enabled"
@@ -113,6 +114,8 @@ func (e EventType) Valid() bool {
 	case EventTypeDiskCreated:
 		return true
 	case EventTypeDiskDeleted:
+		return true
+	case EventTypeDiskSnapshotRestored:
 		return true
 	case EventTypeDiskUpdated:
 		return true
@@ -238,6 +241,7 @@ const (
 	ServiceEventTypeDeployStarted               ServiceEventType = "deploy_started"
 	ServiceEventTypeDiskCreated                 ServiceEventType = "disk_created"
 	ServiceEventTypeDiskDeleted                 ServiceEventType = "disk_deleted"
+	ServiceEventTypeDiskSnapshotRestored        ServiceEventType = "disk_snapshot_restored"
 	ServiceEventTypeDiskUpdated                 ServiceEventType = "disk_updated"
 	ServiceEventTypeImagePullFailed             ServiceEventType = "image_pull_failed"
 	ServiceEventTypeInitialDeployHookEnded      ServiceEventType = "initial_deploy_hook_ended"
@@ -302,6 +306,8 @@ func (e ServiceEventType) Valid() bool {
 	case ServiceEventTypeDiskCreated:
 		return true
 	case ServiceEventTypeDiskDeleted:
+		return true
+	case ServiceEventTypeDiskSnapshotRestored:
 		return true
 	case ServiceEventTypeDiskUpdated:
 		return true

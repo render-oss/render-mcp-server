@@ -11,5 +11,9 @@ func SandboxPlanValues() []SandboxPlan {
 		SandboxPlan("starter"),
 		SandboxPlan("standard"),
 		SandboxPlan("pro"),
+		SandboxPlan("1c-2g"),
+		SandboxPlan("2c-4g"),
+		SandboxPlan("4c-8g"),
+		SandboxPlan("8c-16g"),
 	}
 }
