@@ -78,6 +78,27 @@ func (e ManualEnvVarTargetType) Valid() bool {
 	}
 }
 
+// Defines values for PlanningOutcome.
+const (
+	PlanningOutcomeFailed    PlanningOutcome = "failed"
+	PlanningOutcomeNoChanges PlanningOutcome = "no_changes"
+	PlanningOutcomePlanned   PlanningOutcome = "planned"
+)
+
+// Valid indicates whether the value is a known member of the PlanningOutcome enum.
+func (e PlanningOutcome) Valid() bool {
+	switch e {
+	case PlanningOutcomeFailed:
+		return true
+	case PlanningOutcomeNoChanges:
+		return true
+	case PlanningOutcomePlanned:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ResourceRefType.
 const (
 	BackgroundWorker ResourceRefType = "background_worker"
@@ -332,22 +353,33 @@ type CreateBlueprintRequest struct {
 
 // CreateBlueprintResponse The newly created Blueprint and the result of planning its first Sync.
 // A persisted failed Sync is included with state error and error notices.
-// When sync is null, check notices for errors to distinguish planning errors from no changes.
 type CreateBlueprintResponse struct {
 	Blueprint Blueprint `json:"blueprint"`
 
 	// Notices Planning errors and warnings. Error notices indicate planning failed, whether or not a Sync was persisted.
 	Notices []BlueprintNotice `json:"notices"`
 
+	// PlanningOutcome The outcome of this request's planning attempt.
+	// `planned` means a Sync was persisted in the created state, awaiting approval.
+	// `no_changes` means planning determined that no changes are needed to match the Blueprint configuration. No Sync was persisted.
+	// `failed` means planning failed. If a Sync was persisted, it is in the error state.
+	PlanningOutcome PlanningOutcome `json:"planningOutcome"`
+
 	// Sync The persisted Sync, including a failed Sync in the error state, or null when no Sync was persisted.
 	Sync *SyncWithPlan `json:"sync"`
 }
 
 // CreateBlueprintSyncResponse The result of planning a Sync. If a Sync was persisted, sync contains it in the created or error state.
-// Otherwise, sync is null. Error notices indicate planning failed, including when no Sync record was saved.
+// Otherwise, sync is null.
 type CreateBlueprintSyncResponse struct {
 	// Notices Planning errors and warnings. Error notices indicate planning failed, whether or not a Sync was persisted.
 	Notices []BlueprintNotice `json:"notices"`
+
+	// PlanningOutcome The outcome of this request's planning attempt.
+	// `planned` means a Sync was persisted in the created state, awaiting approval.
+	// `no_changes` means planning determined that no changes are needed to match the Blueprint configuration. No Sync was persisted.
+	// `failed` means planning failed. If a Sync was persisted, it is in the error state.
+	PlanningOutcome PlanningOutcome `json:"planningOutcome"`
 
 	// Sync The persisted Sync, including a failed Sync in the error state, or null when no Sync was persisted.
 	Sync *SyncWithPlan `json:"sync"`
@@ -363,6 +395,12 @@ type ExistingResourceMode string
 
 // ManualEnvVarTargetType Blueprint resource type for a manual environment variable.
 type ManualEnvVarTargetType string
+
+// PlanningOutcome The outcome of this request's planning attempt.
+// `planned` means a Sync was persisted in the created state, awaiting approval.
+// `no_changes` means planning determined that no changes are needed to match the Blueprint configuration. No Sync was persisted.
+// `failed` means planning failed. If a Sync was persisted, it is in the error state.
+type PlanningOutcome string
 
 // RequiredManualEnvVar defines model for requiredManualEnvVar.
 type RequiredManualEnvVar struct {

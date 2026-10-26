@@ -35,6 +35,51 @@ func (e AutoDeployTrigger) Valid() bool {
 	}
 }
 
+// Defines values for FlowRunErrorDetailsCode.
+const (
+	FlowDeterminismError  FlowRunErrorDetailsCode = "flow_determinism_error"
+	FlowHistoryTooLarge   FlowRunErrorDetailsCode = "flow_history_too_large"
+	FlowPayloadTooLarge   FlowRunErrorDetailsCode = "flow_payload_too_large"
+	FlowStepLimitExceeded FlowRunErrorDetailsCode = "flow_step_limit_exceeded"
+)
+
+// Valid indicates whether the value is a known member of the FlowRunErrorDetailsCode enum.
+func (e FlowRunErrorDetailsCode) Valid() bool {
+	switch e {
+	case FlowDeterminismError:
+		return true
+	case FlowHistoryTooLarge:
+		return true
+	case FlowPayloadTooLarge:
+		return true
+	case FlowStepLimitExceeded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FlowRunErrorDetailsKind.
+const (
+	InputHash   FlowRunErrorDetailsKind = "input_hash"
+	Type        FlowRunErrorDetailsKind = "type"
+	UnknownType FlowRunErrorDetailsKind = "unknown_type"
+)
+
+// Valid indicates whether the value is a known member of the FlowRunErrorDetailsKind enum.
+func (e FlowRunErrorDetailsKind) Valid() bool {
+	switch e {
+	case InputHash:
+		return true
+	case Type:
+		return true
+	case UnknownType:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for FlowRunStatus.
 const (
 	FlowRunStatusCanceled  FlowRunStatus = "canceled"
@@ -327,7 +372,8 @@ type FlowRunDetails struct {
 	CompletedAt *time.Time       `json:"completedAt,omitempty"`
 
 	// Error Error message if the flow run failed.
-	Error *string `json:"error,omitempty"`
+	Error        *string              `json:"error,omitempty"`
+	ErrorDetails *FlowRunErrorDetails `json:"errorDetails,omitempty"`
 
 	// FlowId Example: flw-d0hp8fs9c44c73a6f1qg
 	FlowId string `json:"flowId"`
@@ -343,6 +389,26 @@ type FlowRunDetails struct {
 	// Status The status of a flow run.
 	Status FlowRunStatus `json:"status"`
 }
+
+// FlowRunErrorDetails defines model for FlowRunErrorDetails.
+type FlowRunErrorDetails struct {
+	Actual      *string                  `json:"actual,omitempty"`
+	Code        FlowRunErrorDetailsCode  `json:"code"`
+	Expected    *string                  `json:"expected,omitempty"`
+	FlowAttempt *int                     `json:"flowAttempt,omitempty"`
+	Kind        *FlowRunErrorDetailsKind `json:"kind,omitempty"`
+	Limit       *int64                   `json:"limit,omitempty"`
+	Message     string                   `json:"message"`
+	Seq         *int                     `json:"seq,omitempty"`
+	SubKey      *string                  `json:"subKey,omitempty"`
+	Value       *int64                   `json:"value,omitempty"`
+}
+
+// FlowRunErrorDetailsCode defines model for FlowRunErrorDetails.Code.
+type FlowRunErrorDetailsCode string
+
+// FlowRunErrorDetailsKind defines model for FlowRunErrorDetails.Kind.
+type FlowRunErrorDetailsKind string
 
 // FlowRunResult defines model for FlowRunResult.
 type FlowRunResult = []interface{}

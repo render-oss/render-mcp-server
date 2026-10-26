@@ -2049,6 +2049,62 @@ type ClientInterface interface {
 	// Corresponds with GET /sandbox-groups (the `ListSandboxGroups` operationId).
 	ListSandboxGroups(ctx context.Context, params *ListSandboxGroupsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// CreateSandboxBuildWithBody Create sandbox build
+	//
+	// Starts converting an OCI image into a sandbox image, and returns the
+	// build without waiting for it. Poll the build until it `succeeded` or
+	// `failed`, then pass its ID as `buildId` to create a sandbox. A request
+	// for a name and image digest the group already has, or is building,
+	// returns that build.
+	//
+	// 400 with `code: invalid_sandbox_group_id` if `sandboxGroupId` is not a
+	// well-formed `sbg-` ID, or a message if the image is invalid or its
+	// registry can't serve it.
+	//
+	// 409 with `code: sandbox_group_suspended` if the sandbox group is suspended.
+	//
+	// 429 if the group already has as many builds pending or running as its
+	// limit allows. The message includes the limit.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /sandbox-groups/{sandboxGroupId}/builds (the `CreateSandboxBuild` operationId).
+	CreateSandboxBuildWithBody(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateSandboxBuild Create sandbox build
+	//
+	// Starts converting an OCI image into a sandbox image, and returns the
+	// build without waiting for it. Poll the build until it `succeeded` or
+	// `failed`, then pass its ID as `buildId` to create a sandbox. A request
+	// for a name and image digest the group already has, or is building,
+	// returns that build.
+	//
+	// 400 with `code: invalid_sandbox_group_id` if `sandboxGroupId` is not a
+	// well-formed `sbg-` ID, or a message if the image is invalid or its
+	// registry can't serve it.
+	//
+	// 409 with `code: sandbox_group_suspended` if the sandbox group is suspended.
+	//
+	// 429 if the group already has as many builds pending or running as its
+	// limit allows. The message includes the limit.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /sandbox-groups/{sandboxGroupId}/builds (the `CreateSandboxBuild` operationId).
+	CreateSandboxBuild(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, body CreateSandboxBuildJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RetrieveSandboxBuild Retrieve sandbox build
+	//
+	// One build by ID. A build that belongs to another sandbox group returns
+	// 404.
+	//
+	// 400 with `code: invalid_sandbox_group_id` if `sandboxGroupId` is not a
+	// well-formed `sbg-` ID, or `invalid build ID` if `buildId` is not a
+	// well-formed `sbb-` ID.
+	//
+	// Corresponds with GET /sandbox-groups/{sandboxGroupId}/builds/{buildId} (the `RetrieveSandboxBuild` operationId).
+	RetrieveSandboxBuild(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, buildId externalRef15.BuildId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListSandboxGroupCredentials List sandbox group credentials
 	//
 	// Returns all credentials in the group, sorted by caller-supplied ID.
@@ -7392,6 +7448,92 @@ func (c *Client) UpdateRegistryCredential(ctx context.Context, registryCredentia
 // Corresponds with GET /sandbox-groups (the `ListSandboxGroups` operationId).
 func (c *Client) ListSandboxGroups(ctx context.Context, params *ListSandboxGroupsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListSandboxGroupsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateSandboxBuildWithBody Create sandbox build
+//
+// Starts converting an OCI image into a sandbox image, and returns the
+// build without waiting for it. Poll the build until it `succeeded` or
+// `failed`, then pass its ID as `buildId` to create a sandbox. A request
+// for a name and image digest the group already has, or is building,
+// returns that build.
+//
+// 400 with `code: invalid_sandbox_group_id` if `sandboxGroupId` is not a
+// well-formed `sbg-` ID, or a message if the image is invalid or its
+// registry can't serve it.
+//
+// 409 with `code: sandbox_group_suspended` if the sandbox group is suspended.
+//
+// 429 if the group already has as many builds pending or running as its
+// limit allows. The message includes the limit.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /sandbox-groups/{sandboxGroupId}/builds (the `CreateSandboxBuild` operationId).
+func (c *Client) CreateSandboxBuildWithBody(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSandboxBuildRequestWithBody(c.Server, sandboxGroupId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateSandboxBuild Create sandbox build
+//
+// Starts converting an OCI image into a sandbox image, and returns the
+// build without waiting for it. Poll the build until it `succeeded` or
+// `failed`, then pass its ID as `buildId` to create a sandbox. A request
+// for a name and image digest the group already has, or is building,
+// returns that build.
+//
+// 400 with `code: invalid_sandbox_group_id` if `sandboxGroupId` is not a
+// well-formed `sbg-` ID, or a message if the image is invalid or its
+// registry can't serve it.
+//
+// 409 with `code: sandbox_group_suspended` if the sandbox group is suspended.
+//
+// 429 if the group already has as many builds pending or running as its
+// limit allows. The message includes the limit.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /sandbox-groups/{sandboxGroupId}/builds (the `CreateSandboxBuild` operationId).
+func (c *Client) CreateSandboxBuild(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, body CreateSandboxBuildJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSandboxBuildRequest(c.Server, sandboxGroupId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RetrieveSandboxBuild Retrieve sandbox build
+//
+// One build by ID. A build that belongs to another sandbox group returns
+// 404.
+//
+// 400 with `code: invalid_sandbox_group_id` if `sandboxGroupId` is not a
+// well-formed `sbg-` ID, or `invalid build ID` if `buildId` is not a
+// well-formed `sbb-` ID.
+//
+// Corresponds with GET /sandbox-groups/{sandboxGroupId}/builds/{buildId} (the `RetrieveSandboxBuild` operationId).
+func (c *Client) RetrieveSandboxBuild(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, buildId externalRef15.BuildId, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRetrieveSandboxBuildRequest(c.Server, sandboxGroupId, buildId)
 	if err != nil {
 		return nil, err
 	}
@@ -20793,6 +20935,94 @@ func NewListSandboxGroupsRequest(server string, params *ListSandboxGroupsParams)
 	return req, nil
 }
 
+// NewCreateSandboxBuildRequest calls the generic CreateSandboxBuild builder with application/json body
+func NewCreateSandboxBuildRequest(server string, sandboxGroupId externalRef15.SandboxGroupId, body CreateSandboxBuildJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateSandboxBuildRequestWithBody(server, sandboxGroupId, "application/json", bodyReader)
+}
+
+// NewCreateSandboxBuildRequestWithBody constructs an http.Request for the CreateSandboxBuild method, with any body, and a specified content type
+func NewCreateSandboxBuildRequestWithBody(server string, sandboxGroupId externalRef15.SandboxGroupId, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "sandboxGroupId", sandboxGroupId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/sandbox-groups/%s/builds", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRetrieveSandboxBuildRequest constructs an http.Request for the RetrieveSandboxBuild method
+func NewRetrieveSandboxBuildRequest(server string, sandboxGroupId externalRef15.SandboxGroupId, buildId externalRef15.BuildId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "sandboxGroupId", sandboxGroupId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "buildId", buildId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/sandbox-groups/%s/builds/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListSandboxGroupCredentialsRequest constructs an http.Request for the ListSandboxGroupCredentials method
 func NewListSandboxGroupCredentialsRequest(server string, sandboxGroupId externalRef15.SandboxGroupId) (*http.Request, error) {
 	var err error
@@ -28516,6 +28746,64 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /sandbox-groups (the `ListSandboxGroups` operationId).
 	ListSandboxGroupsWithResponse(ctx context.Context, params *ListSandboxGroupsParams, reqEditors ...RequestEditorFn) (*ListSandboxGroupsResponse, error)
+
+	// CreateSandboxBuildWithBodyWithResponse Create sandbox build
+	//
+	// Starts converting an OCI image into a sandbox image, and returns the
+	// build without waiting for it. Poll the build until it `succeeded` or
+	// `failed`, then pass its ID as `buildId` to create a sandbox. A request
+	// for a name and image digest the group already has, or is building,
+	// returns that build.
+	//
+	// 400 with `code: invalid_sandbox_group_id` if `sandboxGroupId` is not a
+	// well-formed `sbg-` ID, or a message if the image is invalid or its
+	// registry can't serve it.
+	//
+	// 409 with `code: sandbox_group_suspended` if the sandbox group is suspended.
+	//
+	// 429 if the group already has as many builds pending or running as its
+	// limit allows. The message includes the limit.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /sandbox-groups/{sandboxGroupId}/builds (the `CreateSandboxBuild` operationId).
+	CreateSandboxBuildWithBodyWithResponse(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSandboxBuildResponse, error)
+
+	// CreateSandboxBuildWithResponse Create sandbox build
+	//
+	// Starts converting an OCI image into a sandbox image, and returns the
+	// build without waiting for it. Poll the build until it `succeeded` or
+	// `failed`, then pass its ID as `buildId` to create a sandbox. A request
+	// for a name and image digest the group already has, or is building,
+	// returns that build.
+	//
+	// 400 with `code: invalid_sandbox_group_id` if `sandboxGroupId` is not a
+	// well-formed `sbg-` ID, or a message if the image is invalid or its
+	// registry can't serve it.
+	//
+	// 409 with `code: sandbox_group_suspended` if the sandbox group is suspended.
+	//
+	// 429 if the group already has as many builds pending or running as its
+	// limit allows. The message includes the limit.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /sandbox-groups/{sandboxGroupId}/builds (the `CreateSandboxBuild` operationId).
+	CreateSandboxBuildWithResponse(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, body CreateSandboxBuildJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSandboxBuildResponse, error)
+
+	// RetrieveSandboxBuildWithResponse Retrieve sandbox build
+	//
+	// One build by ID. A build that belongs to another sandbox group returns
+	// 404.
+	//
+	// 400 with `code: invalid_sandbox_group_id` if `sandboxGroupId` is not a
+	// well-formed `sbg-` ID, or `invalid build ID` if `buildId` is not a
+	// well-formed `sbb-` ID.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /sandbox-groups/{sandboxGroupId}/builds/{buildId} (the `RetrieveSandboxBuild` operationId).
+	RetrieveSandboxBuildWithResponse(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, buildId externalRef15.BuildId, reqEditors ...RequestEditorFn) (*RetrieveSandboxBuildResponse, error)
 
 	// ListSandboxGroupCredentialsWithResponse List sandbox group credentials
 	//
@@ -46475,6 +46763,213 @@ func (r ListSandboxGroupsResponse) ContentType() string {
 	return ""
 }
 
+// CreateSandboxBuildResponse429Headers the declared response headers of an HTTP 429 response for CreateSandboxBuild
+type CreateSandboxBuildResponse429Headers struct {
+	RateLimitLimit     *int
+	RateLimitRemaining *int
+	RateLimitReset     *int
+	RetryAfter         *int
+}
+
+type CreateSandboxBuildResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *externalRef15.SandboxBuild
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *N400BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *N401Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *N403Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *N404NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *N409Conflict
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *N429RateLimit
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *N500InternalServerError
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *N503ServiceUnavailable
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *CreateSandboxBuildResponse429Headers
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateSandboxBuildResponse) GetJSON201() *externalRef15.SandboxBuild {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreateSandboxBuildResponse) GetJSON400() *N400BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r CreateSandboxBuildResponse) GetJSON401() *N401Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateSandboxBuildResponse) GetJSON403() *N403Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r CreateSandboxBuildResponse) GetJSON404() *N404NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateSandboxBuildResponse) GetJSON409() *N409Conflict {
+	return r.JSON409
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r CreateSandboxBuildResponse) GetJSON429() *N429RateLimit {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r CreateSandboxBuildResponse) GetJSON500() *N500InternalServerError {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r CreateSandboxBuildResponse) GetJSON503() *N503ServiceUnavailable {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateSandboxBuildResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateSandboxBuildResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateSandboxBuildResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateSandboxBuildResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// RetrieveSandboxBuildResponse429Headers the declared response headers of an HTTP 429 response for RetrieveSandboxBuild
+type RetrieveSandboxBuildResponse429Headers struct {
+	RateLimitLimit     *int
+	RateLimitRemaining *int
+	RateLimitReset     *int
+	RetryAfter         *int
+}
+
+type RetrieveSandboxBuildResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *externalRef15.SandboxBuild
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *N400BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *N401Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *N403Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *N404NotFound
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *N429RateLimit
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *N500InternalServerError
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *N503ServiceUnavailable
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *RetrieveSandboxBuildResponse429Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r RetrieveSandboxBuildResponse) GetJSON200() *externalRef15.SandboxBuild {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r RetrieveSandboxBuildResponse) GetJSON400() *N400BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r RetrieveSandboxBuildResponse) GetJSON401() *N401Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r RetrieveSandboxBuildResponse) GetJSON403() *N403Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r RetrieveSandboxBuildResponse) GetJSON404() *N404NotFound {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r RetrieveSandboxBuildResponse) GetJSON429() *N429RateLimit {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r RetrieveSandboxBuildResponse) GetJSON500() *N500InternalServerError {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r RetrieveSandboxBuildResponse) GetJSON503() *N503ServiceUnavailable {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r RetrieveSandboxBuildResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RetrieveSandboxBuildResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RetrieveSandboxBuildResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RetrieveSandboxBuildResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // ListSandboxGroupCredentialsResponse429Headers the declared response headers of an HTTP 429 response for ListSandboxGroupCredentials
 type ListSandboxGroupCredentialsResponse429Headers struct {
 	RateLimitLimit     *int
@@ -59464,6 +59959,82 @@ func (c *ClientWithResponses) ListSandboxGroupsWithResponse(ctx context.Context,
 		return nil, err
 	}
 	return ParseListSandboxGroupsResponse(rsp)
+}
+
+// CreateSandboxBuildWithBodyWithResponse Create sandbox build
+//
+// Starts converting an OCI image into a sandbox image, and returns the
+// build without waiting for it. Poll the build until it `succeeded` or
+// `failed`, then pass its ID as `buildId` to create a sandbox. A request
+// for a name and image digest the group already has, or is building,
+// returns that build.
+//
+// 400 with `code: invalid_sandbox_group_id` if `sandboxGroupId` is not a
+// well-formed `sbg-` ID, or a message if the image is invalid or its
+// registry can't serve it.
+//
+// 409 with `code: sandbox_group_suspended` if the sandbox group is suspended.
+//
+// 429 if the group already has as many builds pending or running as its
+// limit allows. The message includes the limit.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /sandbox-groups/{sandboxGroupId}/builds (the `CreateSandboxBuild` operationId).
+func (c *ClientWithResponses) CreateSandboxBuildWithBodyWithResponse(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSandboxBuildResponse, error) {
+	rsp, err := c.CreateSandboxBuildWithBody(ctx, sandboxGroupId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateSandboxBuildResponse(rsp)
+}
+
+// CreateSandboxBuildWithResponse Create sandbox build
+//
+// Starts converting an OCI image into a sandbox image, and returns the
+// build without waiting for it. Poll the build until it `succeeded` or
+// `failed`, then pass its ID as `buildId` to create a sandbox. A request
+// for a name and image digest the group already has, or is building,
+// returns that build.
+//
+// 400 with `code: invalid_sandbox_group_id` if `sandboxGroupId` is not a
+// well-formed `sbg-` ID, or a message if the image is invalid or its
+// registry can't serve it.
+//
+// 409 with `code: sandbox_group_suspended` if the sandbox group is suspended.
+//
+// 429 if the group already has as many builds pending or running as its
+// limit allows. The message includes the limit.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /sandbox-groups/{sandboxGroupId}/builds (the `CreateSandboxBuild` operationId).
+func (c *ClientWithResponses) CreateSandboxBuildWithResponse(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, body CreateSandboxBuildJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSandboxBuildResponse, error) {
+	rsp, err := c.CreateSandboxBuild(ctx, sandboxGroupId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateSandboxBuildResponse(rsp)
+}
+
+// RetrieveSandboxBuildWithResponse Retrieve sandbox build
+//
+// One build by ID. A build that belongs to another sandbox group returns
+// 404.
+//
+// 400 with `code: invalid_sandbox_group_id` if `sandboxGroupId` is not a
+// well-formed `sbg-` ID, or `invalid build ID` if `buildId` is not a
+// well-formed `sbb-` ID.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /sandbox-groups/{sandboxGroupId}/builds/{buildId} (the `RetrieveSandboxBuild` operationId).
+func (c *ClientWithResponses) RetrieveSandboxBuildWithResponse(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, buildId externalRef15.BuildId, reqEditors ...RequestEditorFn) (*RetrieveSandboxBuildResponse, error) {
+	rsp, err := c.RetrieveSandboxBuild(ctx, sandboxGroupId, buildId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRetrieveSandboxBuildResponse(rsp)
 }
 
 // ListSandboxGroupCredentialsWithResponse List sandbox group credentials
@@ -79284,6 +79855,231 @@ func ParseListSandboxGroupsResponse(rsp *http.Response) (*ListSandboxGroupsRespo
 	switch {
 	case rsp.StatusCode == 429:
 		var headers ListSandboxGroupsResponse429Headers
+		if values := rsp.Header.Values("RateLimit-Limit"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Limit", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RateLimitLimit = &value
+		}
+		if values := rsp.Header.Values("RateLimit-Remaining"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Remaining", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RateLimitRemaining = &value
+		}
+		if values := rsp.Header.Values("RateLimit-Reset"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Reset", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RateLimitReset = &value
+		}
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseCreateSandboxBuildResponse parses an HTTP response from a CreateSandboxBuildWithResponse call
+func ParseCreateSandboxBuildResponse(rsp *http.Response) (*CreateSandboxBuildResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateSandboxBuildResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest externalRef15.SandboxBuild
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest N400BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest N401Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest N403Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest N404NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest N409Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest N429RateLimit
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest N500InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest N503ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 429:
+		var headers CreateSandboxBuildResponse429Headers
+		if values := rsp.Header.Values("RateLimit-Limit"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Limit", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RateLimitLimit = &value
+		}
+		if values := rsp.Header.Values("RateLimit-Remaining"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Remaining", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RateLimitRemaining = &value
+		}
+		if values := rsp.Header.Values("RateLimit-Reset"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Reset", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RateLimitReset = &value
+		}
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseRetrieveSandboxBuildResponse parses an HTTP response from a RetrieveSandboxBuildWithResponse call
+func ParseRetrieveSandboxBuildResponse(rsp *http.Response) (*RetrieveSandboxBuildResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RetrieveSandboxBuildResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef15.SandboxBuild
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest N400BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest N401Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest N403Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest N404NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest N429RateLimit
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest N500InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest N503ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 429:
+		var headers RetrieveSandboxBuildResponse429Headers
 		if values := rsp.Header.Values("RateLimit-Limit"); len(values) > 0 {
 			var value int
 			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Limit", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {

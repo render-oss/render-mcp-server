@@ -52,6 +52,30 @@ func (e ExecutionType) Valid() bool {
 	}
 }
 
+// Defines values for SandboxBuildStatus.
+const (
+	SandboxBuildStatusFailed    SandboxBuildStatus = "failed"
+	SandboxBuildStatusPending   SandboxBuildStatus = "pending"
+	SandboxBuildStatusRunning   SandboxBuildStatus = "running"
+	SandboxBuildStatusSucceeded SandboxBuildStatus = "succeeded"
+)
+
+// Valid indicates whether the value is a known member of the SandboxBuildStatus enum.
+func (e SandboxBuildStatus) Valid() bool {
+	switch e {
+	case SandboxBuildStatusFailed:
+		return true
+	case SandboxBuildStatusPending:
+		return true
+	case SandboxBuildStatusRunning:
+		return true
+	case SandboxBuildStatusSucceeded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SandboxCredentialInjectionType.
 const (
 	Basic  SandboxCredentialInjectionType = "basic"
@@ -360,6 +384,65 @@ type Sandbox struct {
 	// Example: 86400
 	TimeoutSeconds int `json:"timeoutSeconds"`
 }
+
+// SandboxBuild defines model for sandboxBuild.
+type SandboxBuild struct {
+	CreatedAt time.Time `json:"createdAt"`
+
+	// FailureReason Why the build failed. Null unless `failed`.
+	FailureReason *string `json:"failureReason,omitempty"`
+
+	// FinishedAt When the build succeeded or failed.
+	FinishedAt *time.Time `json:"finishedAt,omitempty"`
+
+	// Id Example: sbb-cph1rs3idesc73a2b2mg
+	Id SandboxBuildId `json:"id"`
+
+	// Name Names the image. Every build of an image shares it.
+	Name string `json:"name"`
+
+	// SandboxGroupId Example: sbg-cph1rs3idesc73a2b2mg
+	SandboxGroupId SandboxGroupId `json:"sandboxGroupId"`
+	Source         struct {
+		// Image Example: python
+		Image string `json:"image"`
+
+		// Reference Example: 3.13
+		Reference string `json:"reference"`
+
+		// Repository Example: docker.io/library
+		Repository string `json:"repository"`
+	} `json:"source"`
+
+	// SourceDigest The image digest the build converts.
+	//
+	// Example: sha256:c19d4a1...
+	SourceDigest string             `json:"sourceDigest"`
+	Status       SandboxBuildStatus `json:"status"`
+}
+
+// SandboxBuildId Example: sbb-cph1rs3idesc73a2b2mg
+type SandboxBuildId = string
+
+// SandboxBuildPOST defines model for sandboxBuildPOST.
+type SandboxBuildPOST struct {
+	// Name Names the image. Every build of an image shares it.
+	Name string `json:"name"`
+
+	// RegistryCredential Pulls `sourceImage` from a private registry. Used for this build only and never stored.
+	RegistryCredential *struct {
+		Password string `json:"password"`
+		Username string `json:"username"`
+	} `json:"registryCredential,omitempty"`
+
+	// SourceImage The image to convert, by tag or digest.
+	//
+	// Example: python:3.13
+	SourceImage string `json:"sourceImage"`
+}
+
+// SandboxBuildStatus defines model for sandboxBuildStatus.
+type SandboxBuildStatus string
 
 // SandboxConnectRequest Optional body when minting a run connect token. `command` is stored on
 // the exec timeline (truncated to 4KB); the full command is still sent
@@ -802,6 +885,9 @@ type SandboxSnapshotStatus string
 
 // SandboxStatus defines model for sandboxStatus.
 type SandboxStatus string
+
+// BuildId Example: sbb-cph1rs3idesc73a2b2mg
+type BuildId = SandboxBuildId
 
 // CredentialId Caller-supplied URL-safe name, unique within the sandbox group. The names
 // `.` and `..` and the prefix `rnd-` are reserved. IDs are case-sensitive.

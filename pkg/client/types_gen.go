@@ -5092,7 +5092,9 @@ type ListSandboxesParams struct {
 	// Limit The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).
 	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
 
-	// Status Filter by sandbox status.
+	// Status Filter by sandbox status. If omitted, returns sandboxes in every status
+	// except `terminated`. To include terminated sandboxes, list `terminated`
+	// explicitly.
 	Status *[]externalRef15.SandboxStatus `form:"status,omitempty" json:"status,omitempty"`
 }
 
@@ -5739,6 +5741,9 @@ type CreateRegistryCredentialJSONRequestBody CreateRegistryCredentialJSONBody
 
 // UpdateRegistryCredentialJSONRequestBody defines body for UpdateRegistryCredential for application/json ContentType.
 type UpdateRegistryCredentialJSONRequestBody UpdateRegistryCredentialJSONBody
+
+// CreateSandboxBuildJSONRequestBody defines body for CreateSandboxBuild for application/json ContentType.
+type CreateSandboxBuildJSONRequestBody = externalRef15.SandboxBuildPOST
 
 // CreateSandboxGroupCredentialJSONRequestBody defines body for CreateSandboxGroupCredential for application/json ContentType.
 type CreateSandboxGroupCredentialJSONRequestBody = externalRef15.SandboxCredentialCreate
