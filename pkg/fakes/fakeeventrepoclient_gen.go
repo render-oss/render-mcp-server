@@ -11,13 +11,8 @@ import (
 type FakeEventRepoClient struct {
 	ListEventsWithResponseStub        func(context.Context, client.ServiceIdParam, *client.ListEventsParams, ...client.RequestEditorFn) (*client.ListEventsResponse, error)
 	listEventsWithResponseMutex       sync.RWMutex
-	listEventsWithResponseArgsForCall []struct {
-		arg1 context.Context
-		arg2 client.ServiceIdParam
-		arg3 *client.ListEventsParams
-		arg4 []client.RequestEditorFn
-	}
-	listEventsWithResponseReturns struct {
+	listEventsWithResponseArgsForCall []FakeEventRepoClientListEventsWithResponseArgs
+	listEventsWithResponseReturns     struct {
 		result1 *client.ListEventsResponse
 		result2 error
 	}
@@ -26,7 +21,16 @@ type FakeEventRepoClient struct {
 		result2 error
 	}
 	invocations      map[string][][]interface{}
+	callOrder        []string
 	invocationsMutex sync.RWMutex
+}
+
+// FakeEventRepoClientListEventsWithResponseArgs holds the arguments of one call to ListEventsWithResponse.
+type FakeEventRepoClientListEventsWithResponseArgs struct {
+	Arg1 context.Context
+	Arg2 client.ServiceIdParam
+	Arg3 *client.ListEventsParams
+	Arg4 []client.RequestEditorFn
 }
 
 func (fake *FakeEventRepoClient) ListEventsWithResponse(arg1 context.Context, arg2 client.ServiceIdParam, arg3 *client.ListEventsParams, arg4 ...client.RequestEditorFn) (*client.ListEventsResponse, error) {
@@ -37,12 +41,7 @@ func (fake *FakeEventRepoClient) ListEventsWithResponse(arg1 context.Context, ar
 	}
 	fake.listEventsWithResponseMutex.Lock()
 	ret, specificReturn := fake.listEventsWithResponseReturnsOnCall[len(fake.listEventsWithResponseArgsForCall)]
-	fake.listEventsWithResponseArgsForCall = append(fake.listEventsWithResponseArgsForCall, struct {
-		arg1 context.Context
-		arg2 client.ServiceIdParam
-		arg3 *client.ListEventsParams
-		arg4 []client.RequestEditorFn
-	}{arg1, arg2, arg3, arg4Copy})
+	fake.listEventsWithResponseArgsForCall = append(fake.listEventsWithResponseArgsForCall, FakeEventRepoClientListEventsWithResponseArgs{arg1, arg2, arg3, arg4Copy})
 	stub := fake.ListEventsWithResponseStub
 	fakeReturns := fake.listEventsWithResponseReturns
 	fake.recordInvocation("ListEventsWithResponse", []interface{}{arg1, arg2, arg3, arg4Copy})
@@ -72,7 +71,15 @@ func (fake *FakeEventRepoClient) ListEventsWithResponseArgsForCall(i int) (conte
 	fake.listEventsWithResponseMutex.RLock()
 	defer fake.listEventsWithResponseMutex.RUnlock()
 	argsForCall := fake.listEventsWithResponseArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+	return argsForCall.Arg1, argsForCall.Arg2, argsForCall.Arg3, argsForCall.Arg4
+}
+
+func (fake *FakeEventRepoClient) ListEventsWithResponseArgs() []FakeEventRepoClientListEventsWithResponseArgs {
+	fake.listEventsWithResponseMutex.RLock()
+	defer fake.listEventsWithResponseMutex.RUnlock()
+	args := make([]FakeEventRepoClientListEventsWithResponseArgs, len(fake.listEventsWithResponseArgsForCall))
+	copy(args, fake.listEventsWithResponseArgsForCall)
+	return args
 }
 
 func (fake *FakeEventRepoClient) ListEventsWithResponseReturns(result1 *client.ListEventsResponse, result2 error) {
@@ -111,9 +118,18 @@ func (fake *FakeEventRepoClient) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
+func (fake *FakeEventRepoClient) CallOrder() []string {
+	fake.invocationsMutex.RLock()
+	defer fake.invocationsMutex.RUnlock()
+	order := make([]string, len(fake.callOrder))
+	copy(order, fake.callOrder)
+	return order
+}
+
 func (fake *FakeEventRepoClient) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
+	fake.callOrder = append(fake.callOrder, key)
 	if fake.invocations == nil {
 		fake.invocations = map[string][][]interface{}{}
 	}

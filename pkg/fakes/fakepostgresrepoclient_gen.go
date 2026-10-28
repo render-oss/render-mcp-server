@@ -12,12 +12,8 @@ import (
 type FakePostgresRepoClient struct {
 	CreatePostgresWithResponseStub        func(context.Context, client.PostgresPOSTInput, ...client.RequestEditorFn) (*client.CreatePostgresResponse, error)
 	createPostgresWithResponseMutex       sync.RWMutex
-	createPostgresWithResponseArgsForCall []struct {
-		arg1 context.Context
-		arg2 client.PostgresPOSTInput
-		arg3 []client.RequestEditorFn
-	}
-	createPostgresWithResponseReturns struct {
+	createPostgresWithResponseArgsForCall []FakePostgresRepoClientCreatePostgresWithResponseArgs
+	createPostgresWithResponseReturns     struct {
 		result1 *client.CreatePostgresResponse
 		result2 error
 	}
@@ -27,12 +23,8 @@ type FakePostgresRepoClient struct {
 	}
 	ListPostgresWithResponseStub        func(context.Context, *client.ListPostgresParams, ...client.RequestEditorFn) (*client.ListPostgresResponse, error)
 	listPostgresWithResponseMutex       sync.RWMutex
-	listPostgresWithResponseArgsForCall []struct {
-		arg1 context.Context
-		arg2 *client.ListPostgresParams
-		arg3 []client.RequestEditorFn
-	}
-	listPostgresWithResponseReturns struct {
+	listPostgresWithResponseArgsForCall []FakePostgresRepoClientListPostgresWithResponseArgs
+	listPostgresWithResponseReturns     struct {
 		result1 *client.ListPostgresResponse
 		result2 error
 	}
@@ -42,12 +34,8 @@ type FakePostgresRepoClient struct {
 	}
 	RestartPostgresStub        func(context.Context, string, ...client.RequestEditorFn) (*http.Response, error)
 	restartPostgresMutex       sync.RWMutex
-	restartPostgresArgsForCall []struct {
-		arg1 context.Context
-		arg2 string
-		arg3 []client.RequestEditorFn
-	}
-	restartPostgresReturns struct {
+	restartPostgresArgsForCall []FakePostgresRepoClientRestartPostgresArgs
+	restartPostgresReturns     struct {
 		result1 *http.Response
 		result2 error
 	}
@@ -57,12 +45,8 @@ type FakePostgresRepoClient struct {
 	}
 	RetrievePostgresConnectionInfoWithResponseStub        func(context.Context, string, ...client.RequestEditorFn) (*client.RetrievePostgresConnectionInfoResponse, error)
 	retrievePostgresConnectionInfoWithResponseMutex       sync.RWMutex
-	retrievePostgresConnectionInfoWithResponseArgsForCall []struct {
-		arg1 context.Context
-		arg2 string
-		arg3 []client.RequestEditorFn
-	}
-	retrievePostgresConnectionInfoWithResponseReturns struct {
+	retrievePostgresConnectionInfoWithResponseArgsForCall []FakePostgresRepoClientRetrievePostgresConnectionInfoWithResponseArgs
+	retrievePostgresConnectionInfoWithResponseReturns     struct {
 		result1 *client.RetrievePostgresConnectionInfoResponse
 		result2 error
 	}
@@ -72,12 +56,8 @@ type FakePostgresRepoClient struct {
 	}
 	RetrievePostgresWithResponseStub        func(context.Context, string, ...client.RequestEditorFn) (*client.RetrievePostgresResponse, error)
 	retrievePostgresWithResponseMutex       sync.RWMutex
-	retrievePostgresWithResponseArgsForCall []struct {
-		arg1 context.Context
-		arg2 string
-		arg3 []client.RequestEditorFn
-	}
-	retrievePostgresWithResponseReturns struct {
+	retrievePostgresWithResponseArgsForCall []FakePostgresRepoClientRetrievePostgresWithResponseArgs
+	retrievePostgresWithResponseReturns     struct {
 		result1 *client.RetrievePostgresResponse
 		result2 error
 	}
@@ -86,20 +66,57 @@ type FakePostgresRepoClient struct {
 		result2 error
 	}
 	invocations      map[string][][]interface{}
+	callOrder        []string
 	invocationsMutex sync.RWMutex
 }
 
+// FakePostgresRepoClientCreatePostgresWithResponseArgs holds the arguments of one call to CreatePostgresWithResponse.
+type FakePostgresRepoClientCreatePostgresWithResponseArgs struct {
+	Arg1 context.Context
+	Arg2 client.PostgresPOSTInput
+	Arg3 []client.RequestEditorFn
+}
+
+// FakePostgresRepoClientListPostgresWithResponseArgs holds the arguments of one call to ListPostgresWithResponse.
+type FakePostgresRepoClientListPostgresWithResponseArgs struct {
+	Arg1 context.Context
+	Arg2 *client.ListPostgresParams
+	Arg3 []client.RequestEditorFn
+}
+
+// FakePostgresRepoClientRestartPostgresArgs holds the arguments of one call to RestartPostgres.
+type FakePostgresRepoClientRestartPostgresArgs struct {
+	Arg1 context.Context
+	Arg2 string
+	Arg3 []client.RequestEditorFn
+}
+
+// FakePostgresRepoClientRetrievePostgresConnectionInfoWithResponseArgs holds the arguments of one call to RetrievePostgresConnectionInfoWithResponse.
+type FakePostgresRepoClientRetrievePostgresConnectionInfoWithResponseArgs struct {
+	Arg1 context.Context
+	Arg2 string
+	Arg3 []client.RequestEditorFn
+}
+
+// FakePostgresRepoClientRetrievePostgresWithResponseArgs holds the arguments of one call to RetrievePostgresWithResponse.
+type FakePostgresRepoClientRetrievePostgresWithResponseArgs struct {
+	Arg1 context.Context
+	Arg2 string
+	Arg3 []client.RequestEditorFn
+}
+
 func (fake *FakePostgresRepoClient) CreatePostgresWithResponse(arg1 context.Context, arg2 client.PostgresPOSTInput, arg3 ...client.RequestEditorFn) (*client.CreatePostgresResponse, error) {
+	var arg3Copy []client.RequestEditorFn
+	if arg3 != nil {
+		arg3Copy = make([]client.RequestEditorFn, len(arg3))
+		copy(arg3Copy, arg3)
+	}
 	fake.createPostgresWithResponseMutex.Lock()
 	ret, specificReturn := fake.createPostgresWithResponseReturnsOnCall[len(fake.createPostgresWithResponseArgsForCall)]
-	fake.createPostgresWithResponseArgsForCall = append(fake.createPostgresWithResponseArgsForCall, struct {
-		arg1 context.Context
-		arg2 client.PostgresPOSTInput
-		arg3 []client.RequestEditorFn
-	}{arg1, arg2, arg3})
+	fake.createPostgresWithResponseArgsForCall = append(fake.createPostgresWithResponseArgsForCall, FakePostgresRepoClientCreatePostgresWithResponseArgs{arg1, arg2, arg3Copy})
 	stub := fake.CreatePostgresWithResponseStub
 	fakeReturns := fake.createPostgresWithResponseReturns
-	fake.recordInvocation("CreatePostgresWithResponse", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("CreatePostgresWithResponse", []interface{}{arg1, arg2, arg3Copy})
 	fake.createPostgresWithResponseMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3...)
@@ -126,7 +143,15 @@ func (fake *FakePostgresRepoClient) CreatePostgresWithResponseArgsForCall(i int)
 	fake.createPostgresWithResponseMutex.RLock()
 	defer fake.createPostgresWithResponseMutex.RUnlock()
 	argsForCall := fake.createPostgresWithResponseArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.Arg1, argsForCall.Arg2, argsForCall.Arg3
+}
+
+func (fake *FakePostgresRepoClient) CreatePostgresWithResponseArgs() []FakePostgresRepoClientCreatePostgresWithResponseArgs {
+	fake.createPostgresWithResponseMutex.RLock()
+	defer fake.createPostgresWithResponseMutex.RUnlock()
+	args := make([]FakePostgresRepoClientCreatePostgresWithResponseArgs, len(fake.createPostgresWithResponseArgsForCall))
+	copy(args, fake.createPostgresWithResponseArgsForCall)
+	return args
 }
 
 func (fake *FakePostgresRepoClient) CreatePostgresWithResponseReturns(result1 *client.CreatePostgresResponse, result2 error) {
@@ -156,16 +181,17 @@ func (fake *FakePostgresRepoClient) CreatePostgresWithResponseReturnsOnCall(i in
 }
 
 func (fake *FakePostgresRepoClient) ListPostgresWithResponse(arg1 context.Context, arg2 *client.ListPostgresParams, arg3 ...client.RequestEditorFn) (*client.ListPostgresResponse, error) {
+	var arg3Copy []client.RequestEditorFn
+	if arg3 != nil {
+		arg3Copy = make([]client.RequestEditorFn, len(arg3))
+		copy(arg3Copy, arg3)
+	}
 	fake.listPostgresWithResponseMutex.Lock()
 	ret, specificReturn := fake.listPostgresWithResponseReturnsOnCall[len(fake.listPostgresWithResponseArgsForCall)]
-	fake.listPostgresWithResponseArgsForCall = append(fake.listPostgresWithResponseArgsForCall, struct {
-		arg1 context.Context
-		arg2 *client.ListPostgresParams
-		arg3 []client.RequestEditorFn
-	}{arg1, arg2, arg3})
+	fake.listPostgresWithResponseArgsForCall = append(fake.listPostgresWithResponseArgsForCall, FakePostgresRepoClientListPostgresWithResponseArgs{arg1, arg2, arg3Copy})
 	stub := fake.ListPostgresWithResponseStub
 	fakeReturns := fake.listPostgresWithResponseReturns
-	fake.recordInvocation("ListPostgresWithResponse", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("ListPostgresWithResponse", []interface{}{arg1, arg2, arg3Copy})
 	fake.listPostgresWithResponseMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3...)
@@ -192,7 +218,15 @@ func (fake *FakePostgresRepoClient) ListPostgresWithResponseArgsForCall(i int) (
 	fake.listPostgresWithResponseMutex.RLock()
 	defer fake.listPostgresWithResponseMutex.RUnlock()
 	argsForCall := fake.listPostgresWithResponseArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.Arg1, argsForCall.Arg2, argsForCall.Arg3
+}
+
+func (fake *FakePostgresRepoClient) ListPostgresWithResponseArgs() []FakePostgresRepoClientListPostgresWithResponseArgs {
+	fake.listPostgresWithResponseMutex.RLock()
+	defer fake.listPostgresWithResponseMutex.RUnlock()
+	args := make([]FakePostgresRepoClientListPostgresWithResponseArgs, len(fake.listPostgresWithResponseArgsForCall))
+	copy(args, fake.listPostgresWithResponseArgsForCall)
+	return args
 }
 
 func (fake *FakePostgresRepoClient) ListPostgresWithResponseReturns(result1 *client.ListPostgresResponse, result2 error) {
@@ -222,16 +256,17 @@ func (fake *FakePostgresRepoClient) ListPostgresWithResponseReturnsOnCall(i int,
 }
 
 func (fake *FakePostgresRepoClient) RestartPostgres(arg1 context.Context, arg2 string, arg3 ...client.RequestEditorFn) (*http.Response, error) {
+	var arg3Copy []client.RequestEditorFn
+	if arg3 != nil {
+		arg3Copy = make([]client.RequestEditorFn, len(arg3))
+		copy(arg3Copy, arg3)
+	}
 	fake.restartPostgresMutex.Lock()
 	ret, specificReturn := fake.restartPostgresReturnsOnCall[len(fake.restartPostgresArgsForCall)]
-	fake.restartPostgresArgsForCall = append(fake.restartPostgresArgsForCall, struct {
-		arg1 context.Context
-		arg2 string
-		arg3 []client.RequestEditorFn
-	}{arg1, arg2, arg3})
+	fake.restartPostgresArgsForCall = append(fake.restartPostgresArgsForCall, FakePostgresRepoClientRestartPostgresArgs{arg1, arg2, arg3Copy})
 	stub := fake.RestartPostgresStub
 	fakeReturns := fake.restartPostgresReturns
-	fake.recordInvocation("RestartPostgres", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("RestartPostgres", []interface{}{arg1, arg2, arg3Copy})
 	fake.restartPostgresMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3...)
@@ -258,7 +293,15 @@ func (fake *FakePostgresRepoClient) RestartPostgresArgsForCall(i int) (context.C
 	fake.restartPostgresMutex.RLock()
 	defer fake.restartPostgresMutex.RUnlock()
 	argsForCall := fake.restartPostgresArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.Arg1, argsForCall.Arg2, argsForCall.Arg3
+}
+
+func (fake *FakePostgresRepoClient) RestartPostgresArgs() []FakePostgresRepoClientRestartPostgresArgs {
+	fake.restartPostgresMutex.RLock()
+	defer fake.restartPostgresMutex.RUnlock()
+	args := make([]FakePostgresRepoClientRestartPostgresArgs, len(fake.restartPostgresArgsForCall))
+	copy(args, fake.restartPostgresArgsForCall)
+	return args
 }
 
 func (fake *FakePostgresRepoClient) RestartPostgresReturns(result1 *http.Response, result2 error) {
@@ -288,16 +331,17 @@ func (fake *FakePostgresRepoClient) RestartPostgresReturnsOnCall(i int, result1 
 }
 
 func (fake *FakePostgresRepoClient) RetrievePostgresConnectionInfoWithResponse(arg1 context.Context, arg2 string, arg3 ...client.RequestEditorFn) (*client.RetrievePostgresConnectionInfoResponse, error) {
+	var arg3Copy []client.RequestEditorFn
+	if arg3 != nil {
+		arg3Copy = make([]client.RequestEditorFn, len(arg3))
+		copy(arg3Copy, arg3)
+	}
 	fake.retrievePostgresConnectionInfoWithResponseMutex.Lock()
 	ret, specificReturn := fake.retrievePostgresConnectionInfoWithResponseReturnsOnCall[len(fake.retrievePostgresConnectionInfoWithResponseArgsForCall)]
-	fake.retrievePostgresConnectionInfoWithResponseArgsForCall = append(fake.retrievePostgresConnectionInfoWithResponseArgsForCall, struct {
-		arg1 context.Context
-		arg2 string
-		arg3 []client.RequestEditorFn
-	}{arg1, arg2, arg3})
+	fake.retrievePostgresConnectionInfoWithResponseArgsForCall = append(fake.retrievePostgresConnectionInfoWithResponseArgsForCall, FakePostgresRepoClientRetrievePostgresConnectionInfoWithResponseArgs{arg1, arg2, arg3Copy})
 	stub := fake.RetrievePostgresConnectionInfoWithResponseStub
 	fakeReturns := fake.retrievePostgresConnectionInfoWithResponseReturns
-	fake.recordInvocation("RetrievePostgresConnectionInfoWithResponse", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("RetrievePostgresConnectionInfoWithResponse", []interface{}{arg1, arg2, arg3Copy})
 	fake.retrievePostgresConnectionInfoWithResponseMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3...)
@@ -324,7 +368,15 @@ func (fake *FakePostgresRepoClient) RetrievePostgresConnectionInfoWithResponseAr
 	fake.retrievePostgresConnectionInfoWithResponseMutex.RLock()
 	defer fake.retrievePostgresConnectionInfoWithResponseMutex.RUnlock()
 	argsForCall := fake.retrievePostgresConnectionInfoWithResponseArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.Arg1, argsForCall.Arg2, argsForCall.Arg3
+}
+
+func (fake *FakePostgresRepoClient) RetrievePostgresConnectionInfoWithResponseArgs() []FakePostgresRepoClientRetrievePostgresConnectionInfoWithResponseArgs {
+	fake.retrievePostgresConnectionInfoWithResponseMutex.RLock()
+	defer fake.retrievePostgresConnectionInfoWithResponseMutex.RUnlock()
+	args := make([]FakePostgresRepoClientRetrievePostgresConnectionInfoWithResponseArgs, len(fake.retrievePostgresConnectionInfoWithResponseArgsForCall))
+	copy(args, fake.retrievePostgresConnectionInfoWithResponseArgsForCall)
+	return args
 }
 
 func (fake *FakePostgresRepoClient) RetrievePostgresConnectionInfoWithResponseReturns(result1 *client.RetrievePostgresConnectionInfoResponse, result2 error) {
@@ -354,16 +406,17 @@ func (fake *FakePostgresRepoClient) RetrievePostgresConnectionInfoWithResponseRe
 }
 
 func (fake *FakePostgresRepoClient) RetrievePostgresWithResponse(arg1 context.Context, arg2 string, arg3 ...client.RequestEditorFn) (*client.RetrievePostgresResponse, error) {
+	var arg3Copy []client.RequestEditorFn
+	if arg3 != nil {
+		arg3Copy = make([]client.RequestEditorFn, len(arg3))
+		copy(arg3Copy, arg3)
+	}
 	fake.retrievePostgresWithResponseMutex.Lock()
 	ret, specificReturn := fake.retrievePostgresWithResponseReturnsOnCall[len(fake.retrievePostgresWithResponseArgsForCall)]
-	fake.retrievePostgresWithResponseArgsForCall = append(fake.retrievePostgresWithResponseArgsForCall, struct {
-		arg1 context.Context
-		arg2 string
-		arg3 []client.RequestEditorFn
-	}{arg1, arg2, arg3})
+	fake.retrievePostgresWithResponseArgsForCall = append(fake.retrievePostgresWithResponseArgsForCall, FakePostgresRepoClientRetrievePostgresWithResponseArgs{arg1, arg2, arg3Copy})
 	stub := fake.RetrievePostgresWithResponseStub
 	fakeReturns := fake.retrievePostgresWithResponseReturns
-	fake.recordInvocation("RetrievePostgresWithResponse", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("RetrievePostgresWithResponse", []interface{}{arg1, arg2, arg3Copy})
 	fake.retrievePostgresWithResponseMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3...)
@@ -390,7 +443,15 @@ func (fake *FakePostgresRepoClient) RetrievePostgresWithResponseArgsForCall(i in
 	fake.retrievePostgresWithResponseMutex.RLock()
 	defer fake.retrievePostgresWithResponseMutex.RUnlock()
 	argsForCall := fake.retrievePostgresWithResponseArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.Arg1, argsForCall.Arg2, argsForCall.Arg3
+}
+
+func (fake *FakePostgresRepoClient) RetrievePostgresWithResponseArgs() []FakePostgresRepoClientRetrievePostgresWithResponseArgs {
+	fake.retrievePostgresWithResponseMutex.RLock()
+	defer fake.retrievePostgresWithResponseMutex.RUnlock()
+	args := make([]FakePostgresRepoClientRetrievePostgresWithResponseArgs, len(fake.retrievePostgresWithResponseArgsForCall))
+	copy(args, fake.retrievePostgresWithResponseArgsForCall)
+	return args
 }
 
 func (fake *FakePostgresRepoClient) RetrievePostgresWithResponseReturns(result1 *client.RetrievePostgresResponse, result2 error) {
@@ -422,16 +483,6 @@ func (fake *FakePostgresRepoClient) RetrievePostgresWithResponseReturnsOnCall(i 
 func (fake *FakePostgresRepoClient) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.createPostgresWithResponseMutex.RLock()
-	defer fake.createPostgresWithResponseMutex.RUnlock()
-	fake.listPostgresWithResponseMutex.RLock()
-	defer fake.listPostgresWithResponseMutex.RUnlock()
-	fake.restartPostgresMutex.RLock()
-	defer fake.restartPostgresMutex.RUnlock()
-	fake.retrievePostgresConnectionInfoWithResponseMutex.RLock()
-	defer fake.retrievePostgresConnectionInfoWithResponseMutex.RUnlock()
-	fake.retrievePostgresWithResponseMutex.RLock()
-	defer fake.retrievePostgresWithResponseMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
@@ -439,9 +490,18 @@ func (fake *FakePostgresRepoClient) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
+func (fake *FakePostgresRepoClient) CallOrder() []string {
+	fake.invocationsMutex.RLock()
+	defer fake.invocationsMutex.RUnlock()
+	order := make([]string, len(fake.callOrder))
+	copy(order, fake.callOrder)
+	return order
+}
+
 func (fake *FakePostgresRepoClient) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
+	fake.callOrder = append(fake.callOrder, key)
 	if fake.invocations == nil {
 		fake.invocations = map[string][][]interface{}{}
 	}

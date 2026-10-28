@@ -12,7 +12,6 @@ import (
 type keyValueRepoClient interface {
 	ListKeyValueWithResponse(ctx context.Context, params *client.ListKeyValueParams, reqEditors ...client.RequestEditorFn) (*client.ListKeyValueResponse, error)
 	RetrieveKeyValueWithResponse(ctx context.Context, id string, reqEditors ...client.RequestEditorFn) (*client.RetrieveKeyValueResponse, error)
-	RetrieveKeyValueConnectionInfoWithResponse(ctx context.Context, id string, reqEditors ...client.RequestEditorFn) (*client.RetrieveKeyValueConnectionInfoResponse, error)
 	CreateKeyValueWithResponse(ctx context.Context, body client.KeyValuePOSTInput, reqEditors ...client.RequestEditorFn) (*client.CreateKeyValueResponse, error)
 }
 

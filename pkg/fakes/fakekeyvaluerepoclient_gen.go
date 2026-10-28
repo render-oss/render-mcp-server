@@ -11,12 +11,8 @@ import (
 type FakeKeyValueRepoClient struct {
 	CreateKeyValueWithResponseStub        func(context.Context, client.KeyValuePOSTInput, ...client.RequestEditorFn) (*client.CreateKeyValueResponse, error)
 	createKeyValueWithResponseMutex       sync.RWMutex
-	createKeyValueWithResponseArgsForCall []struct {
-		arg1 context.Context
-		arg2 client.KeyValuePOSTInput
-		arg3 []client.RequestEditorFn
-	}
-	createKeyValueWithResponseReturns struct {
+	createKeyValueWithResponseArgsForCall []FakeKeyValueRepoClientCreateKeyValueWithResponseArgs
+	createKeyValueWithResponseReturns     struct {
 		result1 *client.CreateKeyValueResponse
 		result2 error
 	}
@@ -26,12 +22,8 @@ type FakeKeyValueRepoClient struct {
 	}
 	ListKeyValueWithResponseStub        func(context.Context, *client.ListKeyValueParams, ...client.RequestEditorFn) (*client.ListKeyValueResponse, error)
 	listKeyValueWithResponseMutex       sync.RWMutex
-	listKeyValueWithResponseArgsForCall []struct {
-		arg1 context.Context
-		arg2 *client.ListKeyValueParams
-		arg3 []client.RequestEditorFn
-	}
-	listKeyValueWithResponseReturns struct {
+	listKeyValueWithResponseArgsForCall []FakeKeyValueRepoClientListKeyValueWithResponseArgs
+	listKeyValueWithResponseReturns     struct {
 		result1 *client.ListKeyValueResponse
 		result2 error
 	}
@@ -39,29 +31,10 @@ type FakeKeyValueRepoClient struct {
 		result1 *client.ListKeyValueResponse
 		result2 error
 	}
-	RetrieveKeyValueConnectionInfoWithResponseStub        func(context.Context, string, ...client.RequestEditorFn) (*client.RetrieveKeyValueConnectionInfoResponse, error)
-	retrieveKeyValueConnectionInfoWithResponseMutex       sync.RWMutex
-	retrieveKeyValueConnectionInfoWithResponseArgsForCall []struct {
-		arg1 context.Context
-		arg2 string
-		arg3 []client.RequestEditorFn
-	}
-	retrieveKeyValueConnectionInfoWithResponseReturns struct {
-		result1 *client.RetrieveKeyValueConnectionInfoResponse
-		result2 error
-	}
-	retrieveKeyValueConnectionInfoWithResponseReturnsOnCall map[int]struct {
-		result1 *client.RetrieveKeyValueConnectionInfoResponse
-		result2 error
-	}
 	RetrieveKeyValueWithResponseStub        func(context.Context, string, ...client.RequestEditorFn) (*client.RetrieveKeyValueResponse, error)
 	retrieveKeyValueWithResponseMutex       sync.RWMutex
-	retrieveKeyValueWithResponseArgsForCall []struct {
-		arg1 context.Context
-		arg2 string
-		arg3 []client.RequestEditorFn
-	}
-	retrieveKeyValueWithResponseReturns struct {
+	retrieveKeyValueWithResponseArgsForCall []FakeKeyValueRepoClientRetrieveKeyValueWithResponseArgs
+	retrieveKeyValueWithResponseReturns     struct {
 		result1 *client.RetrieveKeyValueResponse
 		result2 error
 	}
@@ -70,20 +43,43 @@ type FakeKeyValueRepoClient struct {
 		result2 error
 	}
 	invocations      map[string][][]interface{}
+	callOrder        []string
 	invocationsMutex sync.RWMutex
 }
 
+// FakeKeyValueRepoClientCreateKeyValueWithResponseArgs holds the arguments of one call to CreateKeyValueWithResponse.
+type FakeKeyValueRepoClientCreateKeyValueWithResponseArgs struct {
+	Arg1 context.Context
+	Arg2 client.KeyValuePOSTInput
+	Arg3 []client.RequestEditorFn
+}
+
+// FakeKeyValueRepoClientListKeyValueWithResponseArgs holds the arguments of one call to ListKeyValueWithResponse.
+type FakeKeyValueRepoClientListKeyValueWithResponseArgs struct {
+	Arg1 context.Context
+	Arg2 *client.ListKeyValueParams
+	Arg3 []client.RequestEditorFn
+}
+
+// FakeKeyValueRepoClientRetrieveKeyValueWithResponseArgs holds the arguments of one call to RetrieveKeyValueWithResponse.
+type FakeKeyValueRepoClientRetrieveKeyValueWithResponseArgs struct {
+	Arg1 context.Context
+	Arg2 string
+	Arg3 []client.RequestEditorFn
+}
+
 func (fake *FakeKeyValueRepoClient) CreateKeyValueWithResponse(arg1 context.Context, arg2 client.KeyValuePOSTInput, arg3 ...client.RequestEditorFn) (*client.CreateKeyValueResponse, error) {
+	var arg3Copy []client.RequestEditorFn
+	if arg3 != nil {
+		arg3Copy = make([]client.RequestEditorFn, len(arg3))
+		copy(arg3Copy, arg3)
+	}
 	fake.createKeyValueWithResponseMutex.Lock()
 	ret, specificReturn := fake.createKeyValueWithResponseReturnsOnCall[len(fake.createKeyValueWithResponseArgsForCall)]
-	fake.createKeyValueWithResponseArgsForCall = append(fake.createKeyValueWithResponseArgsForCall, struct {
-		arg1 context.Context
-		arg2 client.KeyValuePOSTInput
-		arg3 []client.RequestEditorFn
-	}{arg1, arg2, arg3})
+	fake.createKeyValueWithResponseArgsForCall = append(fake.createKeyValueWithResponseArgsForCall, FakeKeyValueRepoClientCreateKeyValueWithResponseArgs{arg1, arg2, arg3Copy})
 	stub := fake.CreateKeyValueWithResponseStub
 	fakeReturns := fake.createKeyValueWithResponseReturns
-	fake.recordInvocation("CreateKeyValueWithResponse", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("CreateKeyValueWithResponse", []interface{}{arg1, arg2, arg3Copy})
 	fake.createKeyValueWithResponseMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3...)
@@ -110,7 +106,15 @@ func (fake *FakeKeyValueRepoClient) CreateKeyValueWithResponseArgsForCall(i int)
 	fake.createKeyValueWithResponseMutex.RLock()
 	defer fake.createKeyValueWithResponseMutex.RUnlock()
 	argsForCall := fake.createKeyValueWithResponseArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.Arg1, argsForCall.Arg2, argsForCall.Arg3
+}
+
+func (fake *FakeKeyValueRepoClient) CreateKeyValueWithResponseArgs() []FakeKeyValueRepoClientCreateKeyValueWithResponseArgs {
+	fake.createKeyValueWithResponseMutex.RLock()
+	defer fake.createKeyValueWithResponseMutex.RUnlock()
+	args := make([]FakeKeyValueRepoClientCreateKeyValueWithResponseArgs, len(fake.createKeyValueWithResponseArgsForCall))
+	copy(args, fake.createKeyValueWithResponseArgsForCall)
+	return args
 }
 
 func (fake *FakeKeyValueRepoClient) CreateKeyValueWithResponseReturns(result1 *client.CreateKeyValueResponse, result2 error) {
@@ -140,16 +144,17 @@ func (fake *FakeKeyValueRepoClient) CreateKeyValueWithResponseReturnsOnCall(i in
 }
 
 func (fake *FakeKeyValueRepoClient) ListKeyValueWithResponse(arg1 context.Context, arg2 *client.ListKeyValueParams, arg3 ...client.RequestEditorFn) (*client.ListKeyValueResponse, error) {
+	var arg3Copy []client.RequestEditorFn
+	if arg3 != nil {
+		arg3Copy = make([]client.RequestEditorFn, len(arg3))
+		copy(arg3Copy, arg3)
+	}
 	fake.listKeyValueWithResponseMutex.Lock()
 	ret, specificReturn := fake.listKeyValueWithResponseReturnsOnCall[len(fake.listKeyValueWithResponseArgsForCall)]
-	fake.listKeyValueWithResponseArgsForCall = append(fake.listKeyValueWithResponseArgsForCall, struct {
-		arg1 context.Context
-		arg2 *client.ListKeyValueParams
-		arg3 []client.RequestEditorFn
-	}{arg1, arg2, arg3})
+	fake.listKeyValueWithResponseArgsForCall = append(fake.listKeyValueWithResponseArgsForCall, FakeKeyValueRepoClientListKeyValueWithResponseArgs{arg1, arg2, arg3Copy})
 	stub := fake.ListKeyValueWithResponseStub
 	fakeReturns := fake.listKeyValueWithResponseReturns
-	fake.recordInvocation("ListKeyValueWithResponse", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("ListKeyValueWithResponse", []interface{}{arg1, arg2, arg3Copy})
 	fake.listKeyValueWithResponseMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3...)
@@ -176,7 +181,15 @@ func (fake *FakeKeyValueRepoClient) ListKeyValueWithResponseArgsForCall(i int) (
 	fake.listKeyValueWithResponseMutex.RLock()
 	defer fake.listKeyValueWithResponseMutex.RUnlock()
 	argsForCall := fake.listKeyValueWithResponseArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.Arg1, argsForCall.Arg2, argsForCall.Arg3
+}
+
+func (fake *FakeKeyValueRepoClient) ListKeyValueWithResponseArgs() []FakeKeyValueRepoClientListKeyValueWithResponseArgs {
+	fake.listKeyValueWithResponseMutex.RLock()
+	defer fake.listKeyValueWithResponseMutex.RUnlock()
+	args := make([]FakeKeyValueRepoClientListKeyValueWithResponseArgs, len(fake.listKeyValueWithResponseArgsForCall))
+	copy(args, fake.listKeyValueWithResponseArgsForCall)
+	return args
 }
 
 func (fake *FakeKeyValueRepoClient) ListKeyValueWithResponseReturns(result1 *client.ListKeyValueResponse, result2 error) {
@@ -205,83 +218,18 @@ func (fake *FakeKeyValueRepoClient) ListKeyValueWithResponseReturnsOnCall(i int,
 	}{result1, result2}
 }
 
-func (fake *FakeKeyValueRepoClient) RetrieveKeyValueConnectionInfoWithResponse(arg1 context.Context, arg2 string, arg3 ...client.RequestEditorFn) (*client.RetrieveKeyValueConnectionInfoResponse, error) {
-	fake.retrieveKeyValueConnectionInfoWithResponseMutex.Lock()
-	ret, specificReturn := fake.retrieveKeyValueConnectionInfoWithResponseReturnsOnCall[len(fake.retrieveKeyValueConnectionInfoWithResponseArgsForCall)]
-	fake.retrieveKeyValueConnectionInfoWithResponseArgsForCall = append(fake.retrieveKeyValueConnectionInfoWithResponseArgsForCall, struct {
-		arg1 context.Context
-		arg2 string
-		arg3 []client.RequestEditorFn
-	}{arg1, arg2, arg3})
-	stub := fake.RetrieveKeyValueConnectionInfoWithResponseStub
-	fakeReturns := fake.retrieveKeyValueConnectionInfoWithResponseReturns
-	fake.recordInvocation("RetrieveKeyValueConnectionInfoWithResponse", []interface{}{arg1, arg2, arg3})
-	fake.retrieveKeyValueConnectionInfoWithResponseMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2, arg3...)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *FakeKeyValueRepoClient) RetrieveKeyValueConnectionInfoWithResponseCallCount() int {
-	fake.retrieveKeyValueConnectionInfoWithResponseMutex.RLock()
-	defer fake.retrieveKeyValueConnectionInfoWithResponseMutex.RUnlock()
-	return len(fake.retrieveKeyValueConnectionInfoWithResponseArgsForCall)
-}
-
-func (fake *FakeKeyValueRepoClient) RetrieveKeyValueConnectionInfoWithResponseCalls(stub func(context.Context, string, ...client.RequestEditorFn) (*client.RetrieveKeyValueConnectionInfoResponse, error)) {
-	fake.retrieveKeyValueConnectionInfoWithResponseMutex.Lock()
-	defer fake.retrieveKeyValueConnectionInfoWithResponseMutex.Unlock()
-	fake.RetrieveKeyValueConnectionInfoWithResponseStub = stub
-}
-
-func (fake *FakeKeyValueRepoClient) RetrieveKeyValueConnectionInfoWithResponseArgsForCall(i int) (context.Context, string, []client.RequestEditorFn) {
-	fake.retrieveKeyValueConnectionInfoWithResponseMutex.RLock()
-	defer fake.retrieveKeyValueConnectionInfoWithResponseMutex.RUnlock()
-	argsForCall := fake.retrieveKeyValueConnectionInfoWithResponseArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
-}
-
-func (fake *FakeKeyValueRepoClient) RetrieveKeyValueConnectionInfoWithResponseReturns(result1 *client.RetrieveKeyValueConnectionInfoResponse, result2 error) {
-	fake.retrieveKeyValueConnectionInfoWithResponseMutex.Lock()
-	defer fake.retrieveKeyValueConnectionInfoWithResponseMutex.Unlock()
-	fake.RetrieveKeyValueConnectionInfoWithResponseStub = nil
-	fake.retrieveKeyValueConnectionInfoWithResponseReturns = struct {
-		result1 *client.RetrieveKeyValueConnectionInfoResponse
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeKeyValueRepoClient) RetrieveKeyValueConnectionInfoWithResponseReturnsOnCall(i int, result1 *client.RetrieveKeyValueConnectionInfoResponse, result2 error) {
-	fake.retrieveKeyValueConnectionInfoWithResponseMutex.Lock()
-	defer fake.retrieveKeyValueConnectionInfoWithResponseMutex.Unlock()
-	fake.RetrieveKeyValueConnectionInfoWithResponseStub = nil
-	if fake.retrieveKeyValueConnectionInfoWithResponseReturnsOnCall == nil {
-		fake.retrieveKeyValueConnectionInfoWithResponseReturnsOnCall = make(map[int]struct {
-			result1 *client.RetrieveKeyValueConnectionInfoResponse
-			result2 error
-		})
-	}
-	fake.retrieveKeyValueConnectionInfoWithResponseReturnsOnCall[i] = struct {
-		result1 *client.RetrieveKeyValueConnectionInfoResponse
-		result2 error
-	}{result1, result2}
-}
-
 func (fake *FakeKeyValueRepoClient) RetrieveKeyValueWithResponse(arg1 context.Context, arg2 string, arg3 ...client.RequestEditorFn) (*client.RetrieveKeyValueResponse, error) {
+	var arg3Copy []client.RequestEditorFn
+	if arg3 != nil {
+		arg3Copy = make([]client.RequestEditorFn, len(arg3))
+		copy(arg3Copy, arg3)
+	}
 	fake.retrieveKeyValueWithResponseMutex.Lock()
 	ret, specificReturn := fake.retrieveKeyValueWithResponseReturnsOnCall[len(fake.retrieveKeyValueWithResponseArgsForCall)]
-	fake.retrieveKeyValueWithResponseArgsForCall = append(fake.retrieveKeyValueWithResponseArgsForCall, struct {
-		arg1 context.Context
-		arg2 string
-		arg3 []client.RequestEditorFn
-	}{arg1, arg2, arg3})
+	fake.retrieveKeyValueWithResponseArgsForCall = append(fake.retrieveKeyValueWithResponseArgsForCall, FakeKeyValueRepoClientRetrieveKeyValueWithResponseArgs{arg1, arg2, arg3Copy})
 	stub := fake.RetrieveKeyValueWithResponseStub
 	fakeReturns := fake.retrieveKeyValueWithResponseReturns
-	fake.recordInvocation("RetrieveKeyValueWithResponse", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("RetrieveKeyValueWithResponse", []interface{}{arg1, arg2, arg3Copy})
 	fake.retrieveKeyValueWithResponseMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3...)
@@ -308,7 +256,15 @@ func (fake *FakeKeyValueRepoClient) RetrieveKeyValueWithResponseArgsForCall(i in
 	fake.retrieveKeyValueWithResponseMutex.RLock()
 	defer fake.retrieveKeyValueWithResponseMutex.RUnlock()
 	argsForCall := fake.retrieveKeyValueWithResponseArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.Arg1, argsForCall.Arg2, argsForCall.Arg3
+}
+
+func (fake *FakeKeyValueRepoClient) RetrieveKeyValueWithResponseArgs() []FakeKeyValueRepoClientRetrieveKeyValueWithResponseArgs {
+	fake.retrieveKeyValueWithResponseMutex.RLock()
+	defer fake.retrieveKeyValueWithResponseMutex.RUnlock()
+	args := make([]FakeKeyValueRepoClientRetrieveKeyValueWithResponseArgs, len(fake.retrieveKeyValueWithResponseArgsForCall))
+	copy(args, fake.retrieveKeyValueWithResponseArgsForCall)
+	return args
 }
 
 func (fake *FakeKeyValueRepoClient) RetrieveKeyValueWithResponseReturns(result1 *client.RetrieveKeyValueResponse, result2 error) {
@@ -340,14 +296,6 @@ func (fake *FakeKeyValueRepoClient) RetrieveKeyValueWithResponseReturnsOnCall(i 
 func (fake *FakeKeyValueRepoClient) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.createKeyValueWithResponseMutex.RLock()
-	defer fake.createKeyValueWithResponseMutex.RUnlock()
-	fake.listKeyValueWithResponseMutex.RLock()
-	defer fake.listKeyValueWithResponseMutex.RUnlock()
-	fake.retrieveKeyValueConnectionInfoWithResponseMutex.RLock()
-	defer fake.retrieveKeyValueConnectionInfoWithResponseMutex.RUnlock()
-	fake.retrieveKeyValueWithResponseMutex.RLock()
-	defer fake.retrieveKeyValueWithResponseMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
@@ -355,9 +303,18 @@ func (fake *FakeKeyValueRepoClient) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
+func (fake *FakeKeyValueRepoClient) CallOrder() []string {
+	fake.invocationsMutex.RLock()
+	defer fake.invocationsMutex.RUnlock()
+	order := make([]string, len(fake.callOrder))
+	copy(order, fake.callOrder)
+	return order
+}
+
 func (fake *FakeKeyValueRepoClient) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
+	fake.callOrder = append(fake.callOrder, key)
 	if fake.invocations == nil {
 		fake.invocations = map[string][][]interface{}{}
 	}
