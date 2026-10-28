@@ -23,20 +23,83 @@ const planningOutcomeGuidance = "Read planningOutcome to determine the next step
 	"Blueprint ID to retry. Do not approve a failed plan, even if a sync is present. " +
 	"If planningOutcome is \"no_changes\", there are no infrastructure changes to approve. " +
 	"If planningOutcome is \"planned\", sync contains the planned infrastructure changes. " +
-	"Summarize those changes for the user, or offer sync.dashboardUrl for review. If " +
-	"sync.requiredManualEnvVars lists environment variables, ask the user for each value. " +
-	"To apply the changes, call approve_blueprint with the Blueprint ID and any supplied " +
-	"values in manualEnvVars. Never invent values. " +
-	"If the user prefers to keep secret values outside the agent context, they can supply " +
-	"manualEnvVars directly through POST /v1/blueprints/{blueprintId}/approve, or open " +
-	"sync.dashboardUrl, approve the sync, and then configure the values on each service’s " +
-	"Environment page. With the Dashboard option, initial deployments may fail until the " +
-	"required values are set."
+	"Summarize those changes for the user, or offer sync.dashboardUrl for review. " +
+	"To apply the changes, call approve_blueprint with the Blueprint ID and follow its " +
+	"guidance for supplying any required environment variable values."
 
+// Tools returns Blueprint tools that do not require workspace context.
 func Tools(c *client.ClientWithResponses) []server.ServerTool {
 	repo := NewRepo(c)
 	return []server.ServerTool{
+		approveBlueprint(repo),
+	}
+}
+
+// WorkspaceScopedTools returns Blueprint tools that require workspace context.
+func WorkspaceScopedTools(c *client.ClientWithResponses) []server.ServerTool {
+	repo := NewRepo(c)
+	return []server.ServerTool{
 		createBlueprint(repo),
+	}
+}
+
+func approveBlueprint(repo *Repo) server.ServerTool {
+	return server.ServerTool{
+		Tool: mcp.NewTool("approve_blueprint",
+			mcp.WithDescription("This tool is in public alpha (early access). Access to this tool and its contract are subject to change. "+
+				"Approve and apply the Blueprint's newest planned sync after confirming that planning succeeded. "+
+				"Approval can update existing resources. After the first approval, Git pushes apply changes automatically "+
+				"when autoSync is enabled. Manually requested plans require approval even when autoSync is enabled. "+
+				"Supply a user-provided value in manualEnvVars for every entry in sync.requiredManualEnvVars. "+
+				"Use values the user has already supplied and ask only for missing values. Never invent a value. "+
+				"These values appear as plaintext in the agent context. If the user prefers to keep secrets outside "+
+				"that context, explain that they can supply manualEnvVars directly through "+
+				"POST /v1/blueprints/{blueprintId}/approve, or approve the sync at dashboardUrl and then set values "+
+				"on each service's Environment page. For the Dashboard option, explain that initial deployments "+
+				"may fail until the values are set. The tool returns before the sync and deployments finish. "+
+				"Report the returned sync state and share dashboardUrl so the user can track progress in the Render Dashboard."),
+			mcp.WithToolAnnotation(mcp.ToolAnnotation{
+				Title:           "Approve Blueprint sync",
+				ReadOnlyHint:    new(false),
+				DestructiveHint: new(true),
+				IdempotentHint:  new(false),
+				OpenWorldHint:   new(true),
+			}),
+			mcp.WithString("blueprintId",
+				mcp.Required(),
+				mcp.Description("Specify the Blueprint ID, which starts with exs-. Use the Blueprint ID, not a sync ID."),
+			),
+			mcp.WithArray("manualEnvVars",
+				mcp.Description("Provide values for the environment variables listed in sync.requiredManualEnvVars."),
+				mcp.Items(map[string]any{
+					"type":                 "object",
+					"additionalProperties": false,
+					"required":             []string{"serviceType", "serviceName", "key", "value"},
+					"properties": map[string]any{
+						"serviceType": map[string]any{"type": "string", "enum": manualEnvVarServiceTypes(), "description": "Use the resource type from the corresponding requiredManualEnvVars entry."},
+						"serviceName": map[string]any{"type": "string", "description": "Use the resource name from the corresponding requiredManualEnvVars entry."},
+						"key":         map[string]any{"type": "string", "description": "Use the environment variable key from the corresponding requiredManualEnvVars entry."},
+						"value":       map[string]any{"type": "string", "description": "Provide the exact environment variable value. An empty string is allowed."},
+					},
+				}),
+			),
+		),
+		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			blueprintID, input, err := validateApproveBlueprintParams(request)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			response, err := repo.ApproveBlueprint(ctx, blueprintID, input)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			responseJSON, err := json.Marshal(response)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			return mcp.NewToolResultText(string(responseJSON)), nil
+		},
 	}
 }
 

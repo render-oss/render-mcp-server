@@ -6,9 +6,21 @@ import (
 	"sync"
 
 	"github.com/render-oss/render-mcp-server/pkg/client"
+	clienta "github.com/render-oss/render-mcp-server/pkg/client/blueprints"
 )
 
 type FakeBlueprintRepoClient struct {
+	ApproveBlueprintWithResponseStub        func(context.Context, clienta.BlueprintId, client.ApproveBlueprintJSONRequestBody, ...client.RequestEditorFn) (*client.ApproveBlueprintResponse, error)
+	approveBlueprintWithResponseMutex       sync.RWMutex
+	approveBlueprintWithResponseArgsForCall []FakeBlueprintRepoClientApproveBlueprintWithResponseArgs
+	approveBlueprintWithResponseReturns     struct {
+		result1 *client.ApproveBlueprintResponse
+		result2 error
+	}
+	approveBlueprintWithResponseReturnsOnCall map[int]struct {
+		result1 *client.ApproveBlueprintResponse
+		result2 error
+	}
 	CreateBlueprintWithResponseStub        func(context.Context, client.CreateBlueprintJSONRequestBody, ...client.RequestEditorFn) (*client.CreateBlueprintResponse, error)
 	createBlueprintWithResponseMutex       sync.RWMutex
 	createBlueprintWithResponseArgsForCall []FakeBlueprintRepoClientCreateBlueprintWithResponseArgs
@@ -25,11 +37,94 @@ type FakeBlueprintRepoClient struct {
 	invocationsMutex sync.RWMutex
 }
 
+// FakeBlueprintRepoClientApproveBlueprintWithResponseArgs holds the arguments of one call to ApproveBlueprintWithResponse.
+type FakeBlueprintRepoClientApproveBlueprintWithResponseArgs struct {
+	Arg1 context.Context
+	Arg2 clienta.BlueprintId
+	Arg3 client.ApproveBlueprintJSONRequestBody
+	Arg4 []client.RequestEditorFn
+}
+
 // FakeBlueprintRepoClientCreateBlueprintWithResponseArgs holds the arguments of one call to CreateBlueprintWithResponse.
 type FakeBlueprintRepoClientCreateBlueprintWithResponseArgs struct {
 	Arg1 context.Context
 	Arg2 client.CreateBlueprintJSONRequestBody
 	Arg3 []client.RequestEditorFn
+}
+
+func (fake *FakeBlueprintRepoClient) ApproveBlueprintWithResponse(arg1 context.Context, arg2 clienta.BlueprintId, arg3 client.ApproveBlueprintJSONRequestBody, arg4 ...client.RequestEditorFn) (*client.ApproveBlueprintResponse, error) {
+	var arg4Copy []client.RequestEditorFn
+	if arg4 != nil {
+		arg4Copy = make([]client.RequestEditorFn, len(arg4))
+		copy(arg4Copy, arg4)
+	}
+	fake.approveBlueprintWithResponseMutex.Lock()
+	ret, specificReturn := fake.approveBlueprintWithResponseReturnsOnCall[len(fake.approveBlueprintWithResponseArgsForCall)]
+	fake.approveBlueprintWithResponseArgsForCall = append(fake.approveBlueprintWithResponseArgsForCall, FakeBlueprintRepoClientApproveBlueprintWithResponseArgs{arg1, arg2, arg3, arg4Copy})
+	stub := fake.ApproveBlueprintWithResponseStub
+	fakeReturns := fake.approveBlueprintWithResponseReturns
+	fake.recordInvocation("ApproveBlueprintWithResponse", []interface{}{arg1, arg2, arg3, arg4Copy})
+	fake.approveBlueprintWithResponseMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4...)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeBlueprintRepoClient) ApproveBlueprintWithResponseCallCount() int {
+	fake.approveBlueprintWithResponseMutex.RLock()
+	defer fake.approveBlueprintWithResponseMutex.RUnlock()
+	return len(fake.approveBlueprintWithResponseArgsForCall)
+}
+
+func (fake *FakeBlueprintRepoClient) ApproveBlueprintWithResponseCalls(stub func(context.Context, clienta.BlueprintId, client.ApproveBlueprintJSONRequestBody, ...client.RequestEditorFn) (*client.ApproveBlueprintResponse, error)) {
+	fake.approveBlueprintWithResponseMutex.Lock()
+	defer fake.approveBlueprintWithResponseMutex.Unlock()
+	fake.ApproveBlueprintWithResponseStub = stub
+}
+
+func (fake *FakeBlueprintRepoClient) ApproveBlueprintWithResponseArgsForCall(i int) (context.Context, clienta.BlueprintId, client.ApproveBlueprintJSONRequestBody, []client.RequestEditorFn) {
+	fake.approveBlueprintWithResponseMutex.RLock()
+	defer fake.approveBlueprintWithResponseMutex.RUnlock()
+	argsForCall := fake.approveBlueprintWithResponseArgsForCall[i]
+	return argsForCall.Arg1, argsForCall.Arg2, argsForCall.Arg3, argsForCall.Arg4
+}
+
+func (fake *FakeBlueprintRepoClient) ApproveBlueprintWithResponseArgs() []FakeBlueprintRepoClientApproveBlueprintWithResponseArgs {
+	fake.approveBlueprintWithResponseMutex.RLock()
+	defer fake.approveBlueprintWithResponseMutex.RUnlock()
+	args := make([]FakeBlueprintRepoClientApproveBlueprintWithResponseArgs, len(fake.approveBlueprintWithResponseArgsForCall))
+	copy(args, fake.approveBlueprintWithResponseArgsForCall)
+	return args
+}
+
+func (fake *FakeBlueprintRepoClient) ApproveBlueprintWithResponseReturns(result1 *client.ApproveBlueprintResponse, result2 error) {
+	fake.approveBlueprintWithResponseMutex.Lock()
+	defer fake.approveBlueprintWithResponseMutex.Unlock()
+	fake.ApproveBlueprintWithResponseStub = nil
+	fake.approveBlueprintWithResponseReturns = struct {
+		result1 *client.ApproveBlueprintResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeBlueprintRepoClient) ApproveBlueprintWithResponseReturnsOnCall(i int, result1 *client.ApproveBlueprintResponse, result2 error) {
+	fake.approveBlueprintWithResponseMutex.Lock()
+	defer fake.approveBlueprintWithResponseMutex.Unlock()
+	fake.ApproveBlueprintWithResponseStub = nil
+	if fake.approveBlueprintWithResponseReturnsOnCall == nil {
+		fake.approveBlueprintWithResponseReturnsOnCall = make(map[int]struct {
+			result1 *client.ApproveBlueprintResponse
+			result2 error
+		})
+	}
+	fake.approveBlueprintWithResponseReturnsOnCall[i] = struct {
+		result1 *client.ApproveBlueprintResponse
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeBlueprintRepoClient) CreateBlueprintWithResponse(arg1 context.Context, arg2 client.CreateBlueprintJSONRequestBody, arg3 ...client.RequestEditorFn) (*client.CreateBlueprintResponse, error) {

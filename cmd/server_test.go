@@ -497,8 +497,11 @@ func TestHTTPQueryPostgresExplainsIPAllowList(t *testing.T) {
 	}
 }
 
-func TestCreateBlueprintIsNotRegistered(t *testing.T) {
-	require.Nil(t, newMCPServer(nil).GetTool("create_blueprint"))
+func TestBlueprintToolsAreNotRegistered(t *testing.T) {
+	s := newMCPServer(nil)
+	for _, name := range []string{"create_blueprint", "approve_blueprint"} {
+		require.Nil(t, s.GetTool(name), name)
+	}
 }
 
 func TestWorkspaceScopedToolsAcceptOptionalWorkspaceID(t *testing.T) {
