@@ -2,6 +2,7 @@ package blueprint
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	blueprintclient "github.com/render-oss/render-mcp-server/pkg/client/blueprints"
@@ -12,6 +13,7 @@ import (
 type blueprintRepoClient interface {
 	CreateBlueprintWithResponse(ctx context.Context, body client.CreateBlueprintJSONRequestBody, reqEditors ...client.RequestEditorFn) (*client.CreateBlueprintResponse, error)
 	ApproveBlueprintWithResponse(ctx context.Context, blueprintID blueprintclient.BlueprintId, body client.ApproveBlueprintJSONRequestBody, reqEditors ...client.RequestEditorFn) (*client.ApproveBlueprintResponse, error)
+	CreateBlueprintSyncWithResponse(ctx context.Context, blueprintID blueprintclient.BlueprintId, reqEditors ...client.RequestEditorFn) (*client.CreateBlueprintSyncResponse, error)
 }
 
 type Repo struct {
@@ -40,6 +42,18 @@ func (r *Repo) ApproveBlueprint(ctx context.Context, blueprintID string, input c
 	response, err := r.client.ApproveBlueprintWithResponse(ctx, blueprintID, input)
 	if err != nil {
 		return nil, err
+	}
+	return client.BodyFromResponse(response.JSON200, response)
+}
+
+func (r *Repo) PlanBlueprint(ctx context.Context, blueprintID string) (*blueprintclient.CreateBlueprintSyncResponse, error) {
+	// REST authorizes the Blueprint ID independently of the selected MCP workspace.
+	response, err := r.client.CreateBlueprintSyncWithResponse(ctx, blueprintID)
+	if err != nil {
+		return nil, err
+	}
+	if response.StatusCode() == http.StatusCreated {
+		return client.BodyFromResponse(response.JSON201, response)
 	}
 	return client.BodyFromResponse(response.JSON200, response)
 }

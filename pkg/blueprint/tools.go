@@ -17,13 +17,18 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
+const workspaceIsolationWarning = "This tool does not enforce workspace isolation. " +
+	"It acts on the supplied Blueprint ID regardless of the selected workspace. " +
+	"Confirm that the Blueprint belongs to the user's intended workspace before calling this tool."
+
 const planningOutcomeGuidance = "Read planningOutcome to determine the next step. " +
 	"If planningOutcome is \"failed\", inspect the errors in notices. Address the reported " +
-	"issues and push any Blueprint file changes, then call plan_blueprint with the returned " +
-	"Blueprint ID to retry. Do not approve a failed plan, even if a sync is present. " +
-	"If planningOutcome is \"no_changes\", there are no infrastructure changes to approve. " +
-	"If planningOutcome is \"planned\", sync contains the planned infrastructure changes. " +
-	"Summarize those changes for the user, or offer sync.dashboardUrl for review. " +
+	"issues and push any Blueprint file changes, then call plan_blueprint with the " +
+	"Blueprint ID again. Do not approve a failed plan, even if sync is present. " +
+	"If planningOutcome is \"no_changes\", this planning attempt found no infrastructure changes. " +
+	"Do not call approve_blueprint for this result. " +
+	"If planningOutcome is \"planned\", sync contains the proposed infrastructure changes. " +
+	"Summarize them for the user or share sync.dashboardUrl for review. " +
 	"To apply the changes, call approve_blueprint with the Blueprint ID and follow its " +
 	"guidance for supplying any required environment variable values."
 
@@ -31,6 +36,7 @@ const planningOutcomeGuidance = "Read planningOutcome to determine the next step
 func Tools(c *client.ClientWithResponses) []server.ServerTool {
 	repo := NewRepo(c)
 	return []server.ServerTool{
+		planBlueprint(repo),
 		approveBlueprint(repo),
 	}
 }
@@ -43,11 +49,55 @@ func WorkspaceScopedTools(c *client.ClientWithResponses) []server.ServerTool {
 	}
 }
 
+func planBlueprint(repo *Repo) server.ServerTool {
+	return server.ServerTool{
+		Tool: mcp.NewTool("plan_blueprint",
+			mcp.WithDescription("This tool is in public alpha (early access). Access to this tool and its contract are subject to change. "+
+				"Preview infrastructure changes for an existing Blueprint using its configured Git branch and Blueprint file path. "+
+				workspaceIsolationWarning+" "+
+				"Push any local Blueprint file changes before calling this tool so that the plan includes them. "+
+				"Planning does not apply infrastructure changes. Review the plan with the user before calling approve_blueprint, "+
+				"even when auto-sync is enabled. If another sync is pending or running, wait for it to finish before requesting a new plan. "+
+				"The tool waits for planning to finish and returns planningOutcome, sync, and notices. "+
+				"Use planningOutcome to determine whether planning succeeded and what to do next. "+
+				planningOutcomeGuidance),
+			mcp.WithToolAnnotation(mcp.ToolAnnotation{
+				Title:           "Plan Blueprint sync",
+				ReadOnlyHint:    new(false),
+				DestructiveHint: new(false),
+				IdempotentHint:  new(false),
+				OpenWorldHint:   new(true),
+			}),
+			mcp.WithString("blueprintId",
+				mcp.Required(),
+				mcp.Description("Specify the Blueprint ID, which starts with exs-. Use the Blueprint ID rather than a sync ID."),
+			),
+		),
+		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			blueprintID, err := blueprintIDFromRequest(request)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			response, err := repo.PlanBlueprint(ctx, blueprintID)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			responseJSON, err := json.Marshal(response)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			return mcp.NewToolResultText(string(responseJSON)), nil
+		},
+	}
+}
+
 func approveBlueprint(repo *Repo) server.ServerTool {
 	return server.ServerTool{
 		Tool: mcp.NewTool("approve_blueprint",
 			mcp.WithDescription("This tool is in public alpha (early access). Access to this tool and its contract are subject to change. "+
 				"Approve and apply the Blueprint's newest planned sync after confirming that planning succeeded. "+
+				workspaceIsolationWarning+" "+
 				"Approval can update existing resources. After the first approval, Git pushes apply changes automatically "+
 				"when autoSync is enabled. Manually requested plans require approval even when autoSync is enabled. "+
 				"Supply a user-provided value in manualEnvVars for every entry in sync.requiredManualEnvVars. "+
@@ -106,7 +156,7 @@ func approveBlueprint(repo *Repo) server.ServerTool {
 func createBlueprint(repo *Repo) server.ServerTool {
 	return server.ServerTool{
 		Tool: mcp.NewTool("create_blueprint",
-			mcp.WithDescription("Experimental (early access): Tool access and contract are subject to change. "+
+			mcp.WithDescription("This tool is in public alpha (early access). Access to this tool and its contract are subject to change. "+
 				"Create a Render Blueprint from a Blueprint YAML file in a public repository or a "+
 				"repository accessible through a connected Git provider, and plan its first sync. "+
 				"By default, the plan creates separate resources and leaves existing resources "+
@@ -114,10 +164,8 @@ func createBlueprint(repo *Repo) server.ServerTool {
 				"approve_blueprint. After the first approval, later pushes deploy automatically "+
 				"when autoSync is enabled. All Blueprint changes are read from the remote "+
 				"repository. When working in a local checkout, push your changes first and pass "+
-				"its origin URL as repoUrl and current branch as branch. Returns blueprint, "+
-				"planningOutcome, sync, and notices. A successful tool call can return "+
-				"planningOutcome: \"failed\". A failed planning attempt may include a persisted "+
-				"sync or sync: null. "+
+				"its origin URL as repoUrl and current branch as branch. The tool returns blueprint, "+
+				"planningOutcome, sync, and notices. Use planningOutcome to determine whether planning succeeded and what to do next. "+
 				planningOutcomeGuidance),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:           "Create Blueprint",

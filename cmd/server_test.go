@@ -499,7 +499,7 @@ func TestHTTPQueryPostgresExplainsIPAllowList(t *testing.T) {
 
 func TestBlueprintToolsAreNotRegistered(t *testing.T) {
 	s := newMCPServer(nil)
-	for _, name := range []string{"create_blueprint", "approve_blueprint"} {
+	for _, name := range []string{"create_blueprint", "plan_blueprint", "approve_blueprint"} {
 		require.Nil(t, s.GetTool(name), name)
 	}
 }

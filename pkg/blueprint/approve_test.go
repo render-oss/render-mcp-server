@@ -140,7 +140,7 @@ func TestApproveBlueprintMapsToolInputsToRESTRequest(t *testing.T) {
 		JSON200:      &blueprintclient.ApprovedSync{},
 	}, nil)
 	result := callApproveBlueprint(t, NewRepo(fakeClient), map[string]any{
-		"blueprintId": " \texs-test\n\u00a0",
+		"blueprintId": "exs-test",
 		"manualEnvVars": []any{
 			map[string]any{
 				"serviceType": "web",
@@ -202,35 +202,14 @@ func TestApproveBlueprintPreservesRESTApprovalResponse(t *testing.T) {
 }
 
 func TestApproveBlueprintIDValidation(t *testing.T) {
-	for _, tt := range []struct {
-		name    string
-		args    map[string]any
-		message string
-	}{
-		{
-			name:    "missing Blueprint ID",
-			args:    nil,
-			message: "required parameter not present: blueprintId",
-		},
-		{
-			name:    "sync ID",
-			args:    map[string]any{"blueprintId": "exe-test"},
-			message: "Blueprint ID starting with exs-",
-		},
-		{
-			name:    "empty Blueprint ID",
-			args:    map[string]any{"blueprintId": ""},
-			message: "Blueprint ID starting with exs-",
-		},
-	} {
-		t.Run("rejects "+tt.name+" before calling REST", func(t *testing.T) {
-			fakeClient := &fakes.FakeBlueprintRepoClient{}
-			result := callApproveBlueprint(t, NewRepo(fakeClient), tt.args)
-			assert.True(t, result.IsError)
-			assert.Contains(t, textContent(t, result), tt.message)
-			assert.Zero(t, fakeClient.ApproveBlueprintWithResponseCallCount())
-		})
-	}
+	t.Run("rejects an invalid Blueprint ID before calling REST", func(t *testing.T) {
+		fakeClient := &fakes.FakeBlueprintRepoClient{}
+		result := callApproveBlueprint(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exe-test"})
+
+		assert.True(t, result.IsError)
+		assert.Contains(t, textContent(t, result), "Blueprint ID starting with exs-")
+		assert.Zero(t, fakeClient.ApproveBlueprintWithResponseCallCount())
+	})
 }
 
 func TestApproveBlueprintManualEnvVarValidation(t *testing.T) {

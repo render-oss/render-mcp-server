@@ -1,7 +1,6 @@
 package blueprint
 
 import (
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -21,13 +20,9 @@ func manualEnvVarServiceTypes() []string {
 // request body after validating the tool parameters.
 func validateApproveBlueprintParams(request mcp.CallToolRequest) (string, client.ApproveBlueprintJSONRequestBody, error) {
 	var zero client.ApproveBlueprintJSONRequestBody
-	blueprintID, err := validate.RequiredToolParam[string](request, "blueprintId")
+	blueprintID, err := blueprintIDFromRequest(request)
 	if err != nil {
 		return "", zero, err
-	}
-	blueprintID = strings.TrimSpace(blueprintID)
-	if !strings.HasPrefix(blueprintID, "exs-") {
-		return "", zero, errors.New("blueprintId must be a Blueprint ID starting with exs-")
 	}
 
 	entries, present, err := validate.OptionalToolArrayParam[map[string]any](request, "manualEnvVars")

@@ -21,6 +21,17 @@ type FakeBlueprintRepoClient struct {
 		result1 *client.ApproveBlueprintResponse
 		result2 error
 	}
+	CreateBlueprintSyncWithResponseStub        func(context.Context, clienta.BlueprintId, ...client.RequestEditorFn) (*client.CreateBlueprintSyncResponse, error)
+	createBlueprintSyncWithResponseMutex       sync.RWMutex
+	createBlueprintSyncWithResponseArgsForCall []FakeBlueprintRepoClientCreateBlueprintSyncWithResponseArgs
+	createBlueprintSyncWithResponseReturns     struct {
+		result1 *client.CreateBlueprintSyncResponse
+		result2 error
+	}
+	createBlueprintSyncWithResponseReturnsOnCall map[int]struct {
+		result1 *client.CreateBlueprintSyncResponse
+		result2 error
+	}
 	CreateBlueprintWithResponseStub        func(context.Context, client.CreateBlueprintJSONRequestBody, ...client.RequestEditorFn) (*client.CreateBlueprintResponse, error)
 	createBlueprintWithResponseMutex       sync.RWMutex
 	createBlueprintWithResponseArgsForCall []FakeBlueprintRepoClientCreateBlueprintWithResponseArgs
@@ -43,6 +54,13 @@ type FakeBlueprintRepoClientApproveBlueprintWithResponseArgs struct {
 	Arg2 clienta.BlueprintId
 	Arg3 client.ApproveBlueprintJSONRequestBody
 	Arg4 []client.RequestEditorFn
+}
+
+// FakeBlueprintRepoClientCreateBlueprintSyncWithResponseArgs holds the arguments of one call to CreateBlueprintSyncWithResponse.
+type FakeBlueprintRepoClientCreateBlueprintSyncWithResponseArgs struct {
+	Arg1 context.Context
+	Arg2 clienta.BlueprintId
+	Arg3 []client.RequestEditorFn
 }
 
 // FakeBlueprintRepoClientCreateBlueprintWithResponseArgs holds the arguments of one call to CreateBlueprintWithResponse.
@@ -123,6 +141,81 @@ func (fake *FakeBlueprintRepoClient) ApproveBlueprintWithResponseReturnsOnCall(i
 	}
 	fake.approveBlueprintWithResponseReturnsOnCall[i] = struct {
 		result1 *client.ApproveBlueprintResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeBlueprintRepoClient) CreateBlueprintSyncWithResponse(arg1 context.Context, arg2 clienta.BlueprintId, arg3 ...client.RequestEditorFn) (*client.CreateBlueprintSyncResponse, error) {
+	var arg3Copy []client.RequestEditorFn
+	if arg3 != nil {
+		arg3Copy = make([]client.RequestEditorFn, len(arg3))
+		copy(arg3Copy, arg3)
+	}
+	fake.createBlueprintSyncWithResponseMutex.Lock()
+	ret, specificReturn := fake.createBlueprintSyncWithResponseReturnsOnCall[len(fake.createBlueprintSyncWithResponseArgsForCall)]
+	fake.createBlueprintSyncWithResponseArgsForCall = append(fake.createBlueprintSyncWithResponseArgsForCall, FakeBlueprintRepoClientCreateBlueprintSyncWithResponseArgs{arg1, arg2, arg3Copy})
+	stub := fake.CreateBlueprintSyncWithResponseStub
+	fakeReturns := fake.createBlueprintSyncWithResponseReturns
+	fake.recordInvocation("CreateBlueprintSyncWithResponse", []interface{}{arg1, arg2, arg3Copy})
+	fake.createBlueprintSyncWithResponseMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3...)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeBlueprintRepoClient) CreateBlueprintSyncWithResponseCallCount() int {
+	fake.createBlueprintSyncWithResponseMutex.RLock()
+	defer fake.createBlueprintSyncWithResponseMutex.RUnlock()
+	return len(fake.createBlueprintSyncWithResponseArgsForCall)
+}
+
+func (fake *FakeBlueprintRepoClient) CreateBlueprintSyncWithResponseCalls(stub func(context.Context, clienta.BlueprintId, ...client.RequestEditorFn) (*client.CreateBlueprintSyncResponse, error)) {
+	fake.createBlueprintSyncWithResponseMutex.Lock()
+	defer fake.createBlueprintSyncWithResponseMutex.Unlock()
+	fake.CreateBlueprintSyncWithResponseStub = stub
+}
+
+func (fake *FakeBlueprintRepoClient) CreateBlueprintSyncWithResponseArgsForCall(i int) (context.Context, clienta.BlueprintId, []client.RequestEditorFn) {
+	fake.createBlueprintSyncWithResponseMutex.RLock()
+	defer fake.createBlueprintSyncWithResponseMutex.RUnlock()
+	argsForCall := fake.createBlueprintSyncWithResponseArgsForCall[i]
+	return argsForCall.Arg1, argsForCall.Arg2, argsForCall.Arg3
+}
+
+func (fake *FakeBlueprintRepoClient) CreateBlueprintSyncWithResponseArgs() []FakeBlueprintRepoClientCreateBlueprintSyncWithResponseArgs {
+	fake.createBlueprintSyncWithResponseMutex.RLock()
+	defer fake.createBlueprintSyncWithResponseMutex.RUnlock()
+	args := make([]FakeBlueprintRepoClientCreateBlueprintSyncWithResponseArgs, len(fake.createBlueprintSyncWithResponseArgsForCall))
+	copy(args, fake.createBlueprintSyncWithResponseArgsForCall)
+	return args
+}
+
+func (fake *FakeBlueprintRepoClient) CreateBlueprintSyncWithResponseReturns(result1 *client.CreateBlueprintSyncResponse, result2 error) {
+	fake.createBlueprintSyncWithResponseMutex.Lock()
+	defer fake.createBlueprintSyncWithResponseMutex.Unlock()
+	fake.CreateBlueprintSyncWithResponseStub = nil
+	fake.createBlueprintSyncWithResponseReturns = struct {
+		result1 *client.CreateBlueprintSyncResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeBlueprintRepoClient) CreateBlueprintSyncWithResponseReturnsOnCall(i int, result1 *client.CreateBlueprintSyncResponse, result2 error) {
+	fake.createBlueprintSyncWithResponseMutex.Lock()
+	defer fake.createBlueprintSyncWithResponseMutex.Unlock()
+	fake.CreateBlueprintSyncWithResponseStub = nil
+	if fake.createBlueprintSyncWithResponseReturnsOnCall == nil {
+		fake.createBlueprintSyncWithResponseReturnsOnCall = make(map[int]struct {
+			result1 *client.CreateBlueprintSyncResponse
+			result2 error
+		})
+	}
+	fake.createBlueprintSyncWithResponseReturnsOnCall[i] = struct {
+		result1 *client.CreateBlueprintSyncResponse
 		result2 error
 	}{result1, result2}
 }
