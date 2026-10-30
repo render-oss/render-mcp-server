@@ -36,6 +36,7 @@ const planningOutcomeGuidance = "Read planningOutcome to determine the next step
 func Tools(c *client.ClientWithResponses) []server.ServerTool {
 	repo := NewRepo(c)
 	return []server.ServerTool{
+		getBlueprint(repo),
 		planBlueprint(repo),
 		approveBlueprint(repo),
 		updateBlueprint(repo),
@@ -47,6 +48,44 @@ func WorkspaceScopedTools(c *client.ClientWithResponses) []server.ServerTool {
 	repo := NewRepo(c)
 	return []server.ServerTool{
 		createBlueprint(repo),
+	}
+}
+
+func getBlueprint(repo *Repo) server.ServerTool {
+	return server.ServerTool{
+		Tool: mcp.NewTool("get_blueprint",
+			mcp.WithDescription("This tool is in public alpha (early access). Access to this tool and its contract are subject to change. "+
+				"Retrieve a Blueprint's settings and status, along with the IDs of the resources it manages. "+
+				workspaceIsolationWarning+" "+
+				"This tool does not create a plan or apply infrastructure changes."),
+			mcp.WithToolAnnotation(mcp.ToolAnnotation{
+				Title:           "Get Blueprint details",
+				ReadOnlyHint:    new(true),
+				DestructiveHint: new(false),
+				IdempotentHint:  new(true),
+				OpenWorldHint:   new(false),
+			}),
+			mcp.WithString("blueprintId",
+				mcp.Required(),
+				mcp.Description("This ID identifies the Blueprint to retrieve. Blueprint IDs start with exs-."),
+			),
+		),
+		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			blueprintID, err := blueprintIDFromRequest(request)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			response, err := repo.RetrieveBlueprint(ctx, blueprintID)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			responseJSON, err := json.Marshal(response)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			return mcp.NewToolResultText(string(responseJSON)), nil
+		},
 	}
 }
 
