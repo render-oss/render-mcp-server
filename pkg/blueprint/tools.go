@@ -38,6 +38,7 @@ func Tools(c *client.ClientWithResponses) []server.ServerTool {
 	return []server.ServerTool{
 		planBlueprint(repo),
 		approveBlueprint(repo),
+		updateBlueprint(repo),
 	}
 }
 
@@ -46,6 +47,96 @@ func WorkspaceScopedTools(c *client.ClientWithResponses) []server.ServerTool {
 	repo := NewRepo(c)
 	return []server.ServerTool{
 		createBlueprint(repo),
+	}
+}
+
+func updateBlueprint(repo *Repo) server.ServerTool {
+	return server.ServerTool{
+		Tool: mcp.NewTool("update_blueprint",
+			mcp.WithDescription("This tool is in public alpha (early access). Access to this tool and its contract are subject to change. "+
+				"Update a Blueprint's name, Git branch, Blueprint file path, or auto-sync setting. "+
+				workspaceIsolationWarning+" "+
+				"Provide the Blueprint ID and at least one setting. Omitted settings retain their current values. "+
+				"Empty or whitespace-only names, branches, and paths are rejected. "+
+				"If all supplied values match the Blueprint's current settings, the tool returns the Blueprint without updating it or creating a plan. "+
+				"Changing the branch or path also creates a plan. Changing only the name or auto-sync setting does not create a plan. "+
+				"Planning uses the Blueprint file in the remote Git repository. When changing the branch or path, ensure any local Blueprint file changes intended for the plan have been pushed. "+
+				"The tool waits for planning to finish before returning. Changes to the Blueprint's settings take effect immediately. "+
+				"Review any returned plan with the user before calling approve_blueprint, even when auto-sync is enabled. "+
+				"To request a plan without updating the Blueprint, use plan_blueprint. "+
+				"If an update request fails, changes may still have been applied to the Blueprint. Consider checking its current settings before retrying. "+
+				"The response includes blueprint, planningOutcome, sync, notices, and error. "+
+				"If planningOutcome and error are both null, planning was skipped. "+
+				"Report the Blueprint update and the planning outcome separately to the user. "+
+				"If error is non-null, explain that the Blueprint was updated but no planning result is available. "+
+				"When planningOutcome is non-null, use it to determine the next step. "+
+				planningOutcomeGuidance),
+			mcp.WithToolAnnotation(mcp.ToolAnnotation{
+				Title:           "Update Blueprint",
+				ReadOnlyHint:    new(false),
+				DestructiveHint: new(true),
+				IdempotentHint:  new(false),
+				OpenWorldHint:   new(true),
+			}),
+			mcp.WithString("blueprintId", mcp.Required(),
+				mcp.Description("This ID identifies the Blueprint to update. Blueprint IDs start with exs-. Use the Blueprint ID rather than a sync ID.")),
+			mcp.WithString("name", mcp.Description("This value sets the Blueprint's new name. Omit this setting to keep the current name.")),
+			mcp.WithString("branch", mcp.Description("This value sets the Git branch from which the Blueprint file is read. If it differs from the current branch, the tool also creates a plan. Omit this setting to keep the current branch.")),
+			mcp.WithString("path", mcp.Description("This value sets the Blueprint file's new path relative to the repository root. If it differs from the current path, the tool also creates a plan. Omit this setting to keep the current path.")),
+			mcp.WithBoolean("autoSync", mcp.Description("Set this to true to enable automatic syncing on later Git pushes, or false to disable it. Automatic syncing requires approval of the Blueprint's first sync. Omit this setting to keep its current value.")),
+		),
+		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			blueprintID, input, err := validateUpdateBlueprintParams(request)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			current, err := repo.RetrieveBlueprint(ctx, blueprintID)
+			if err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("The Blueprint could not be retrieved: %v. This call did not update it or start planning.", err)), nil
+			}
+			branchChanged := input.Branch != nil && strings.TrimSpace(*input.Branch) != current.Branch
+			pathChanged := input.Path != nil && *input.Path != current.Path
+			changed := branchChanged || pathChanged ||
+				(input.Name != nil && *input.Name != current.Name) ||
+				(input.AutoSync != nil && *input.AutoSync != current.AutoSync)
+			response := updateBlueprintResponse{Notices: []blueprintclient.BlueprintNotice{}}
+			if changed {
+				updated, err := repo.UpdateBlueprint(ctx, blueprintID, input)
+				if err != nil {
+					return mcp.NewToolResultError(fmt.Sprintf("The Blueprint update failed: %v. This call did not start planning.", err)), nil
+				}
+				response.Blueprint = *updated
+			} else {
+				response.Blueprint = blueprintclient.Blueprint{
+					Id: current.Id, Name: current.Name, Branch: current.Branch, Path: current.Path,
+					AutoSync: current.AutoSync, Repo: current.Repo, Status: current.Status, LastSync: current.LastSync,
+				}
+			}
+			if branchChanged || pathChanged {
+				planning, err := repo.PlanBlueprint(ctx, blueprintID)
+				if err != nil {
+					response.Error = &updateBlueprintError{
+						Stage: "planning",
+						Message: fmt.Sprintf("The Blueprint was updated, but no planning result is available: %v. "+
+							"Review the error before calling plan_blueprint again. "+
+							"Do not approve changes based on this response.", err),
+					}
+				} else {
+					response.PlanningOutcome = &planning.PlanningOutcome
+					response.Sync = planning.Sync
+					response.Notices = planning.Notices
+				}
+			}
+			responseJSON, err := json.Marshal(response)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			result := mcp.NewToolResultText(string(responseJSON))
+			if !changed {
+				result.Content = append(result.Content, mcp.NewTextContent("The Blueprint already has the supplied settings. No update was needed, and planning was skipped."))
+			}
+			return result, nil
+		},
 	}
 }
 

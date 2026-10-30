@@ -11,9 +11,11 @@ import (
 
 //go:generate go tool counterfeiter -o ../fakes/fakeblueprintrepoclient_gen.go . blueprintRepoClient
 type blueprintRepoClient interface {
+	RetrieveBlueprintWithResponse(ctx context.Context, blueprintID blueprintclient.BlueprintId, reqEditors ...client.RequestEditorFn) (*client.RetrieveBlueprintResponse, error)
 	CreateBlueprintWithResponse(ctx context.Context, body client.CreateBlueprintJSONRequestBody, reqEditors ...client.RequestEditorFn) (*client.CreateBlueprintResponse, error)
 	ApproveBlueprintWithResponse(ctx context.Context, blueprintID blueprintclient.BlueprintId, body client.ApproveBlueprintJSONRequestBody, reqEditors ...client.RequestEditorFn) (*client.ApproveBlueprintResponse, error)
 	CreateBlueprintSyncWithResponse(ctx context.Context, blueprintID blueprintclient.BlueprintId, reqEditors ...client.RequestEditorFn) (*client.CreateBlueprintSyncResponse, error)
+	UpdateBlueprintWithResponse(ctx context.Context, blueprintID blueprintclient.BlueprintId, body client.UpdateBlueprintJSONRequestBody, reqEditors ...client.RequestEditorFn) (*client.UpdateBlueprintResponse, error)
 }
 
 type Repo struct {
@@ -54,6 +56,24 @@ func (r *Repo) PlanBlueprint(ctx context.Context, blueprintID string) (*blueprin
 	}
 	if response.StatusCode() == http.StatusCreated {
 		return client.BodyFromResponse(response.JSON201, response)
+	}
+	return client.BodyFromResponse(response.JSON200, response)
+}
+
+func (r *Repo) UpdateBlueprint(ctx context.Context, blueprintID string, input client.UpdateBlueprintJSONRequestBody) (*blueprintclient.Blueprint, error) {
+	// REST authorizes the Blueprint ID independently of the selected MCP workspace.
+	response, err := r.client.UpdateBlueprintWithResponse(ctx, blueprintID, input)
+	if err != nil {
+		return nil, err
+	}
+	return client.BodyFromResponse(response.JSON200, response)
+}
+
+func (r *Repo) RetrieveBlueprint(ctx context.Context, blueprintID string) (*blueprintclient.BlueprintDetail, error) {
+	// REST authorizes the Blueprint ID independently of the selected MCP workspace.
+	response, err := r.client.RetrieveBlueprintWithResponse(ctx, blueprintID)
+	if err != nil {
+		return nil, err
 	}
 	return client.BodyFromResponse(response.JSON200, response)
 }

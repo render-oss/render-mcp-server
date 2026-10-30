@@ -43,6 +43,28 @@ type FakeBlueprintRepoClient struct {
 		result1 *client.CreateBlueprintResponse
 		result2 error
 	}
+	RetrieveBlueprintWithResponseStub        func(context.Context, clienta.BlueprintId, ...client.RequestEditorFn) (*client.RetrieveBlueprintResponse, error)
+	retrieveBlueprintWithResponseMutex       sync.RWMutex
+	retrieveBlueprintWithResponseArgsForCall []FakeBlueprintRepoClientRetrieveBlueprintWithResponseArgs
+	retrieveBlueprintWithResponseReturns     struct {
+		result1 *client.RetrieveBlueprintResponse
+		result2 error
+	}
+	retrieveBlueprintWithResponseReturnsOnCall map[int]struct {
+		result1 *client.RetrieveBlueprintResponse
+		result2 error
+	}
+	UpdateBlueprintWithResponseStub        func(context.Context, clienta.BlueprintId, client.UpdateBlueprintJSONRequestBody, ...client.RequestEditorFn) (*client.UpdateBlueprintResponse, error)
+	updateBlueprintWithResponseMutex       sync.RWMutex
+	updateBlueprintWithResponseArgsForCall []FakeBlueprintRepoClientUpdateBlueprintWithResponseArgs
+	updateBlueprintWithResponseReturns     struct {
+		result1 *client.UpdateBlueprintResponse
+		result2 error
+	}
+	updateBlueprintWithResponseReturnsOnCall map[int]struct {
+		result1 *client.UpdateBlueprintResponse
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	callOrder        []string
 	invocationsMutex sync.RWMutex
@@ -68,6 +90,21 @@ type FakeBlueprintRepoClientCreateBlueprintWithResponseArgs struct {
 	Arg1 context.Context
 	Arg2 client.CreateBlueprintJSONRequestBody
 	Arg3 []client.RequestEditorFn
+}
+
+// FakeBlueprintRepoClientRetrieveBlueprintWithResponseArgs holds the arguments of one call to RetrieveBlueprintWithResponse.
+type FakeBlueprintRepoClientRetrieveBlueprintWithResponseArgs struct {
+	Arg1 context.Context
+	Arg2 clienta.BlueprintId
+	Arg3 []client.RequestEditorFn
+}
+
+// FakeBlueprintRepoClientUpdateBlueprintWithResponseArgs holds the arguments of one call to UpdateBlueprintWithResponse.
+type FakeBlueprintRepoClientUpdateBlueprintWithResponseArgs struct {
+	Arg1 context.Context
+	Arg2 clienta.BlueprintId
+	Arg3 client.UpdateBlueprintJSONRequestBody
+	Arg4 []client.RequestEditorFn
 }
 
 func (fake *FakeBlueprintRepoClient) ApproveBlueprintWithResponse(arg1 context.Context, arg2 clienta.BlueprintId, arg3 client.ApproveBlueprintJSONRequestBody, arg4 ...client.RequestEditorFn) (*client.ApproveBlueprintResponse, error) {
@@ -291,6 +328,156 @@ func (fake *FakeBlueprintRepoClient) CreateBlueprintWithResponseReturnsOnCall(i 
 	}
 	fake.createBlueprintWithResponseReturnsOnCall[i] = struct {
 		result1 *client.CreateBlueprintResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeBlueprintRepoClient) RetrieveBlueprintWithResponse(arg1 context.Context, arg2 clienta.BlueprintId, arg3 ...client.RequestEditorFn) (*client.RetrieveBlueprintResponse, error) {
+	var arg3Copy []client.RequestEditorFn
+	if arg3 != nil {
+		arg3Copy = make([]client.RequestEditorFn, len(arg3))
+		copy(arg3Copy, arg3)
+	}
+	fake.retrieveBlueprintWithResponseMutex.Lock()
+	ret, specificReturn := fake.retrieveBlueprintWithResponseReturnsOnCall[len(fake.retrieveBlueprintWithResponseArgsForCall)]
+	fake.retrieveBlueprintWithResponseArgsForCall = append(fake.retrieveBlueprintWithResponseArgsForCall, FakeBlueprintRepoClientRetrieveBlueprintWithResponseArgs{arg1, arg2, arg3Copy})
+	stub := fake.RetrieveBlueprintWithResponseStub
+	fakeReturns := fake.retrieveBlueprintWithResponseReturns
+	fake.recordInvocation("RetrieveBlueprintWithResponse", []interface{}{arg1, arg2, arg3Copy})
+	fake.retrieveBlueprintWithResponseMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3...)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeBlueprintRepoClient) RetrieveBlueprintWithResponseCallCount() int {
+	fake.retrieveBlueprintWithResponseMutex.RLock()
+	defer fake.retrieveBlueprintWithResponseMutex.RUnlock()
+	return len(fake.retrieveBlueprintWithResponseArgsForCall)
+}
+
+func (fake *FakeBlueprintRepoClient) RetrieveBlueprintWithResponseCalls(stub func(context.Context, clienta.BlueprintId, ...client.RequestEditorFn) (*client.RetrieveBlueprintResponse, error)) {
+	fake.retrieveBlueprintWithResponseMutex.Lock()
+	defer fake.retrieveBlueprintWithResponseMutex.Unlock()
+	fake.RetrieveBlueprintWithResponseStub = stub
+}
+
+func (fake *FakeBlueprintRepoClient) RetrieveBlueprintWithResponseArgsForCall(i int) (context.Context, clienta.BlueprintId, []client.RequestEditorFn) {
+	fake.retrieveBlueprintWithResponseMutex.RLock()
+	defer fake.retrieveBlueprintWithResponseMutex.RUnlock()
+	argsForCall := fake.retrieveBlueprintWithResponseArgsForCall[i]
+	return argsForCall.Arg1, argsForCall.Arg2, argsForCall.Arg3
+}
+
+func (fake *FakeBlueprintRepoClient) RetrieveBlueprintWithResponseArgs() []FakeBlueprintRepoClientRetrieveBlueprintWithResponseArgs {
+	fake.retrieveBlueprintWithResponseMutex.RLock()
+	defer fake.retrieveBlueprintWithResponseMutex.RUnlock()
+	args := make([]FakeBlueprintRepoClientRetrieveBlueprintWithResponseArgs, len(fake.retrieveBlueprintWithResponseArgsForCall))
+	copy(args, fake.retrieveBlueprintWithResponseArgsForCall)
+	return args
+}
+
+func (fake *FakeBlueprintRepoClient) RetrieveBlueprintWithResponseReturns(result1 *client.RetrieveBlueprintResponse, result2 error) {
+	fake.retrieveBlueprintWithResponseMutex.Lock()
+	defer fake.retrieveBlueprintWithResponseMutex.Unlock()
+	fake.RetrieveBlueprintWithResponseStub = nil
+	fake.retrieveBlueprintWithResponseReturns = struct {
+		result1 *client.RetrieveBlueprintResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeBlueprintRepoClient) RetrieveBlueprintWithResponseReturnsOnCall(i int, result1 *client.RetrieveBlueprintResponse, result2 error) {
+	fake.retrieveBlueprintWithResponseMutex.Lock()
+	defer fake.retrieveBlueprintWithResponseMutex.Unlock()
+	fake.RetrieveBlueprintWithResponseStub = nil
+	if fake.retrieveBlueprintWithResponseReturnsOnCall == nil {
+		fake.retrieveBlueprintWithResponseReturnsOnCall = make(map[int]struct {
+			result1 *client.RetrieveBlueprintResponse
+			result2 error
+		})
+	}
+	fake.retrieveBlueprintWithResponseReturnsOnCall[i] = struct {
+		result1 *client.RetrieveBlueprintResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeBlueprintRepoClient) UpdateBlueprintWithResponse(arg1 context.Context, arg2 clienta.BlueprintId, arg3 client.UpdateBlueprintJSONRequestBody, arg4 ...client.RequestEditorFn) (*client.UpdateBlueprintResponse, error) {
+	var arg4Copy []client.RequestEditorFn
+	if arg4 != nil {
+		arg4Copy = make([]client.RequestEditorFn, len(arg4))
+		copy(arg4Copy, arg4)
+	}
+	fake.updateBlueprintWithResponseMutex.Lock()
+	ret, specificReturn := fake.updateBlueprintWithResponseReturnsOnCall[len(fake.updateBlueprintWithResponseArgsForCall)]
+	fake.updateBlueprintWithResponseArgsForCall = append(fake.updateBlueprintWithResponseArgsForCall, FakeBlueprintRepoClientUpdateBlueprintWithResponseArgs{arg1, arg2, arg3, arg4Copy})
+	stub := fake.UpdateBlueprintWithResponseStub
+	fakeReturns := fake.updateBlueprintWithResponseReturns
+	fake.recordInvocation("UpdateBlueprintWithResponse", []interface{}{arg1, arg2, arg3, arg4Copy})
+	fake.updateBlueprintWithResponseMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4...)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeBlueprintRepoClient) UpdateBlueprintWithResponseCallCount() int {
+	fake.updateBlueprintWithResponseMutex.RLock()
+	defer fake.updateBlueprintWithResponseMutex.RUnlock()
+	return len(fake.updateBlueprintWithResponseArgsForCall)
+}
+
+func (fake *FakeBlueprintRepoClient) UpdateBlueprintWithResponseCalls(stub func(context.Context, clienta.BlueprintId, client.UpdateBlueprintJSONRequestBody, ...client.RequestEditorFn) (*client.UpdateBlueprintResponse, error)) {
+	fake.updateBlueprintWithResponseMutex.Lock()
+	defer fake.updateBlueprintWithResponseMutex.Unlock()
+	fake.UpdateBlueprintWithResponseStub = stub
+}
+
+func (fake *FakeBlueprintRepoClient) UpdateBlueprintWithResponseArgsForCall(i int) (context.Context, clienta.BlueprintId, client.UpdateBlueprintJSONRequestBody, []client.RequestEditorFn) {
+	fake.updateBlueprintWithResponseMutex.RLock()
+	defer fake.updateBlueprintWithResponseMutex.RUnlock()
+	argsForCall := fake.updateBlueprintWithResponseArgsForCall[i]
+	return argsForCall.Arg1, argsForCall.Arg2, argsForCall.Arg3, argsForCall.Arg4
+}
+
+func (fake *FakeBlueprintRepoClient) UpdateBlueprintWithResponseArgs() []FakeBlueprintRepoClientUpdateBlueprintWithResponseArgs {
+	fake.updateBlueprintWithResponseMutex.RLock()
+	defer fake.updateBlueprintWithResponseMutex.RUnlock()
+	args := make([]FakeBlueprintRepoClientUpdateBlueprintWithResponseArgs, len(fake.updateBlueprintWithResponseArgsForCall))
+	copy(args, fake.updateBlueprintWithResponseArgsForCall)
+	return args
+}
+
+func (fake *FakeBlueprintRepoClient) UpdateBlueprintWithResponseReturns(result1 *client.UpdateBlueprintResponse, result2 error) {
+	fake.updateBlueprintWithResponseMutex.Lock()
+	defer fake.updateBlueprintWithResponseMutex.Unlock()
+	fake.UpdateBlueprintWithResponseStub = nil
+	fake.updateBlueprintWithResponseReturns = struct {
+		result1 *client.UpdateBlueprintResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeBlueprintRepoClient) UpdateBlueprintWithResponseReturnsOnCall(i int, result1 *client.UpdateBlueprintResponse, result2 error) {
+	fake.updateBlueprintWithResponseMutex.Lock()
+	defer fake.updateBlueprintWithResponseMutex.Unlock()
+	fake.UpdateBlueprintWithResponseStub = nil
+	if fake.updateBlueprintWithResponseReturnsOnCall == nil {
+		fake.updateBlueprintWithResponseReturnsOnCall = make(map[int]struct {
+			result1 *client.UpdateBlueprintResponse
+			result2 error
+		})
+	}
+	fake.updateBlueprintWithResponseReturnsOnCall[i] = struct {
+		result1 *client.UpdateBlueprintResponse
 		result2 error
 	}{result1, result2}
 }
