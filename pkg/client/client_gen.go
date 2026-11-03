@@ -29,9 +29,10 @@ import (
 	externalRef13 "github.com/render-oss/render-mcp-server/pkg/client/notifications"
 	externalRef14 "github.com/render-oss/render-mcp-server/pkg/client/postgres"
 	externalRef15 "github.com/render-oss/render-mcp-server/pkg/client/sandboxes"
-	externalRef16 "github.com/render-oss/render-mcp-server/pkg/client/storage"
-	externalRef17 "github.com/render-oss/render-mcp-server/pkg/client/webhooks"
-	externalRef18 "github.com/render-oss/render-mcp-server/pkg/client/workflows"
+	externalRef16 "github.com/render-oss/render-mcp-server/pkg/client/sharedfilesystems"
+	externalRef17 "github.com/render-oss/render-mcp-server/pkg/client/storage"
+	externalRef18 "github.com/render-oss/render-mcp-server/pkg/client/webhooks"
+	externalRef19 "github.com/render-oss/render-mcp-server/pkg/client/workflows"
 )
 
 // RequestEditorFn is the function signature for the RequestEditor callback function
@@ -969,28 +970,28 @@ type ClientInterface interface {
 	// Cancel a running flow run with the provided ID.
 	//
 	// Corresponds with DELETE /flow-runs/{flowRunId} (the `CancelFlowRun` operationId).
-	CancelFlowRun(ctx context.Context, flowRunId externalRef18.FlowRunIDParam, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CancelFlowRun(ctx context.Context, flowRunId externalRef19.FlowRunIDParam, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetFlowRun Retrieve flow run
 	//
 	// Retrieve the flow run with the provided ID, including its input and results.
 	//
 	// Corresponds with GET /flow-runs/{flowRunId} (the `GetFlowRun` operationId).
-	GetFlowRun(ctx context.Context, flowRunId externalRef18.FlowRunIDParam, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetFlowRun(ctx context.Context, flowRunId externalRef19.FlowRunIDParam, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListFlowRunSteps List flow run steps
 	//
-	// List the steps a flow run has recorded, in the order the flow started them.
+	// List the steps a flow run has recorded, in the order the flow started them. A page can hold fewer than `limit` steps and still have more after it, so page until `hasMore` is false.
 	//
 	// Corresponds with GET /flow-runs/{flowRunId}/steps (the `ListFlowRunSteps` operationId).
-	ListFlowRunSteps(ctx context.Context, flowRunId externalRef18.FlowRunIDParam, params *ListFlowRunStepsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ListFlowRunSteps(ctx context.Context, flowRunId externalRef19.FlowRunIDParam, params *ListFlowRunStepsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetFlowRunStep Retrieve flow run step
 	//
-	// Retrieve a single step of a flow run, including its input, result, error, and failed attempts.
+	// Retrieve a single step of a flow run, including its input, result and error. A sequence number can cover more than one step, so pass the `stepKey` the step listing reported to address one of those.
 	//
 	// Corresponds with GET /flow-runs/{flowRunId}/steps/{stepSeq} (the `GetFlowRunStep` operationId).
-	GetFlowRunStep(ctx context.Context, flowRunId externalRef18.FlowRunIDParam, stepSeq externalRef18.FlowRunStepSeqParam, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetFlowRunStep(ctx context.Context, flowRunId externalRef19.FlowRunIDParam, stepSeq externalRef19.FlowRunStepSeqParam, params *GetFlowRunStepParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListFlows List flows
 	//
@@ -1004,7 +1005,7 @@ type ClientInterface interface {
 	// Retrieve the workflow flow with the provided ID.
 	//
 	// Corresponds with GET /flows/{flowId} (the `GetFlow` operationId).
-	GetFlow(ctx context.Context, flowId externalRef18.FlowIDParam, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetFlow(ctx context.Context, flowId externalRef19.FlowIDParam, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListKeyValue List Key Value instances
 	//
@@ -1477,7 +1478,7 @@ type ClientInterface interface {
 	// Deletes the object at the specified key. This operation is irreversible.
 	//
 	// Corresponds with DELETE /objects/{ownerId}/{region}/{key} (the `DeleteObject` operationId).
-	DeleteObject(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteObject(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetObject Get presigned URL to download an object
 	//
@@ -1485,7 +1486,7 @@ type ClientInterface interface {
 	// The object must begin being downloaded within the URL's expiration time.
 	//
 	// Corresponds with GET /objects/{ownerId}/{region}/{key} (the `GetObject` operationId).
-	GetObject(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetObject(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutObjectWithBody Get presigned URL to upload an object
 	//
@@ -1495,7 +1496,7 @@ type ClientInterface interface {
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with PUT /objects/{ownerId}/{region}/{key} (the `PutObject` operationId).
-	PutObjectWithBody(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutObjectWithBody(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutObject Get presigned URL to upload an object
 	//
@@ -1505,7 +1506,7 @@ type ClientInterface interface {
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with PUT /objects/{ownerId}/{region}/{key} (the `PutObject` operationId).
-	PutObject(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam, body PutObjectJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutObject(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam, body PutObjectJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListOrganizationAuditLogs List organization audit logs
 	//
@@ -2044,10 +2045,61 @@ type ClientInterface interface {
 
 	// ListSandboxGroups List sandbox groups
 	//
-	// List sandbox groups for a single workspace.
+	// List sandbox groups for a single workspace, newest first. The default
+	// page size is 20 and the maximum is 100.
+	// Use the last item's cursor to fetch the next page, until it is empty.
 	//
 	// Corresponds with GET /sandbox-groups (the `ListSandboxGroups` operationId).
 	ListSandboxGroups(ctx context.Context, params *ListSandboxGroupsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateSandboxGroupWithBody Create sandbox group
+	//
+	// Create a sandbox group. The workspace's first group becomes its default.
+	// Returns 409 if the `name` is taken.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /sandbox-groups (the `CreateSandboxGroup` operationId).
+	CreateSandboxGroupWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateSandboxGroup Create sandbox group
+	//
+	// Create a sandbox group. The workspace's first group becomes its default.
+	// Returns 409 if the `name` is taken.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /sandbox-groups (the `CreateSandboxGroup` operationId).
+	CreateSandboxGroup(ctx context.Context, body CreateSandboxGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RetrieveSandboxGroup Retrieve sandbox group
+	//
+	// Retrieve a sandbox group. 400 `invalid_sandbox_group_id` for a malformed ID.
+	//
+	// Corresponds with GET /sandbox-groups/{sandboxGroupId} (the `RetrieveSandboxGroup` operationId).
+	RetrieveSandboxGroup(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateSandboxGroupWithBody Update sandbox group
+	//
+	// Update a sandbox group's concurrency limit. Returns 400 for a malformed
+	// ID (`invalid_sandbox_group_id`), missing `concurrencyLimit`, or a value
+	// below 1. The response returns the effective limit after applying Render's cap.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PATCH /sandbox-groups/{sandboxGroupId} (the `UpdateSandboxGroup` operationId).
+	UpdateSandboxGroupWithBody(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateSandboxGroup Update sandbox group
+	//
+	// Update a sandbox group's concurrency limit. Returns 400 for a malformed
+	// ID (`invalid_sandbox_group_id`), missing `concurrencyLimit`, or a value
+	// below 1. The response returns the effective limit after applying Render's cap.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PATCH /sandbox-groups/{sandboxGroupId} (the `UpdateSandboxGroup` operationId).
+	UpdateSandboxGroup(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, body UpdateSandboxGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateSandboxBuildWithBody Create sandbox build
 	//
@@ -2095,8 +2147,8 @@ type ClientInterface interface {
 
 	// RetrieveSandboxBuild Retrieve sandbox build
 	//
-	// One build by ID. A build that belongs to another sandbox group returns
-	// 404.
+	// One build by ID. 404 with `code: build_not_found` if the build doesn't
+	// exist or belongs to another sandbox group.
 	//
 	// 400 with `code: invalid_sandbox_group_id` if `sandboxGroupId` is not a
 	// well-formed `sbg-` ID, or `invalid build ID` if `buildId` is not a
@@ -2116,10 +2168,12 @@ type ClientInterface interface {
 	// CreateSandboxGroupCredentialWithBody Create sandbox group credential
 	//
 	// Admin-only. Creates an independent credential with a caller-supplied ID.
-	// Each sandbox group supports at most 25 credentials and 200 KiB (204800 bytes)
-	// of serialized current credentials, including configuration and values. Three
-	// distinct prior configurations per credential are retained by fingerprint, with
-	// a 1 MiB total storage limit including version metadata and configurations. Limits are checked before saving.
+	// Each sandbox group supports at most 25 credentials and 200 KiB (204800
+	// bytes) of serialized current credentials, including configuration and
+	// values. Three distinct prior configurations per credential are retained
+	// by fingerprint, with a 1 MiB total storage limit including version
+	// metadata and configurations. Limits are checked before saving. A
+	// temporary synchronization conflicts return 429.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -2129,10 +2183,12 @@ type ClientInterface interface {
 	// CreateSandboxGroupCredential Create sandbox group credential
 	//
 	// Admin-only. Creates an independent credential with a caller-supplied ID.
-	// Each sandbox group supports at most 25 credentials and 200 KiB (204800 bytes)
-	// of serialized current credentials, including configuration and values. Three
-	// distinct prior configurations per credential are retained by fingerprint, with
-	// a 1 MiB total storage limit including version metadata and configurations. Limits are checked before saving.
+	// Each sandbox group supports at most 25 credentials and 200 KiB (204800
+	// bytes) of serialized current credentials, including configuration and
+	// values. Three distinct prior configurations per credential are retained
+	// by fingerprint, with a 1 MiB total storage limit including version
+	// metadata and configurations. Limits are checked before saving. A
+	// temporary synchronization conflicts return 429.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -2141,7 +2197,9 @@ type ClientInterface interface {
 
 	// DeleteSandboxGroupCredential Delete sandbox group credential
 	//
-	// Admin-only. Removes the credential from the group's desired configuration.
+	// Admin-only. Removes the credential if present and synchronizes the
+	// group's gateway configuration. Repeated deletion requests are accepted.
+	// A temporary synchronization conflict returns 429.
 	//
 	// Corresponds with DELETE /sandbox-groups/{sandboxGroupId}/credentials/{credentialId} (the `DeleteSandboxGroupCredential` operationId).
 	DeleteSandboxGroupCredential(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, credentialId externalRef15.CredentialId, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2156,13 +2214,14 @@ type ClientInterface interface {
 
 	// UpdateSandboxGroupCredentialWithBody Update sandbox group credential
 	//
-	// Admins may update configuration. Developers may update injection, method/path
-	// filters, and enabled state; destination or value changes require an admin.
-	// Assigning a value creates a new version; omitting it preserves the value.
-	// Other omitted fields are preserved; empty methods or paths arrays clear their
-	// filters. The group's serialized current credentials must
-	// remain within 200 KiB (204800 bytes). A successful response means desired
-	// state was saved; runtime reconciliation may still be pending.
+	// Admins may update configuration. Developers may update injection,
+	// method/path filters, and enabled state; destination or value changes
+	// require an admin. Assigning a value creates a new version; omitting it
+	// preserves the value. Other omitted fields are preserved; empty methods
+	// or paths arrays clear their filters. The group's serialized current
+	// credentials must remain within 200 KiB (204800 bytes). A successful
+	// response means desired state was saved; runtime reconciliation may still
+	// be pending. A temporary synchronization conflict returns 429.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -2171,13 +2230,14 @@ type ClientInterface interface {
 
 	// UpdateSandboxGroupCredential Update sandbox group credential
 	//
-	// Admins may update configuration. Developers may update injection, method/path
-	// filters, and enabled state; destination or value changes require an admin.
-	// Assigning a value creates a new version; omitting it preserves the value.
-	// Other omitted fields are preserved; empty methods or paths arrays clear their
-	// filters. The group's serialized current credentials must
-	// remain within 200 KiB (204800 bytes). A successful response means desired
-	// state was saved; runtime reconciliation may still be pending.
+	// Admins may update configuration. Developers may update injection,
+	// method/path filters, and enabled state; destination or value changes
+	// require an admin. Assigning a value creates a new version; omitting it
+	// preserves the value. Other omitted fields are preserved; empty methods
+	// or paths arrays clear their filters. The group's serialized current
+	// credentials must remain within 200 KiB (204800 bytes). A successful
+	// response means desired state was saved; runtime reconciliation may still
+	// be pending. A temporary synchronization conflict returns 429.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -2186,13 +2246,15 @@ type ClientInterface interface {
 
 	// RestoreSandboxGroupCredentialWithBody Restore sandbox credential configuration
 	//
-	// Admin-only. Creates a new current revision from the routing configuration,
-	// injection configuration, and secret value of a retained version. The new revision
-	// has an increasing version ID, the restoring identity and timestamp, the same
-	// fingerprint as the source, and restoredFromVersionId identifying the source.
-	// Each distinct configuration is stored once by fingerprint. The current and three
-	// most recently active prior configurations are retained. Evicting a configuration
-	// removes all version metadata referring to it. Values are never returned.
+	// Admin-only. Creates a new current revision from the routing
+	// configuration, injection configuration, and secret value of a retained
+	// version. The new revision has an increasing version ID, the restoring
+	// identity and timestamp, the same fingerprint as the source, and
+	// restoredFromVersionId identifying the source. Each distinct
+	// configuration is stored once by fingerprint. The current and three most
+	// recently active prior configurations are retained. Evicting a
+	// configuration removes all version metadata referring to it. Values are
+	// never returned. A temporary synchronization conflict returns 429.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -2201,13 +2263,15 @@ type ClientInterface interface {
 
 	// RestoreSandboxGroupCredential Restore sandbox credential configuration
 	//
-	// Admin-only. Creates a new current revision from the routing configuration,
-	// injection configuration, and secret value of a retained version. The new revision
-	// has an increasing version ID, the restoring identity and timestamp, the same
-	// fingerprint as the source, and restoredFromVersionId identifying the source.
-	// Each distinct configuration is stored once by fingerprint. The current and three
-	// most recently active prior configurations are retained. Evicting a configuration
-	// removes all version metadata referring to it. Values are never returned.
+	// Admin-only. Creates a new current revision from the routing
+	// configuration, injection configuration, and secret value of a retained
+	// version. The new revision has an increasing version ID, the restoring
+	// identity and timestamp, the same fingerprint as the source, and
+	// restoredFromVersionId identifying the source. Each distinct
+	// configuration is stored once by fingerprint. The current and three most
+	// recently active prior configurations are retained. Evicting a
+	// configuration removes all version metadata referring to it. Values are
+	// never returned. A temporary synchronization conflict returns 429.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -2290,6 +2354,12 @@ type ClientInterface interface {
 	// 400 with `code: sandbox_group_limit_reached` if the owner has no default
 	// sandbox group and is already at its sandbox group limit.
 	//
+	// 400 with `code: invalid_sandbox_plan` if `plan` is not one the API currently
+	// accepts. The message lists the accepted plans.
+	//
+	// 400 with `code: invalid_timeout_seconds` if `timeoutSeconds` is below 0 or
+	// above 2592000 (30 days).
+	//
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with POST /sandboxes (the `CreateSandbox` operationId).
@@ -2313,6 +2383,12 @@ type ClientInterface interface {
 	//
 	// 400 with `code: sandbox_group_limit_reached` if the owner has no default
 	// sandbox group and is already at its sandbox group limit.
+	//
+	// 400 with `code: invalid_sandbox_plan` if `plan` is not one the API currently
+	// accepts. The message lists the accepted plans.
+	//
+	// 400 with `code: invalid_timeout_seconds` if `timeoutSeconds` is below 0 or
+	// above 2592000 (30 days).
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -2340,15 +2416,6 @@ type ClientInterface interface {
 	// Corresponds with GET /sandboxes/{sandboxId}/execs/{execId} (the `RetrieveSandboxExecution` operationId).
 	RetrieveSandboxExecution(ctx context.Context, sandboxId externalRef15.SandboxId, execId externalRef15.ExecId, params *RetrieveSandboxExecutionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListSandboxFiles List directory contents in sandbox
-	//
-	// List the contents of a directory in a running sandbox. Returns file and
-	// directory metadata without transferring file contents. The sandbox must
-	// be `running`.
-	//
-	// Corresponds with GET /sandboxes/{sandboxId}/files/list (the `ListSandboxFiles` operationId).
-	ListSandboxFiles(ctx context.Context, sandboxId externalRef15.SandboxId, params *ListSandboxFilesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// ConnectSandboxFiles Mint a connect token for a sandbox file transfer
 	//
 	// Mint a short-lived, capability-scoped connect token that authorizes a
@@ -2366,16 +2433,6 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /sandboxes/{sandboxId}/files/{operation}/token (the `ConnectSandboxFiles` operationId).
 	ConnectSandboxFiles(ctx context.Context, sandboxId externalRef15.SandboxId, operation string, params *ConnectSandboxFilesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// StreamSandboxLogs Stream sandbox logs and lifecycle events
-	//
-	// Stream sandbox output and lifecycle events as a server-sent event stream.
-	// Replays historical events from sandbox creation (or from `since`), then
-	// continues live. The stream closes after the `terminated` or `errored`
-	// lifecycle event.
-	//
-	// Corresponds with GET /sandboxes/{sandboxId}/logs (the `StreamSandboxLogs` operationId).
-	StreamSandboxLogs(ctx context.Context, sandboxId externalRef15.SandboxId, params *StreamSandboxLogsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ConnectSandboxRunWithBody Create a connect token for a sandbox run
 	//
@@ -2453,6 +2510,9 @@ type ClientInterface interface {
 	//
 	// Creates a new Render service in the specified workspace with the specified configuration.
 	//
+	// 400 with `code: build_source_region_mismatch` if `buildSourceId` names a git-backed
+	// Build Source in a different region than the service.
+	//
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with POST /services (the `CreateService` operationId).
@@ -2461,6 +2521,9 @@ type ClientInterface interface {
 	// CreateService Create service
 	//
 	// Creates a new Render service in the specified workspace with the specified configuration.
+	//
+	// 400 with `code: build_source_region_mismatch` if `buildSourceId` names a git-backed
+	// Build Source in a different region than the service.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -2485,6 +2548,9 @@ type ClientInterface interface {
 	//
 	// Update the service with the provided ID.
 	//
+	// 400 with `code: build_source_region_mismatch` if `buildSourceId` names a git-backed
+	// Build Source in a different region than the service.
+	//
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with PATCH /services/{serviceId} (the `UpdateService` operationId).
@@ -2493,6 +2559,9 @@ type ClientInterface interface {
 	// UpdateService Update service
 	//
 	// Update the service with the provided ID.
+	//
+	// 400 with `code: build_source_region_mismatch` if `buildSourceId` names a git-backed
+	// Build Source in a different region than the service.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -3073,6 +3142,13 @@ type ClientInterface interface {
 	// Corresponds with POST /services/{serviceId}/suspend (the `SuspendService` operationId).
 	SuspendService(ctx context.Context, serviceId ServiceIdParam, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListSharedFilesystems List shared filesystems
+	//
+	// List the shared filesystems in a single workspace.
+	//
+	// Corresponds with GET /shared-filesystems (the `ListSharedFilesystems` operationId).
+	ListSharedFilesystems(ctx context.Context, params *ListSharedFilesystemsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListTaskRuns List task runs
 	//
 	// List task runs that match the provided filters. If no filters are provided, all task runs accessible by the authenticated user are returned.
@@ -3125,14 +3201,14 @@ type ClientInterface interface {
 	// Cancel a running task run with the provided ID.
 	//
 	// Corresponds with DELETE /task-runs/{taskRunId} (the `CancelTaskRun` operationId).
-	CancelTaskRun(ctx context.Context, taskRunId externalRef18.TaskRunIDParam, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CancelTaskRun(ctx context.Context, taskRunId externalRef19.TaskRunIDParam, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetTaskRun Retrieve task run
 	//
 	// Retrieve the workflow task run with the provided ID.
 	//
 	// Corresponds with GET /task-runs/{taskRunId} (the `GetTaskRun` operationId).
-	GetTaskRun(ctx context.Context, taskRunId externalRef18.TaskRunIDParam, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetTaskRun(ctx context.Context, taskRunId externalRef19.TaskRunIDParam, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListTasks List tasks
 	//
@@ -3146,7 +3222,7 @@ type ClientInterface interface {
 	// Retrieve the workflow task with the provided ID.
 	//
 	// Corresponds with GET /tasks/{taskId} (the `GetTask` operationId).
-	GetTask(ctx context.Context, taskId externalRef18.TaskIDParam, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetTask(ctx context.Context, taskId externalRef19.TaskIDParam, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetUser Get the authenticated user
 	//
@@ -3183,14 +3259,14 @@ type ClientInterface interface {
 	// Delete the webhook with the provided ID.
 	//
 	// Corresponds with DELETE /webhooks/{webhookId} (the `DeleteWebhook` operationId).
-	DeleteWebhook(ctx context.Context, webhookId externalRef17.WebhookIdParam, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteWebhook(ctx context.Context, webhookId externalRef18.WebhookIdParam, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// RetrieveWebhook Retrieve a webhook
 	//
 	// Retrieve the webhook with the provided ID.
 	//
 	// Corresponds with GET /webhooks/{webhookId} (the `RetrieveWebhook` operationId).
-	RetrieveWebhook(ctx context.Context, webhookId externalRef17.WebhookIdParam, reqEditors ...RequestEditorFn) (*http.Response, error)
+	RetrieveWebhook(ctx context.Context, webhookId externalRef18.WebhookIdParam, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateWebhookWithBody Update a webhook
 	//
@@ -3199,7 +3275,7 @@ type ClientInterface interface {
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with PATCH /webhooks/{webhookId} (the `UpdateWebhook` operationId).
-	UpdateWebhookWithBody(ctx context.Context, webhookId externalRef17.WebhookIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateWebhookWithBody(ctx context.Context, webhookId externalRef18.WebhookIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateWebhook Update a webhook
 	//
@@ -3208,14 +3284,14 @@ type ClientInterface interface {
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with PATCH /webhooks/{webhookId} (the `UpdateWebhook` operationId).
-	UpdateWebhook(ctx context.Context, webhookId externalRef17.WebhookIdParam, body UpdateWebhookJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateWebhook(ctx context.Context, webhookId externalRef18.WebhookIdParam, body UpdateWebhookJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListWebhookEvents List webhook events
 	//
 	// Retrieve a list of events that have been sent to this webhook, with optional filtering by timestamp.
 	//
 	// Corresponds with GET /webhooks/{webhookId}/events (the `ListWebhookEvents` operationId).
-	ListWebhookEvents(ctx context.Context, webhookId externalRef17.WebhookIdParam, params *ListWebhookEventsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ListWebhookEvents(ctx context.Context, webhookId externalRef18.WebhookIdParam, params *ListWebhookEventsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListWorkflows List workflows
 	//
@@ -3247,14 +3323,14 @@ type ClientInterface interface {
 	// Delete the workflow service with the provided ID.
 	//
 	// Corresponds with DELETE /workflows/{workflowId} (the `DeleteWorkflow` operationId).
-	DeleteWorkflow(ctx context.Context, workflowId externalRef18.WorkflowIDParam, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteWorkflow(ctx context.Context, workflowId externalRef19.WorkflowIDParam, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetWorkflow Retrieve workflow
 	//
 	// Retrieve the workflow service with the provided ID.
 	//
 	// Corresponds with GET /workflows/{workflowId} (the `GetWorkflow` operationId).
-	GetWorkflow(ctx context.Context, workflowId externalRef18.WorkflowIDParam, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetWorkflow(ctx context.Context, workflowId externalRef19.WorkflowIDParam, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateWorkflowWithBody Update workflow
 	//
@@ -3263,7 +3339,7 @@ type ClientInterface interface {
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with PATCH /workflows/{workflowId} (the `UpdateWorkflow` operationId).
-	UpdateWorkflowWithBody(ctx context.Context, workflowId externalRef18.WorkflowIDParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateWorkflowWithBody(ctx context.Context, workflowId externalRef19.WorkflowIDParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateWorkflow Update workflow
 	//
@@ -3272,7 +3348,7 @@ type ClientInterface interface {
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with PATCH /workflows/{workflowId} (the `UpdateWorkflow` operationId).
-	UpdateWorkflow(ctx context.Context, workflowId externalRef18.WorkflowIDParam, body UpdateWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateWorkflow(ctx context.Context, workflowId externalRef19.WorkflowIDParam, body UpdateWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListWorkflowVersions List workflow versions
 	//
@@ -3304,7 +3380,7 @@ type ClientInterface interface {
 	// Retrieve the specific workflow service version with the provided ID.
 	//
 	// Corresponds with GET /workflowversions/{workflowVersionId} (the `GetWorkflowVersion` operationId).
-	GetWorkflowVersion(ctx context.Context, workflowVersionId externalRef18.WorkflowVersionIDParam, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetWorkflowVersion(ctx context.Context, workflowVersionId externalRef19.WorkflowVersionIDParam, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 // ListBlueprints List Blueprints
@@ -5048,7 +5124,7 @@ func (c *Client) StartFlowRun(ctx context.Context, body StartFlowRunJSONRequestB
 // Cancel a running flow run with the provided ID.
 //
 // Corresponds with DELETE /flow-runs/{flowRunId} (the `CancelFlowRun` operationId).
-func (c *Client) CancelFlowRun(ctx context.Context, flowRunId externalRef18.FlowRunIDParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) CancelFlowRun(ctx context.Context, flowRunId externalRef19.FlowRunIDParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCancelFlowRunRequest(c.Server, flowRunId)
 	if err != nil {
 		return nil, err
@@ -5065,7 +5141,7 @@ func (c *Client) CancelFlowRun(ctx context.Context, flowRunId externalRef18.Flow
 // Retrieve the flow run with the provided ID, including its input and results.
 //
 // Corresponds with GET /flow-runs/{flowRunId} (the `GetFlowRun` operationId).
-func (c *Client) GetFlowRun(ctx context.Context, flowRunId externalRef18.FlowRunIDParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetFlowRun(ctx context.Context, flowRunId externalRef19.FlowRunIDParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetFlowRunRequest(c.Server, flowRunId)
 	if err != nil {
 		return nil, err
@@ -5079,10 +5155,10 @@ func (c *Client) GetFlowRun(ctx context.Context, flowRunId externalRef18.FlowRun
 
 // ListFlowRunSteps List flow run steps
 //
-// List the steps a flow run has recorded, in the order the flow started them.
+// List the steps a flow run has recorded, in the order the flow started them. A page can hold fewer than `limit` steps and still have more after it, so page until `hasMore` is false.
 //
 // Corresponds with GET /flow-runs/{flowRunId}/steps (the `ListFlowRunSteps` operationId).
-func (c *Client) ListFlowRunSteps(ctx context.Context, flowRunId externalRef18.FlowRunIDParam, params *ListFlowRunStepsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) ListFlowRunSteps(ctx context.Context, flowRunId externalRef19.FlowRunIDParam, params *ListFlowRunStepsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListFlowRunStepsRequest(c.Server, flowRunId, params)
 	if err != nil {
 		return nil, err
@@ -5096,11 +5172,11 @@ func (c *Client) ListFlowRunSteps(ctx context.Context, flowRunId externalRef18.F
 
 // GetFlowRunStep Retrieve flow run step
 //
-// Retrieve a single step of a flow run, including its input, result, error, and failed attempts.
+// Retrieve a single step of a flow run, including its input, result and error. A sequence number can cover more than one step, so pass the `stepKey` the step listing reported to address one of those.
 //
 // Corresponds with GET /flow-runs/{flowRunId}/steps/{stepSeq} (the `GetFlowRunStep` operationId).
-func (c *Client) GetFlowRunStep(ctx context.Context, flowRunId externalRef18.FlowRunIDParam, stepSeq externalRef18.FlowRunStepSeqParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetFlowRunStepRequest(c.Server, flowRunId, stepSeq)
+func (c *Client) GetFlowRunStep(ctx context.Context, flowRunId externalRef19.FlowRunIDParam, stepSeq externalRef19.FlowRunStepSeqParam, params *GetFlowRunStepParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetFlowRunStepRequest(c.Server, flowRunId, stepSeq, params)
 	if err != nil {
 		return nil, err
 	}
@@ -5133,7 +5209,7 @@ func (c *Client) ListFlows(ctx context.Context, params *ListFlowsParams, reqEdit
 // Retrieve the workflow flow with the provided ID.
 //
 // Corresponds with GET /flows/{flowId} (the `GetFlow` operationId).
-func (c *Client) GetFlow(ctx context.Context, flowId externalRef18.FlowIDParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetFlow(ctx context.Context, flowId externalRef19.FlowIDParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetFlowRequest(c.Server, flowId)
 	if err != nil {
 		return nil, err
@@ -6206,7 +6282,7 @@ func (c *Client) ListObjects(ctx context.Context, ownerId OwnerIdPathParam, regi
 // Deletes the object at the specified key. This operation is irreversible.
 //
 // Corresponds with DELETE /objects/{ownerId}/{region}/{key} (the `DeleteObject` operationId).
-func (c *Client) DeleteObject(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) DeleteObject(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteObjectRequest(c.Server, ownerId, region, key)
 	if err != nil {
 		return nil, err
@@ -6224,7 +6300,7 @@ func (c *Client) DeleteObject(ctx context.Context, ownerId OwnerIdPathParam, reg
 // The object must begin being downloaded within the URL's expiration time.
 //
 // Corresponds with GET /objects/{ownerId}/{region}/{key} (the `GetObject` operationId).
-func (c *Client) GetObject(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetObject(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetObjectRequest(c.Server, ownerId, region, key)
 	if err != nil {
 		return nil, err
@@ -6244,7 +6320,7 @@ func (c *Client) GetObject(ctx context.Context, ownerId OwnerIdPathParam, region
 // Takes any type of body and a specified content type.
 //
 // Corresponds with PUT /objects/{ownerId}/{region}/{key} (the `PutObject` operationId).
-func (c *Client) PutObjectWithBody(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutObjectWithBody(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutObjectRequestWithBody(c.Server, ownerId, region, key, contentType, body)
 	if err != nil {
 		return nil, err
@@ -6264,7 +6340,7 @@ func (c *Client) PutObjectWithBody(ctx context.Context, ownerId OwnerIdPathParam
 // Takes a body of the `application/json` content type.
 //
 // Corresponds with PUT /objects/{ownerId}/{region}/{key} (the `PutObject` operationId).
-func (c *Client) PutObject(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam, body PutObjectJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutObject(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam, body PutObjectJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutObjectRequest(c.Server, ownerId, region, key, body)
 	if err != nil {
 		return nil, err
@@ -7443,11 +7519,112 @@ func (c *Client) UpdateRegistryCredential(ctx context.Context, registryCredentia
 
 // ListSandboxGroups List sandbox groups
 //
-// List sandbox groups for a single workspace.
+// List sandbox groups for a single workspace, newest first. The default
+// page size is 20 and the maximum is 100.
+// Use the last item's cursor to fetch the next page, until it is empty.
 //
 // Corresponds with GET /sandbox-groups (the `ListSandboxGroups` operationId).
 func (c *Client) ListSandboxGroups(ctx context.Context, params *ListSandboxGroupsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListSandboxGroupsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateSandboxGroupWithBody Create sandbox group
+//
+// Create a sandbox group. The workspace's first group becomes its default.
+// Returns 409 if the `name` is taken.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /sandbox-groups (the `CreateSandboxGroup` operationId).
+func (c *Client) CreateSandboxGroupWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSandboxGroupRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateSandboxGroup Create sandbox group
+//
+// Create a sandbox group. The workspace's first group becomes its default.
+// Returns 409 if the `name` is taken.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /sandbox-groups (the `CreateSandboxGroup` operationId).
+func (c *Client) CreateSandboxGroup(ctx context.Context, body CreateSandboxGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSandboxGroupRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RetrieveSandboxGroup Retrieve sandbox group
+//
+// Retrieve a sandbox group. 400 `invalid_sandbox_group_id` for a malformed ID.
+//
+// Corresponds with GET /sandbox-groups/{sandboxGroupId} (the `RetrieveSandboxGroup` operationId).
+func (c *Client) RetrieveSandboxGroup(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRetrieveSandboxGroupRequest(c.Server, sandboxGroupId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateSandboxGroupWithBody Update sandbox group
+//
+// Update a sandbox group's concurrency limit. Returns 400 for a malformed
+// ID (`invalid_sandbox_group_id`), missing `concurrencyLimit`, or a value
+// below 1. The response returns the effective limit after applying Render's cap.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PATCH /sandbox-groups/{sandboxGroupId} (the `UpdateSandboxGroup` operationId).
+func (c *Client) UpdateSandboxGroupWithBody(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateSandboxGroupRequestWithBody(c.Server, sandboxGroupId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateSandboxGroup Update sandbox group
+//
+// Update a sandbox group's concurrency limit. Returns 400 for a malformed
+// ID (`invalid_sandbox_group_id`), missing `concurrencyLimit`, or a value
+// below 1. The response returns the effective limit after applying Render's cap.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PATCH /sandbox-groups/{sandboxGroupId} (the `UpdateSandboxGroup` operationId).
+func (c *Client) UpdateSandboxGroup(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, body UpdateSandboxGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateSandboxGroupRequest(c.Server, sandboxGroupId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -7524,8 +7701,8 @@ func (c *Client) CreateSandboxBuild(ctx context.Context, sandboxGroupId external
 
 // RetrieveSandboxBuild Retrieve sandbox build
 //
-// One build by ID. A build that belongs to another sandbox group returns
-// 404.
+// One build by ID. 404 with `code: build_not_found` if the build doesn't
+// exist or belongs to another sandbox group.
 //
 // 400 with `code: invalid_sandbox_group_id` if `sandboxGroupId` is not a
 // well-formed `sbg-` ID, or `invalid build ID` if `buildId` is not a
@@ -7565,10 +7742,12 @@ func (c *Client) ListSandboxGroupCredentials(ctx context.Context, sandboxGroupId
 // CreateSandboxGroupCredentialWithBody Create sandbox group credential
 //
 // Admin-only. Creates an independent credential with a caller-supplied ID.
-// Each sandbox group supports at most 25 credentials and 200 KiB (204800 bytes)
-// of serialized current credentials, including configuration and values. Three
-// distinct prior configurations per credential are retained by fingerprint, with
-// a 1 MiB total storage limit including version metadata and configurations. Limits are checked before saving.
+// Each sandbox group supports at most 25 credentials and 200 KiB (204800
+// bytes) of serialized current credentials, including configuration and
+// values. Three distinct prior configurations per credential are retained
+// by fingerprint, with a 1 MiB total storage limit including version
+// metadata and configurations. Limits are checked before saving. A
+// temporary synchronization conflicts return 429.
 //
 // Takes any type of body and a specified content type.
 //
@@ -7588,10 +7767,12 @@ func (c *Client) CreateSandboxGroupCredentialWithBody(ctx context.Context, sandb
 // CreateSandboxGroupCredential Create sandbox group credential
 //
 // Admin-only. Creates an independent credential with a caller-supplied ID.
-// Each sandbox group supports at most 25 credentials and 200 KiB (204800 bytes)
-// of serialized current credentials, including configuration and values. Three
-// distinct prior configurations per credential are retained by fingerprint, with
-// a 1 MiB total storage limit including version metadata and configurations. Limits are checked before saving.
+// Each sandbox group supports at most 25 credentials and 200 KiB (204800
+// bytes) of serialized current credentials, including configuration and
+// values. Three distinct prior configurations per credential are retained
+// by fingerprint, with a 1 MiB total storage limit including version
+// metadata and configurations. Limits are checked before saving. A
+// temporary synchronization conflicts return 429.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -7610,7 +7791,9 @@ func (c *Client) CreateSandboxGroupCredential(ctx context.Context, sandboxGroupI
 
 // DeleteSandboxGroupCredential Delete sandbox group credential
 //
-// Admin-only. Removes the credential from the group's desired configuration.
+// Admin-only. Removes the credential if present and synchronizes the
+// group's gateway configuration. Repeated deletion requests are accepted.
+// A temporary synchronization conflict returns 429.
 //
 // Corresponds with DELETE /sandbox-groups/{sandboxGroupId}/credentials/{credentialId} (the `DeleteSandboxGroupCredential` operationId).
 func (c *Client) DeleteSandboxGroupCredential(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, credentialId externalRef15.CredentialId, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -7645,13 +7828,14 @@ func (c *Client) RetrieveSandboxGroupCredential(ctx context.Context, sandboxGrou
 
 // UpdateSandboxGroupCredentialWithBody Update sandbox group credential
 //
-// Admins may update configuration. Developers may update injection, method/path
-// filters, and enabled state; destination or value changes require an admin.
-// Assigning a value creates a new version; omitting it preserves the value.
-// Other omitted fields are preserved; empty methods or paths arrays clear their
-// filters. The group's serialized current credentials must
-// remain within 200 KiB (204800 bytes). A successful response means desired
-// state was saved; runtime reconciliation may still be pending.
+// Admins may update configuration. Developers may update injection,
+// method/path filters, and enabled state; destination or value changes
+// require an admin. Assigning a value creates a new version; omitting it
+// preserves the value. Other omitted fields are preserved; empty methods
+// or paths arrays clear their filters. The group's serialized current
+// credentials must remain within 200 KiB (204800 bytes). A successful
+// response means desired state was saved; runtime reconciliation may still
+// be pending. A temporary synchronization conflict returns 429.
 //
 // Takes any type of body and a specified content type.
 //
@@ -7670,13 +7854,14 @@ func (c *Client) UpdateSandboxGroupCredentialWithBody(ctx context.Context, sandb
 
 // UpdateSandboxGroupCredential Update sandbox group credential
 //
-// Admins may update configuration. Developers may update injection, method/path
-// filters, and enabled state; destination or value changes require an admin.
-// Assigning a value creates a new version; omitting it preserves the value.
-// Other omitted fields are preserved; empty methods or paths arrays clear their
-// filters. The group's serialized current credentials must
-// remain within 200 KiB (204800 bytes). A successful response means desired
-// state was saved; runtime reconciliation may still be pending.
+// Admins may update configuration. Developers may update injection,
+// method/path filters, and enabled state; destination or value changes
+// require an admin. Assigning a value creates a new version; omitting it
+// preserves the value. Other omitted fields are preserved; empty methods
+// or paths arrays clear their filters. The group's serialized current
+// credentials must remain within 200 KiB (204800 bytes). A successful
+// response means desired state was saved; runtime reconciliation may still
+// be pending. A temporary synchronization conflict returns 429.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -7695,13 +7880,15 @@ func (c *Client) UpdateSandboxGroupCredential(ctx context.Context, sandboxGroupI
 
 // RestoreSandboxGroupCredentialWithBody Restore sandbox credential configuration
 //
-// Admin-only. Creates a new current revision from the routing configuration,
-// injection configuration, and secret value of a retained version. The new revision
-// has an increasing version ID, the restoring identity and timestamp, the same
-// fingerprint as the source, and restoredFromVersionId identifying the source.
-// Each distinct configuration is stored once by fingerprint. The current and three
-// most recently active prior configurations are retained. Evicting a configuration
-// removes all version metadata referring to it. Values are never returned.
+// Admin-only. Creates a new current revision from the routing
+// configuration, injection configuration, and secret value of a retained
+// version. The new revision has an increasing version ID, the restoring
+// identity and timestamp, the same fingerprint as the source, and
+// restoredFromVersionId identifying the source. Each distinct
+// configuration is stored once by fingerprint. The current and three most
+// recently active prior configurations are retained. Evicting a
+// configuration removes all version metadata referring to it. Values are
+// never returned. A temporary synchronization conflict returns 429.
 //
 // Takes any type of body and a specified content type.
 //
@@ -7720,13 +7907,15 @@ func (c *Client) RestoreSandboxGroupCredentialWithBody(ctx context.Context, sand
 
 // RestoreSandboxGroupCredential Restore sandbox credential configuration
 //
-// Admin-only. Creates a new current revision from the routing configuration,
-// injection configuration, and secret value of a retained version. The new revision
-// has an increasing version ID, the restoring identity and timestamp, the same
-// fingerprint as the source, and restoredFromVersionId identifying the source.
-// Each distinct configuration is stored once by fingerprint. The current and three
-// most recently active prior configurations are retained. Evicting a configuration
-// removes all version metadata referring to it. Values are never returned.
+// Admin-only. Creates a new current revision from the routing
+// configuration, injection configuration, and secret value of a retained
+// version. The new revision has an increasing version ID, the restoring
+// identity and timestamp, the same fingerprint as the source, and
+// restoredFromVersionId identifying the source. Each distinct
+// configuration is stored once by fingerprint. The current and three most
+// recently active prior configurations are retained. Evicting a
+// configuration removes all version metadata referring to it. Values are
+// never returned. A temporary synchronization conflict returns 429.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -7869,6 +8058,12 @@ func (c *Client) ListSandboxes(ctx context.Context, params *ListSandboxesParams,
 // 400 with `code: sandbox_group_limit_reached` if the owner has no default
 // sandbox group and is already at its sandbox group limit.
 //
+// 400 with `code: invalid_sandbox_plan` if `plan` is not one the API currently
+// accepts. The message lists the accepted plans.
+//
+// 400 with `code: invalid_timeout_seconds` if `timeoutSeconds` is below 0 or
+// above 2592000 (30 days).
+//
 // Takes any type of body and a specified content type.
 //
 // Corresponds with POST /sandboxes (the `CreateSandbox` operationId).
@@ -7902,6 +8097,12 @@ func (c *Client) CreateSandboxWithBody(ctx context.Context, contentType string, 
 //
 // 400 with `code: sandbox_group_limit_reached` if the owner has no default
 // sandbox group and is already at its sandbox group limit.
+//
+// 400 with `code: invalid_sandbox_plan` if `plan` is not one the API currently
+// accepts. The message lists the accepted plans.
+//
+// 400 with `code: invalid_timeout_seconds` if `timeoutSeconds` is below 0 or
+// above 2592000 (30 days).
 //
 // Takes a body of the `application/json` content type.
 //
@@ -7969,25 +8170,6 @@ func (c *Client) RetrieveSandboxExecution(ctx context.Context, sandboxId externa
 	return c.Client.Do(req)
 }
 
-// ListSandboxFiles List directory contents in sandbox
-//
-// List the contents of a directory in a running sandbox. Returns file and
-// directory metadata without transferring file contents. The sandbox must
-// be `running`.
-//
-// Corresponds with GET /sandboxes/{sandboxId}/files/list (the `ListSandboxFiles` operationId).
-func (c *Client) ListSandboxFiles(ctx context.Context, sandboxId externalRef15.SandboxId, params *ListSandboxFilesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListSandboxFilesRequest(c.Server, sandboxId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 // ConnectSandboxFiles Mint a connect token for a sandbox file transfer
 //
 // Mint a short-lived, capability-scoped connect token that authorizes a
@@ -8006,26 +8188,6 @@ func (c *Client) ListSandboxFiles(ctx context.Context, sandboxId externalRef15.S
 // Corresponds with POST /sandboxes/{sandboxId}/files/{operation}/token (the `ConnectSandboxFiles` operationId).
 func (c *Client) ConnectSandboxFiles(ctx context.Context, sandboxId externalRef15.SandboxId, operation string, params *ConnectSandboxFilesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewConnectSandboxFilesRequest(c.Server, sandboxId, operation, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// StreamSandboxLogs Stream sandbox logs and lifecycle events
-//
-// Stream sandbox output and lifecycle events as a server-sent event stream.
-// Replays historical events from sandbox creation (or from `since`), then
-// continues live. The stream closes after the `terminated` or `errored`
-// lifecycle event.
-//
-// Corresponds with GET /sandboxes/{sandboxId}/logs (the `StreamSandboxLogs` operationId).
-func (c *Client) StreamSandboxLogs(ctx context.Context, sandboxId externalRef15.SandboxId, params *StreamSandboxLogsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewStreamSandboxLogsRequest(c.Server, sandboxId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -8172,6 +8334,9 @@ func (c *Client) ListServices(ctx context.Context, params *ListServicesParams, r
 //
 // Creates a new Render service in the specified workspace with the specified configuration.
 //
+// 400 with `code: build_source_region_mismatch` if `buildSourceId` names a git-backed
+// Build Source in a different region than the service.
+//
 // Takes any type of body and a specified content type.
 //
 // Corresponds with POST /services (the `CreateService` operationId).
@@ -8190,6 +8355,9 @@ func (c *Client) CreateServiceWithBody(ctx context.Context, contentType string, 
 // CreateService Create service
 //
 // Creates a new Render service in the specified workspace with the specified configuration.
+//
+// 400 with `code: build_source_region_mismatch` if `buildSourceId` names a git-backed
+// Build Source in a different region than the service.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -8244,6 +8412,9 @@ func (c *Client) RetrieveService(ctx context.Context, serviceId ServiceIdParam, 
 //
 // Update the service with the provided ID.
 //
+// 400 with `code: build_source_region_mismatch` if `buildSourceId` names a git-backed
+// Build Source in a different region than the service.
+//
 // Takes any type of body and a specified content type.
 //
 // Corresponds with PATCH /services/{serviceId} (the `UpdateService` operationId).
@@ -8262,6 +8433,9 @@ func (c *Client) UpdateServiceWithBody(ctx context.Context, serviceId ServiceIdP
 // UpdateService Update service
 //
 // Update the service with the provided ID.
+//
+// 400 with `code: build_source_region_mismatch` if `buildSourceId` names a git-backed
+// Build Source in a different region than the service.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -9472,6 +9646,23 @@ func (c *Client) SuspendService(ctx context.Context, serviceId ServiceIdParam, r
 	return c.Client.Do(req)
 }
 
+// ListSharedFilesystems List shared filesystems
+//
+// List the shared filesystems in a single workspace.
+//
+// Corresponds with GET /shared-filesystems (the `ListSharedFilesystems` operationId).
+func (c *Client) ListSharedFilesystems(ctx context.Context, params *ListSharedFilesystemsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListSharedFilesystemsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // ListTaskRuns List task runs
 //
 // List task runs that match the provided filters. If no filters are provided, all task runs accessible by the authenticated user are returned.
@@ -9564,7 +9755,7 @@ func (c *Client) StreamTaskRunsEvents(ctx context.Context, params *StreamTaskRun
 // Cancel a running task run with the provided ID.
 //
 // Corresponds with DELETE /task-runs/{taskRunId} (the `CancelTaskRun` operationId).
-func (c *Client) CancelTaskRun(ctx context.Context, taskRunId externalRef18.TaskRunIDParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) CancelTaskRun(ctx context.Context, taskRunId externalRef19.TaskRunIDParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCancelTaskRunRequest(c.Server, taskRunId)
 	if err != nil {
 		return nil, err
@@ -9581,7 +9772,7 @@ func (c *Client) CancelTaskRun(ctx context.Context, taskRunId externalRef18.Task
 // Retrieve the workflow task run with the provided ID.
 //
 // Corresponds with GET /task-runs/{taskRunId} (the `GetTaskRun` operationId).
-func (c *Client) GetTaskRun(ctx context.Context, taskRunId externalRef18.TaskRunIDParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetTaskRun(ctx context.Context, taskRunId externalRef19.TaskRunIDParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetTaskRunRequest(c.Server, taskRunId)
 	if err != nil {
 		return nil, err
@@ -9615,7 +9806,7 @@ func (c *Client) ListTasks(ctx context.Context, params *ListTasksParams, reqEdit
 // Retrieve the workflow task with the provided ID.
 //
 // Corresponds with GET /tasks/{taskId} (the `GetTask` operationId).
-func (c *Client) GetTask(ctx context.Context, taskId externalRef18.TaskIDParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetTask(ctx context.Context, taskId externalRef19.TaskIDParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetTaskRequest(c.Server, taskId)
 	if err != nil {
 		return nil, err
@@ -9702,7 +9893,7 @@ func (c *Client) CreateWebhook(ctx context.Context, body CreateWebhookJSONReques
 // Delete the webhook with the provided ID.
 //
 // Corresponds with DELETE /webhooks/{webhookId} (the `DeleteWebhook` operationId).
-func (c *Client) DeleteWebhook(ctx context.Context, webhookId externalRef17.WebhookIdParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) DeleteWebhook(ctx context.Context, webhookId externalRef18.WebhookIdParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteWebhookRequest(c.Server, webhookId)
 	if err != nil {
 		return nil, err
@@ -9719,7 +9910,7 @@ func (c *Client) DeleteWebhook(ctx context.Context, webhookId externalRef17.Webh
 // Retrieve the webhook with the provided ID.
 //
 // Corresponds with GET /webhooks/{webhookId} (the `RetrieveWebhook` operationId).
-func (c *Client) RetrieveWebhook(ctx context.Context, webhookId externalRef17.WebhookIdParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) RetrieveWebhook(ctx context.Context, webhookId externalRef18.WebhookIdParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRetrieveWebhookRequest(c.Server, webhookId)
 	if err != nil {
 		return nil, err
@@ -9738,7 +9929,7 @@ func (c *Client) RetrieveWebhook(ctx context.Context, webhookId externalRef17.We
 // Takes any type of body and a specified content type.
 //
 // Corresponds with PATCH /webhooks/{webhookId} (the `UpdateWebhook` operationId).
-func (c *Client) UpdateWebhookWithBody(ctx context.Context, webhookId externalRef17.WebhookIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) UpdateWebhookWithBody(ctx context.Context, webhookId externalRef18.WebhookIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateWebhookRequestWithBody(c.Server, webhookId, contentType, body)
 	if err != nil {
 		return nil, err
@@ -9757,7 +9948,7 @@ func (c *Client) UpdateWebhookWithBody(ctx context.Context, webhookId externalRe
 // Takes a body of the `application/json` content type.
 //
 // Corresponds with PATCH /webhooks/{webhookId} (the `UpdateWebhook` operationId).
-func (c *Client) UpdateWebhook(ctx context.Context, webhookId externalRef17.WebhookIdParam, body UpdateWebhookJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) UpdateWebhook(ctx context.Context, webhookId externalRef18.WebhookIdParam, body UpdateWebhookJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateWebhookRequest(c.Server, webhookId, body)
 	if err != nil {
 		return nil, err
@@ -9774,7 +9965,7 @@ func (c *Client) UpdateWebhook(ctx context.Context, webhookId externalRef17.Webh
 // Retrieve a list of events that have been sent to this webhook, with optional filtering by timestamp.
 //
 // Corresponds with GET /webhooks/{webhookId}/events (the `ListWebhookEvents` operationId).
-func (c *Client) ListWebhookEvents(ctx context.Context, webhookId externalRef17.WebhookIdParam, params *ListWebhookEventsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) ListWebhookEvents(ctx context.Context, webhookId externalRef18.WebhookIdParam, params *ListWebhookEventsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListWebhookEventsRequest(c.Server, webhookId, params)
 	if err != nil {
 		return nil, err
@@ -9846,7 +10037,7 @@ func (c *Client) CreateWorkflow(ctx context.Context, body CreateWorkflowJSONRequ
 // Delete the workflow service with the provided ID.
 //
 // Corresponds with DELETE /workflows/{workflowId} (the `DeleteWorkflow` operationId).
-func (c *Client) DeleteWorkflow(ctx context.Context, workflowId externalRef18.WorkflowIDParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) DeleteWorkflow(ctx context.Context, workflowId externalRef19.WorkflowIDParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteWorkflowRequest(c.Server, workflowId)
 	if err != nil {
 		return nil, err
@@ -9863,7 +10054,7 @@ func (c *Client) DeleteWorkflow(ctx context.Context, workflowId externalRef18.Wo
 // Retrieve the workflow service with the provided ID.
 //
 // Corresponds with GET /workflows/{workflowId} (the `GetWorkflow` operationId).
-func (c *Client) GetWorkflow(ctx context.Context, workflowId externalRef18.WorkflowIDParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetWorkflow(ctx context.Context, workflowId externalRef19.WorkflowIDParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetWorkflowRequest(c.Server, workflowId)
 	if err != nil {
 		return nil, err
@@ -9882,7 +10073,7 @@ func (c *Client) GetWorkflow(ctx context.Context, workflowId externalRef18.Workf
 // Takes any type of body and a specified content type.
 //
 // Corresponds with PATCH /workflows/{workflowId} (the `UpdateWorkflow` operationId).
-func (c *Client) UpdateWorkflowWithBody(ctx context.Context, workflowId externalRef18.WorkflowIDParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) UpdateWorkflowWithBody(ctx context.Context, workflowId externalRef19.WorkflowIDParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateWorkflowRequestWithBody(c.Server, workflowId, contentType, body)
 	if err != nil {
 		return nil, err
@@ -9901,7 +10092,7 @@ func (c *Client) UpdateWorkflowWithBody(ctx context.Context, workflowId external
 // Takes a body of the `application/json` content type.
 //
 // Corresponds with PATCH /workflows/{workflowId} (the `UpdateWorkflow` operationId).
-func (c *Client) UpdateWorkflow(ctx context.Context, workflowId externalRef18.WorkflowIDParam, body UpdateWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) UpdateWorkflow(ctx context.Context, workflowId externalRef19.WorkflowIDParam, body UpdateWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateWorkflowRequest(c.Server, workflowId, body)
 	if err != nil {
 		return nil, err
@@ -9973,7 +10164,7 @@ func (c *Client) CreateWorkflowVersion(ctx context.Context, body CreateWorkflowV
 // Retrieve the specific workflow service version with the provided ID.
 //
 // Corresponds with GET /workflowversions/{workflowVersionId} (the `GetWorkflowVersion` operationId).
-func (c *Client) GetWorkflowVersion(ctx context.Context, workflowVersionId externalRef18.WorkflowVersionIDParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetWorkflowVersion(ctx context.Context, workflowVersionId externalRef19.WorkflowVersionIDParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetWorkflowVersionRequest(c.Server, workflowVersionId)
 	if err != nil {
 		return nil, err
@@ -13440,7 +13631,7 @@ func NewStartFlowRunRequestWithBody(server string, contentType string, body io.R
 }
 
 // NewCancelFlowRunRequest constructs an http.Request for the CancelFlowRun method
-func NewCancelFlowRunRequest(server string, flowRunId externalRef18.FlowRunIDParam) (*http.Request, error) {
+func NewCancelFlowRunRequest(server string, flowRunId externalRef19.FlowRunIDParam) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -13474,7 +13665,7 @@ func NewCancelFlowRunRequest(server string, flowRunId externalRef18.FlowRunIDPar
 }
 
 // NewGetFlowRunRequest constructs an http.Request for the GetFlowRun method
-func NewGetFlowRunRequest(server string, flowRunId externalRef18.FlowRunIDParam) (*http.Request, error) {
+func NewGetFlowRunRequest(server string, flowRunId externalRef19.FlowRunIDParam) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -13508,7 +13699,7 @@ func NewGetFlowRunRequest(server string, flowRunId externalRef18.FlowRunIDParam)
 }
 
 // NewListFlowRunStepsRequest constructs an http.Request for the ListFlowRunSteps method
-func NewListFlowRunStepsRequest(server string, flowRunId externalRef18.FlowRunIDParam, params *ListFlowRunStepsParams) (*http.Request, error) {
+func NewListFlowRunStepsRequest(server string, flowRunId externalRef19.FlowRunIDParam, params *ListFlowRunStepsParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -13581,7 +13772,7 @@ func NewListFlowRunStepsRequest(server string, flowRunId externalRef18.FlowRunID
 }
 
 // NewGetFlowRunStepRequest constructs an http.Request for the GetFlowRunStep method
-func NewGetFlowRunStepRequest(server string, flowRunId externalRef18.FlowRunIDParam, stepSeq externalRef18.FlowRunStepSeqParam) (*http.Request, error) {
+func NewGetFlowRunStepRequest(server string, flowRunId externalRef19.FlowRunIDParam, stepSeq externalRef19.FlowRunStepSeqParam, params *GetFlowRunStepParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -13611,6 +13802,33 @@ func NewGetFlowRunStepRequest(server string, flowRunId externalRef18.FlowRunIDPa
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.StepKey != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "stepKey", *params.StepKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
@@ -13736,7 +13954,7 @@ func NewListFlowsRequest(server string, params *ListFlowsParams) (*http.Request,
 }
 
 // NewGetFlowRequest constructs an http.Request for the GetFlow method
-func NewGetFlowRequest(server string, flowId externalRef18.FlowIDParam) (*http.Request, error) {
+func NewGetFlowRequest(server string, flowId externalRef19.FlowIDParam) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -18115,7 +18333,7 @@ func NewListObjectsRequest(server string, ownerId OwnerIdPathParam, region Regio
 }
 
 // NewDeleteObjectRequest constructs an http.Request for the DeleteObject method
-func NewDeleteObjectRequest(server string, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam) (*http.Request, error) {
+func NewDeleteObjectRequest(server string, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -18163,7 +18381,7 @@ func NewDeleteObjectRequest(server string, ownerId OwnerIdPathParam, region Regi
 }
 
 // NewGetObjectRequest constructs an http.Request for the GetObject method
-func NewGetObjectRequest(server string, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam) (*http.Request, error) {
+func NewGetObjectRequest(server string, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -18211,7 +18429,7 @@ func NewGetObjectRequest(server string, ownerId OwnerIdPathParam, region RegionP
 }
 
 // NewPutObjectRequest calls the generic PutObject builder with application/json body
-func NewPutObjectRequest(server string, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam, body PutObjectJSONRequestBody) (*http.Request, error) {
+func NewPutObjectRequest(server string, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam, body PutObjectJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
@@ -18222,7 +18440,7 @@ func NewPutObjectRequest(server string, ownerId OwnerIdPathParam, region RegionP
 }
 
 // NewPutObjectRequestWithBody constructs an http.Request for the PutObject method, with any body, and a specified content type
-func NewPutObjectRequestWithBody(server string, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam, contentType string, body io.Reader) (*http.Request, error) {
+func NewPutObjectRequestWithBody(server string, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -20921,6 +21139,30 @@ func NewListSandboxGroupsRequest(server string, params *ListSandboxGroupsParams)
 			}
 		}
 
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if encoded := queryValues.Encode(); encoded != "" {
 			rawQueryFragments = append(rawQueryFragments, encoded)
 		}
@@ -20931,6 +21173,127 @@ func NewListSandboxGroupsRequest(server string, params *ListSandboxGroupsParams)
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewCreateSandboxGroupRequest calls the generic CreateSandboxGroup builder with application/json body
+func NewCreateSandboxGroupRequest(server string, body CreateSandboxGroupJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateSandboxGroupRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateSandboxGroupRequestWithBody constructs an http.Request for the CreateSandboxGroup method, with any body, and a specified content type
+func NewCreateSandboxGroupRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/sandbox-groups")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRetrieveSandboxGroupRequest constructs an http.Request for the RetrieveSandboxGroup method
+func NewRetrieveSandboxGroupRequest(server string, sandboxGroupId externalRef15.SandboxGroupId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "sandboxGroupId", sandboxGroupId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/sandbox-groups/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateSandboxGroupRequest calls the generic UpdateSandboxGroup builder with application/json body
+func NewUpdateSandboxGroupRequest(server string, sandboxGroupId externalRef15.SandboxGroupId, body UpdateSandboxGroupJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateSandboxGroupRequestWithBody(server, sandboxGroupId, "application/json", bodyReader)
+}
+
+// NewUpdateSandboxGroupRequestWithBody constructs an http.Request for the UpdateSandboxGroup method, with any body, and a specified content type
+func NewUpdateSandboxGroupRequestWithBody(server string, sandboxGroupId externalRef15.SandboxGroupId, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "sandboxGroupId", sandboxGroupId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/sandbox-groups/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -21600,6 +21963,18 @@ func NewListSandboxesRequest(server string, params *ListSandboxesParams) (*http.
 			}
 		}
 
+		if params.SandboxGroupId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sandboxGroupId", *params.SandboxGroupId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.Cursor != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
@@ -21904,75 +22279,6 @@ func NewRetrieveSandboxExecutionRequest(server string, sandboxId externalRef15.S
 	return req, nil
 }
 
-// NewListSandboxFilesRequest constructs an http.Request for the ListSandboxFiles method
-func NewListSandboxFilesRequest(server string, sandboxId externalRef15.SandboxId, params *ListSandboxFilesParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "sandboxId", sandboxId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/sandboxes/%s/files/list", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		// queryValues collects non-styled parameters (passthrough, JSON)
-		// that are safe to round-trip through url.Values.Encode().
-		queryValues := queryURL.Query()
-		// rawQueryFragments collects pre-encoded query fragments from
-		// styled parameters, preserving literal commas as delimiters
-		// per the OpenAPI spec (e.g. "color=blue,black,brown").
-		var rawQueryFragments []string
-
-		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "path", params.Path, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
-			}
-		}
-
-		if params.Depth != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "depth", *params.Depth, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
-		if encoded := queryValues.Encode(); encoded != "" {
-			rawQueryFragments = append(rawQueryFragments, encoded)
-		}
-		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
 // NewConnectSandboxFilesRequest constructs an http.Request for the ConnectSandboxFiles method
 func NewConnectSandboxFilesRequest(server string, sandboxId externalRef15.SandboxId, operation string, params *ConnectSandboxFilesParams) (*http.Request, error) {
 	var err error
@@ -22044,106 +22350,6 @@ func NewConnectSandboxFilesRequest(server string, sandboxId externalRef15.Sandbo
 	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewStreamSandboxLogsRequest constructs an http.Request for the StreamSandboxLogs method
-func NewStreamSandboxLogsRequest(server string, sandboxId externalRef15.SandboxId, params *StreamSandboxLogsParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "sandboxId", sandboxId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/sandboxes/%s/logs", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		// queryValues collects non-styled parameters (passthrough, JSON)
-		// that are safe to round-trip through url.Values.Encode().
-		queryValues := queryURL.Query()
-		// rawQueryFragments collects pre-encoded query fragments from
-		// styled parameters, preserving literal commas as delimiters
-		// per the OpenAPI spec (e.g. "color=blue,black,brown").
-		var rawQueryFragments []string
-
-		if params.Since != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "since", *params.Since, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date-time"}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
-		if params.Follow != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "follow", *params.Follow, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
-		if params.ExecId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "execId", *params.ExecId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
-		if encoded := queryValues.Encode(); encoded != "" {
-			rawQueryFragments = append(rawQueryFragments, encoded)
-		}
-		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		if params.Accept != nil {
-			var headerParam0 string
-
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "Accept", *params.Accept, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-			if err != nil {
-				return nil, err
-			}
-
-			req.Header.Set("Accept", headerParam0)
-		}
-
 	}
 
 	return req, nil
@@ -25243,6 +25449,56 @@ func NewSuspendServiceRequest(server string, serviceId ServiceIdParam) (*http.Re
 	return req, nil
 }
 
+// NewListSharedFilesystemsRequest constructs an http.Request for the ListSharedFilesystems method
+func NewListSharedFilesystemsRequest(server string, params *ListSharedFilesystemsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/shared-filesystems")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "ownerId", params.OwnerId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListTaskRunsRequest constructs an http.Request for the ListTaskRuns method
 func NewListTaskRunsRequest(server string, params *ListTaskRunsParams) (*http.Request, error) {
 	var err error
@@ -25479,7 +25735,7 @@ func NewStreamTaskRunsEventsRequest(server string, params *StreamTaskRunsEventsP
 }
 
 // NewCancelTaskRunRequest constructs an http.Request for the CancelTaskRun method
-func NewCancelTaskRunRequest(server string, taskRunId externalRef18.TaskRunIDParam) (*http.Request, error) {
+func NewCancelTaskRunRequest(server string, taskRunId externalRef19.TaskRunIDParam) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -25513,7 +25769,7 @@ func NewCancelTaskRunRequest(server string, taskRunId externalRef18.TaskRunIDPar
 }
 
 // NewGetTaskRunRequest constructs an http.Request for the GetTaskRun method
-func NewGetTaskRunRequest(server string, taskRunId externalRef18.TaskRunIDParam) (*http.Request, error) {
+func NewGetTaskRunRequest(server string, taskRunId externalRef19.TaskRunIDParam) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -25661,7 +25917,7 @@ func NewListTasksRequest(server string, params *ListTasksParams) (*http.Request,
 }
 
 // NewGetTaskRequest constructs an http.Request for the GetTask method
-func NewGetTaskRequest(server string, taskId externalRef18.TaskIDParam) (*http.Request, error) {
+func NewGetTaskRequest(server string, taskId externalRef19.TaskIDParam) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -25840,7 +26096,7 @@ func NewCreateWebhookRequestWithBody(server string, contentType string, body io.
 }
 
 // NewDeleteWebhookRequest constructs an http.Request for the DeleteWebhook method
-func NewDeleteWebhookRequest(server string, webhookId externalRef17.WebhookIdParam) (*http.Request, error) {
+func NewDeleteWebhookRequest(server string, webhookId externalRef18.WebhookIdParam) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -25874,7 +26130,7 @@ func NewDeleteWebhookRequest(server string, webhookId externalRef17.WebhookIdPar
 }
 
 // NewRetrieveWebhookRequest constructs an http.Request for the RetrieveWebhook method
-func NewRetrieveWebhookRequest(server string, webhookId externalRef17.WebhookIdParam) (*http.Request, error) {
+func NewRetrieveWebhookRequest(server string, webhookId externalRef18.WebhookIdParam) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -25908,7 +26164,7 @@ func NewRetrieveWebhookRequest(server string, webhookId externalRef17.WebhookIdP
 }
 
 // NewUpdateWebhookRequest calls the generic UpdateWebhook builder with application/json body
-func NewUpdateWebhookRequest(server string, webhookId externalRef17.WebhookIdParam, body UpdateWebhookJSONRequestBody) (*http.Request, error) {
+func NewUpdateWebhookRequest(server string, webhookId externalRef18.WebhookIdParam, body UpdateWebhookJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
@@ -25919,7 +26175,7 @@ func NewUpdateWebhookRequest(server string, webhookId externalRef17.WebhookIdPar
 }
 
 // NewUpdateWebhookRequestWithBody constructs an http.Request for the UpdateWebhook method, with any body, and a specified content type
-func NewUpdateWebhookRequestWithBody(server string, webhookId externalRef17.WebhookIdParam, contentType string, body io.Reader) (*http.Request, error) {
+func NewUpdateWebhookRequestWithBody(server string, webhookId externalRef18.WebhookIdParam, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -25955,7 +26211,7 @@ func NewUpdateWebhookRequestWithBody(server string, webhookId externalRef17.Webh
 }
 
 // NewListWebhookEventsRequest constructs an http.Request for the ListWebhookEvents method
-func NewListWebhookEventsRequest(server string, webhookId externalRef17.WebhookIdParam, params *ListWebhookEventsParams) (*http.Request, error) {
+func NewListWebhookEventsRequest(server string, webhookId externalRef18.WebhookIdParam, params *ListWebhookEventsParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -26206,7 +26462,7 @@ func NewCreateWorkflowRequestWithBody(server string, contentType string, body io
 }
 
 // NewDeleteWorkflowRequest constructs an http.Request for the DeleteWorkflow method
-func NewDeleteWorkflowRequest(server string, workflowId externalRef18.WorkflowIDParam) (*http.Request, error) {
+func NewDeleteWorkflowRequest(server string, workflowId externalRef19.WorkflowIDParam) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -26240,7 +26496,7 @@ func NewDeleteWorkflowRequest(server string, workflowId externalRef18.WorkflowID
 }
 
 // NewGetWorkflowRequest constructs an http.Request for the GetWorkflow method
-func NewGetWorkflowRequest(server string, workflowId externalRef18.WorkflowIDParam) (*http.Request, error) {
+func NewGetWorkflowRequest(server string, workflowId externalRef19.WorkflowIDParam) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -26274,7 +26530,7 @@ func NewGetWorkflowRequest(server string, workflowId externalRef18.WorkflowIDPar
 }
 
 // NewUpdateWorkflowRequest calls the generic UpdateWorkflow builder with application/json body
-func NewUpdateWorkflowRequest(server string, workflowId externalRef18.WorkflowIDParam, body UpdateWorkflowJSONRequestBody) (*http.Request, error) {
+func NewUpdateWorkflowRequest(server string, workflowId externalRef19.WorkflowIDParam, body UpdateWorkflowJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
@@ -26285,7 +26541,7 @@ func NewUpdateWorkflowRequest(server string, workflowId externalRef18.WorkflowID
 }
 
 // NewUpdateWorkflowRequestWithBody constructs an http.Request for the UpdateWorkflow method, with any body, and a specified content type
-func NewUpdateWorkflowRequestWithBody(server string, workflowId externalRef18.WorkflowIDParam, contentType string, body io.Reader) (*http.Request, error) {
+func NewUpdateWorkflowRequestWithBody(server string, workflowId externalRef19.WorkflowIDParam, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -26463,7 +26719,7 @@ func NewCreateWorkflowVersionRequestWithBody(server string, contentType string, 
 }
 
 // NewGetWorkflowVersionRequest constructs an http.Request for the GetWorkflowVersion method
-func NewGetWorkflowVersionRequest(server string, workflowVersionId externalRef18.WorkflowVersionIDParam) (*http.Request, error) {
+func NewGetWorkflowVersionRequest(server string, workflowVersionId externalRef19.WorkflowVersionIDParam) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -27489,7 +27745,7 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with DELETE /flow-runs/{flowRunId} (the `CancelFlowRun` operationId).
-	CancelFlowRunWithResponse(ctx context.Context, flowRunId externalRef18.FlowRunIDParam, reqEditors ...RequestEditorFn) (*CancelFlowRunResponse, error)
+	CancelFlowRunWithResponse(ctx context.Context, flowRunId externalRef19.FlowRunIDParam, reqEditors ...RequestEditorFn) (*CancelFlowRunResponse, error)
 
 	// GetFlowRunWithResponse Retrieve flow run
 	//
@@ -27498,25 +27754,25 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /flow-runs/{flowRunId} (the `GetFlowRun` operationId).
-	GetFlowRunWithResponse(ctx context.Context, flowRunId externalRef18.FlowRunIDParam, reqEditors ...RequestEditorFn) (*GetFlowRunResponse, error)
+	GetFlowRunWithResponse(ctx context.Context, flowRunId externalRef19.FlowRunIDParam, reqEditors ...RequestEditorFn) (*GetFlowRunResponse, error)
 
 	// ListFlowRunStepsWithResponse List flow run steps
 	//
-	// List the steps a flow run has recorded, in the order the flow started them.
+	// List the steps a flow run has recorded, in the order the flow started them. A page can hold fewer than `limit` steps and still have more after it, so page until `hasMore` is false.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /flow-runs/{flowRunId}/steps (the `ListFlowRunSteps` operationId).
-	ListFlowRunStepsWithResponse(ctx context.Context, flowRunId externalRef18.FlowRunIDParam, params *ListFlowRunStepsParams, reqEditors ...RequestEditorFn) (*ListFlowRunStepsResponse, error)
+	ListFlowRunStepsWithResponse(ctx context.Context, flowRunId externalRef19.FlowRunIDParam, params *ListFlowRunStepsParams, reqEditors ...RequestEditorFn) (*ListFlowRunStepsResponse, error)
 
 	// GetFlowRunStepWithResponse Retrieve flow run step
 	//
-	// Retrieve a single step of a flow run, including its input, result, error, and failed attempts.
+	// Retrieve a single step of a flow run, including its input, result and error. A sequence number can cover more than one step, so pass the `stepKey` the step listing reported to address one of those.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /flow-runs/{flowRunId}/steps/{stepSeq} (the `GetFlowRunStep` operationId).
-	GetFlowRunStepWithResponse(ctx context.Context, flowRunId externalRef18.FlowRunIDParam, stepSeq externalRef18.FlowRunStepSeqParam, reqEditors ...RequestEditorFn) (*GetFlowRunStepResponse, error)
+	GetFlowRunStepWithResponse(ctx context.Context, flowRunId externalRef19.FlowRunIDParam, stepSeq externalRef19.FlowRunStepSeqParam, params *GetFlowRunStepParams, reqEditors ...RequestEditorFn) (*GetFlowRunStepResponse, error)
 
 	// ListFlowsWithResponse List flows
 	//
@@ -27534,7 +27790,7 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /flows/{flowId} (the `GetFlow` operationId).
-	GetFlowWithResponse(ctx context.Context, flowId externalRef18.FlowIDParam, reqEditors ...RequestEditorFn) (*GetFlowResponse, error)
+	GetFlowWithResponse(ctx context.Context, flowId externalRef19.FlowIDParam, reqEditors ...RequestEditorFn) (*GetFlowResponse, error)
 
 	// ListKeyValueWithResponse List Key Value instances
 	//
@@ -28095,7 +28351,7 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with DELETE /objects/{ownerId}/{region}/{key} (the `DeleteObject` operationId).
-	DeleteObjectWithResponse(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam, reqEditors ...RequestEditorFn) (*DeleteObjectResponse, error)
+	DeleteObjectWithResponse(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam, reqEditors ...RequestEditorFn) (*DeleteObjectResponse, error)
 
 	// GetObjectWithResponse Get presigned URL to download an object
 	//
@@ -28105,7 +28361,7 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /objects/{ownerId}/{region}/{key} (the `GetObject` operationId).
-	GetObjectWithResponse(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam, reqEditors ...RequestEditorFn) (*GetObjectResponse, error)
+	GetObjectWithResponse(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam, reqEditors ...RequestEditorFn) (*GetObjectResponse, error)
 
 	// PutObjectWithBodyWithResponse Get presigned URL to upload an object
 	//
@@ -28115,7 +28371,7 @@ type ClientWithResponsesInterface interface {
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with PUT /objects/{ownerId}/{region}/{key} (the `PutObject` operationId).
-	PutObjectWithBodyWithResponse(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutObjectResponse, error)
+	PutObjectWithBodyWithResponse(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutObjectResponse, error)
 
 	// PutObjectWithResponse Get presigned URL to upload an object
 	//
@@ -28125,7 +28381,7 @@ type ClientWithResponsesInterface interface {
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with PUT /objects/{ownerId}/{region}/{key} (the `PutObject` operationId).
-	PutObjectWithResponse(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam, body PutObjectJSONRequestBody, reqEditors ...RequestEditorFn) (*PutObjectResponse, error)
+	PutObjectWithResponse(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam, body PutObjectJSONRequestBody, reqEditors ...RequestEditorFn) (*PutObjectResponse, error)
 
 	// ListOrganizationAuditLogsWithResponse List organization audit logs
 	//
@@ -28740,12 +28996,65 @@ type ClientWithResponsesInterface interface {
 
 	// ListSandboxGroupsWithResponse List sandbox groups
 	//
-	// List sandbox groups for a single workspace.
+	// List sandbox groups for a single workspace, newest first. The default
+	// page size is 20 and the maximum is 100.
+	// Use the last item's cursor to fetch the next page, until it is empty.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /sandbox-groups (the `ListSandboxGroups` operationId).
 	ListSandboxGroupsWithResponse(ctx context.Context, params *ListSandboxGroupsParams, reqEditors ...RequestEditorFn) (*ListSandboxGroupsResponse, error)
+
+	// CreateSandboxGroupWithBodyWithResponse Create sandbox group
+	//
+	// Create a sandbox group. The workspace's first group becomes its default.
+	// Returns 409 if the `name` is taken.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /sandbox-groups (the `CreateSandboxGroup` operationId).
+	CreateSandboxGroupWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSandboxGroupResponse, error)
+
+	// CreateSandboxGroupWithResponse Create sandbox group
+	//
+	// Create a sandbox group. The workspace's first group becomes its default.
+	// Returns 409 if the `name` is taken.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /sandbox-groups (the `CreateSandboxGroup` operationId).
+	CreateSandboxGroupWithResponse(ctx context.Context, body CreateSandboxGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSandboxGroupResponse, error)
+
+	// RetrieveSandboxGroupWithResponse Retrieve sandbox group
+	//
+	// Retrieve a sandbox group. 400 `invalid_sandbox_group_id` for a malformed ID.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /sandbox-groups/{sandboxGroupId} (the `RetrieveSandboxGroup` operationId).
+	RetrieveSandboxGroupWithResponse(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, reqEditors ...RequestEditorFn) (*RetrieveSandboxGroupResponse, error)
+
+	// UpdateSandboxGroupWithBodyWithResponse Update sandbox group
+	//
+	// Update a sandbox group's concurrency limit. Returns 400 for a malformed
+	// ID (`invalid_sandbox_group_id`), missing `concurrencyLimit`, or a value
+	// below 1. The response returns the effective limit after applying Render's cap.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /sandbox-groups/{sandboxGroupId} (the `UpdateSandboxGroup` operationId).
+	UpdateSandboxGroupWithBodyWithResponse(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateSandboxGroupResponse, error)
+
+	// UpdateSandboxGroupWithResponse Update sandbox group
+	//
+	// Update a sandbox group's concurrency limit. Returns 400 for a malformed
+	// ID (`invalid_sandbox_group_id`), missing `concurrencyLimit`, or a value
+	// below 1. The response returns the effective limit after applying Render's cap.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /sandbox-groups/{sandboxGroupId} (the `UpdateSandboxGroup` operationId).
+	UpdateSandboxGroupWithResponse(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, body UpdateSandboxGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSandboxGroupResponse, error)
 
 	// CreateSandboxBuildWithBodyWithResponse Create sandbox build
 	//
@@ -28793,8 +29102,8 @@ type ClientWithResponsesInterface interface {
 
 	// RetrieveSandboxBuildWithResponse Retrieve sandbox build
 	//
-	// One build by ID. A build that belongs to another sandbox group returns
-	// 404.
+	// One build by ID. 404 with `code: build_not_found` if the build doesn't
+	// exist or belongs to another sandbox group.
 	//
 	// 400 with `code: invalid_sandbox_group_id` if `sandboxGroupId` is not a
 	// well-formed `sbg-` ID, or `invalid build ID` if `buildId` is not a
@@ -28818,10 +29127,12 @@ type ClientWithResponsesInterface interface {
 	// CreateSandboxGroupCredentialWithBodyWithResponse Create sandbox group credential
 	//
 	// Admin-only. Creates an independent credential with a caller-supplied ID.
-	// Each sandbox group supports at most 25 credentials and 200 KiB (204800 bytes)
-	// of serialized current credentials, including configuration and values. Three
-	// distinct prior configurations per credential are retained by fingerprint, with
-	// a 1 MiB total storage limit including version metadata and configurations. Limits are checked before saving.
+	// Each sandbox group supports at most 25 credentials and 200 KiB (204800
+	// bytes) of serialized current credentials, including configuration and
+	// values. Three distinct prior configurations per credential are retained
+	// by fingerprint, with a 1 MiB total storage limit including version
+	// metadata and configurations. Limits are checked before saving. A
+	// temporary synchronization conflicts return 429.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -28831,10 +29142,12 @@ type ClientWithResponsesInterface interface {
 	// CreateSandboxGroupCredentialWithResponse Create sandbox group credential
 	//
 	// Admin-only. Creates an independent credential with a caller-supplied ID.
-	// Each sandbox group supports at most 25 credentials and 200 KiB (204800 bytes)
-	// of serialized current credentials, including configuration and values. Three
-	// distinct prior configurations per credential are retained by fingerprint, with
-	// a 1 MiB total storage limit including version metadata and configurations. Limits are checked before saving.
+	// Each sandbox group supports at most 25 credentials and 200 KiB (204800
+	// bytes) of serialized current credentials, including configuration and
+	// values. Three distinct prior configurations per credential are retained
+	// by fingerprint, with a 1 MiB total storage limit including version
+	// metadata and configurations. Limits are checked before saving. A
+	// temporary synchronization conflicts return 429.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -28843,7 +29156,9 @@ type ClientWithResponsesInterface interface {
 
 	// DeleteSandboxGroupCredentialWithResponse Delete sandbox group credential
 	//
-	// Admin-only. Removes the credential from the group's desired configuration.
+	// Admin-only. Removes the credential if present and synchronizes the
+	// group's gateway configuration. Repeated deletion requests are accepted.
+	// A temporary synchronization conflict returns 429.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -28862,13 +29177,14 @@ type ClientWithResponsesInterface interface {
 
 	// UpdateSandboxGroupCredentialWithBodyWithResponse Update sandbox group credential
 	//
-	// Admins may update configuration. Developers may update injection, method/path
-	// filters, and enabled state; destination or value changes require an admin.
-	// Assigning a value creates a new version; omitting it preserves the value.
-	// Other omitted fields are preserved; empty methods or paths arrays clear their
-	// filters. The group's serialized current credentials must
-	// remain within 200 KiB (204800 bytes). A successful response means desired
-	// state was saved; runtime reconciliation may still be pending.
+	// Admins may update configuration. Developers may update injection,
+	// method/path filters, and enabled state; destination or value changes
+	// require an admin. Assigning a value creates a new version; omitting it
+	// preserves the value. Other omitted fields are preserved; empty methods
+	// or paths arrays clear their filters. The group's serialized current
+	// credentials must remain within 200 KiB (204800 bytes). A successful
+	// response means desired state was saved; runtime reconciliation may still
+	// be pending. A temporary synchronization conflict returns 429.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -28877,13 +29193,14 @@ type ClientWithResponsesInterface interface {
 
 	// UpdateSandboxGroupCredentialWithResponse Update sandbox group credential
 	//
-	// Admins may update configuration. Developers may update injection, method/path
-	// filters, and enabled state; destination or value changes require an admin.
-	// Assigning a value creates a new version; omitting it preserves the value.
-	// Other omitted fields are preserved; empty methods or paths arrays clear their
-	// filters. The group's serialized current credentials must
-	// remain within 200 KiB (204800 bytes). A successful response means desired
-	// state was saved; runtime reconciliation may still be pending.
+	// Admins may update configuration. Developers may update injection,
+	// method/path filters, and enabled state; destination or value changes
+	// require an admin. Assigning a value creates a new version; omitting it
+	// preserves the value. Other omitted fields are preserved; empty methods
+	// or paths arrays clear their filters. The group's serialized current
+	// credentials must remain within 200 KiB (204800 bytes). A successful
+	// response means desired state was saved; runtime reconciliation may still
+	// be pending. A temporary synchronization conflict returns 429.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -28892,13 +29209,15 @@ type ClientWithResponsesInterface interface {
 
 	// RestoreSandboxGroupCredentialWithBodyWithResponse Restore sandbox credential configuration
 	//
-	// Admin-only. Creates a new current revision from the routing configuration,
-	// injection configuration, and secret value of a retained version. The new revision
-	// has an increasing version ID, the restoring identity and timestamp, the same
-	// fingerprint as the source, and restoredFromVersionId identifying the source.
-	// Each distinct configuration is stored once by fingerprint. The current and three
-	// most recently active prior configurations are retained. Evicting a configuration
-	// removes all version metadata referring to it. Values are never returned.
+	// Admin-only. Creates a new current revision from the routing
+	// configuration, injection configuration, and secret value of a retained
+	// version. The new revision has an increasing version ID, the restoring
+	// identity and timestamp, the same fingerprint as the source, and
+	// restoredFromVersionId identifying the source. Each distinct
+	// configuration is stored once by fingerprint. The current and three most
+	// recently active prior configurations are retained. Evicting a
+	// configuration removes all version metadata referring to it. Values are
+	// never returned. A temporary synchronization conflict returns 429.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -28907,13 +29226,15 @@ type ClientWithResponsesInterface interface {
 
 	// RestoreSandboxGroupCredentialWithResponse Restore sandbox credential configuration
 	//
-	// Admin-only. Creates a new current revision from the routing configuration,
-	// injection configuration, and secret value of a retained version. The new revision
-	// has an increasing version ID, the restoring identity and timestamp, the same
-	// fingerprint as the source, and restoredFromVersionId identifying the source.
-	// Each distinct configuration is stored once by fingerprint. The current and three
-	// most recently active prior configurations are retained. Evicting a configuration
-	// removes all version metadata referring to it. Values are never returned.
+	// Admin-only. Creates a new current revision from the routing
+	// configuration, injection configuration, and secret value of a retained
+	// version. The new revision has an increasing version ID, the restoring
+	// identity and timestamp, the same fingerprint as the source, and
+	// restoredFromVersionId identifying the source. Each distinct
+	// configuration is stored once by fingerprint. The current and three most
+	// recently active prior configurations are retained. Evicting a
+	// configuration removes all version metadata referring to it. Values are
+	// never returned. A temporary synchronization conflict returns 429.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -29006,6 +29327,12 @@ type ClientWithResponsesInterface interface {
 	// 400 with `code: sandbox_group_limit_reached` if the owner has no default
 	// sandbox group and is already at its sandbox group limit.
 	//
+	// 400 with `code: invalid_sandbox_plan` if `plan` is not one the API currently
+	// accepts. The message lists the accepted plans.
+	//
+	// 400 with `code: invalid_timeout_seconds` if `timeoutSeconds` is below 0 or
+	// above 2592000 (30 days).
+	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /sandboxes (the `CreateSandbox` operationId).
@@ -29029,6 +29356,12 @@ type ClientWithResponsesInterface interface {
 	//
 	// 400 with `code: sandbox_group_limit_reached` if the owner has no default
 	// sandbox group and is already at its sandbox group limit.
+	//
+	// 400 with `code: invalid_sandbox_plan` if `plan` is not one the API currently
+	// accepts. The message lists the accepted plans.
+	//
+	// 400 with `code: invalid_timeout_seconds` if `timeoutSeconds` is below 0 or
+	// above 2592000 (30 days).
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -29062,17 +29395,6 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /sandboxes/{sandboxId}/execs/{execId} (the `RetrieveSandboxExecution` operationId).
 	RetrieveSandboxExecutionWithResponse(ctx context.Context, sandboxId externalRef15.SandboxId, execId externalRef15.ExecId, params *RetrieveSandboxExecutionParams, reqEditors ...RequestEditorFn) (*RetrieveSandboxExecutionResponse, error)
 
-	// ListSandboxFilesWithResponse List directory contents in sandbox
-	//
-	// List the contents of a directory in a running sandbox. Returns file and
-	// directory metadata without transferring file contents. The sandbox must
-	// be `running`.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /sandboxes/{sandboxId}/files/list (the `ListSandboxFiles` operationId).
-	ListSandboxFilesWithResponse(ctx context.Context, sandboxId externalRef15.SandboxId, params *ListSandboxFilesParams, reqEditors ...RequestEditorFn) (*ListSandboxFilesResponse, error)
-
 	// ConnectSandboxFilesWithResponse Mint a connect token for a sandbox file transfer
 	//
 	// Mint a short-lived, capability-scoped connect token that authorizes a
@@ -29092,18 +29414,6 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /sandboxes/{sandboxId}/files/{operation}/token (the `ConnectSandboxFiles` operationId).
 	ConnectSandboxFilesWithResponse(ctx context.Context, sandboxId externalRef15.SandboxId, operation string, params *ConnectSandboxFilesParams, reqEditors ...RequestEditorFn) (*ConnectSandboxFilesResponse, error)
-
-	// StreamSandboxLogsWithResponse Stream sandbox logs and lifecycle events
-	//
-	// Stream sandbox output and lifecycle events as a server-sent event stream.
-	// Replays historical events from sandbox creation (or from `since`), then
-	// continues live. The stream closes after the `terminated` or `errored`
-	// lifecycle event.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /sandboxes/{sandboxId}/logs (the `StreamSandboxLogs` operationId).
-	StreamSandboxLogsWithResponse(ctx context.Context, sandboxId externalRef15.SandboxId, params *StreamSandboxLogsParams, reqEditors ...RequestEditorFn) (*StreamSandboxLogsResponse, error)
 
 	// ConnectSandboxRunWithBodyWithResponse Create a connect token for a sandbox run
 	//
@@ -29185,6 +29495,9 @@ type ClientWithResponsesInterface interface {
 	//
 	// Creates a new Render service in the specified workspace with the specified configuration.
 	//
+	// 400 with `code: build_source_region_mismatch` if `buildSourceId` names a git-backed
+	// Build Source in a different region than the service.
+	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /services (the `CreateService` operationId).
@@ -29193,6 +29506,9 @@ type ClientWithResponsesInterface interface {
 	// CreateServiceWithResponse Create service
 	//
 	// Creates a new Render service in the specified workspace with the specified configuration.
+	//
+	// 400 with `code: build_source_region_mismatch` if `buildSourceId` names a git-backed
+	// Build Source in a different region than the service.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -29221,6 +29537,9 @@ type ClientWithResponsesInterface interface {
 	//
 	// Update the service with the provided ID.
 	//
+	// 400 with `code: build_source_region_mismatch` if `buildSourceId` names a git-backed
+	// Build Source in a different region than the service.
+	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with PATCH /services/{serviceId} (the `UpdateService` operationId).
@@ -29229,6 +29548,9 @@ type ClientWithResponsesInterface interface {
 	// UpdateServiceWithResponse Update service
 	//
 	// Update the service with the provided ID.
+	//
+	// 400 with `code: build_source_region_mismatch` if `buildSourceId` names a git-backed
+	// Build Source in a different region than the service.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -29863,6 +30185,15 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /services/{serviceId}/suspend (the `SuspendService` operationId).
 	SuspendServiceWithResponse(ctx context.Context, serviceId ServiceIdParam, reqEditors ...RequestEditorFn) (*SuspendServiceResponse, error)
 
+	// ListSharedFilesystemsWithResponse List shared filesystems
+	//
+	// List the shared filesystems in a single workspace.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /shared-filesystems (the `ListSharedFilesystems` operationId).
+	ListSharedFilesystemsWithResponse(ctx context.Context, params *ListSharedFilesystemsParams, reqEditors ...RequestEditorFn) (*ListSharedFilesystemsResponse, error)
+
 	// ListTaskRunsWithResponse List task runs
 	//
 	// List task runs that match the provided filters. If no filters are provided, all task runs accessible by the authenticated user are returned.
@@ -29921,7 +30252,7 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with DELETE /task-runs/{taskRunId} (the `CancelTaskRun` operationId).
-	CancelTaskRunWithResponse(ctx context.Context, taskRunId externalRef18.TaskRunIDParam, reqEditors ...RequestEditorFn) (*CancelTaskRunResponse, error)
+	CancelTaskRunWithResponse(ctx context.Context, taskRunId externalRef19.TaskRunIDParam, reqEditors ...RequestEditorFn) (*CancelTaskRunResponse, error)
 
 	// GetTaskRunWithResponse Retrieve task run
 	//
@@ -29930,7 +30261,7 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /task-runs/{taskRunId} (the `GetTaskRun` operationId).
-	GetTaskRunWithResponse(ctx context.Context, taskRunId externalRef18.TaskRunIDParam, reqEditors ...RequestEditorFn) (*GetTaskRunResponse, error)
+	GetTaskRunWithResponse(ctx context.Context, taskRunId externalRef19.TaskRunIDParam, reqEditors ...RequestEditorFn) (*GetTaskRunResponse, error)
 
 	// ListTasksWithResponse List tasks
 	//
@@ -29948,7 +30279,7 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /tasks/{taskId} (the `GetTask` operationId).
-	GetTaskWithResponse(ctx context.Context, taskId externalRef18.TaskIDParam, reqEditors ...RequestEditorFn) (*GetTaskResponse, error)
+	GetTaskWithResponse(ctx context.Context, taskId externalRef19.TaskIDParam, reqEditors ...RequestEditorFn) (*GetTaskResponse, error)
 
 	// GetUserWithResponse Get the authenticated user
 	//
@@ -29991,7 +30322,7 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with DELETE /webhooks/{webhookId} (the `DeleteWebhook` operationId).
-	DeleteWebhookWithResponse(ctx context.Context, webhookId externalRef17.WebhookIdParam, reqEditors ...RequestEditorFn) (*DeleteWebhookResponse, error)
+	DeleteWebhookWithResponse(ctx context.Context, webhookId externalRef18.WebhookIdParam, reqEditors ...RequestEditorFn) (*DeleteWebhookResponse, error)
 
 	// RetrieveWebhookWithResponse Retrieve a webhook
 	//
@@ -30000,7 +30331,7 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /webhooks/{webhookId} (the `RetrieveWebhook` operationId).
-	RetrieveWebhookWithResponse(ctx context.Context, webhookId externalRef17.WebhookIdParam, reqEditors ...RequestEditorFn) (*RetrieveWebhookResponse, error)
+	RetrieveWebhookWithResponse(ctx context.Context, webhookId externalRef18.WebhookIdParam, reqEditors ...RequestEditorFn) (*RetrieveWebhookResponse, error)
 
 	// UpdateWebhookWithBodyWithResponse Update a webhook
 	//
@@ -30009,7 +30340,7 @@ type ClientWithResponsesInterface interface {
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with PATCH /webhooks/{webhookId} (the `UpdateWebhook` operationId).
-	UpdateWebhookWithBodyWithResponse(ctx context.Context, webhookId externalRef17.WebhookIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateWebhookResponse, error)
+	UpdateWebhookWithBodyWithResponse(ctx context.Context, webhookId externalRef18.WebhookIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateWebhookResponse, error)
 
 	// UpdateWebhookWithResponse Update a webhook
 	//
@@ -30018,7 +30349,7 @@ type ClientWithResponsesInterface interface {
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with PATCH /webhooks/{webhookId} (the `UpdateWebhook` operationId).
-	UpdateWebhookWithResponse(ctx context.Context, webhookId externalRef17.WebhookIdParam, body UpdateWebhookJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateWebhookResponse, error)
+	UpdateWebhookWithResponse(ctx context.Context, webhookId externalRef18.WebhookIdParam, body UpdateWebhookJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateWebhookResponse, error)
 
 	// ListWebhookEventsWithResponse List webhook events
 	//
@@ -30027,7 +30358,7 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /webhooks/{webhookId}/events (the `ListWebhookEvents` operationId).
-	ListWebhookEventsWithResponse(ctx context.Context, webhookId externalRef17.WebhookIdParam, params *ListWebhookEventsParams, reqEditors ...RequestEditorFn) (*ListWebhookEventsResponse, error)
+	ListWebhookEventsWithResponse(ctx context.Context, webhookId externalRef18.WebhookIdParam, params *ListWebhookEventsParams, reqEditors ...RequestEditorFn) (*ListWebhookEventsResponse, error)
 
 	// ListWorkflowsWithResponse List workflows
 	//
@@ -30063,7 +30394,7 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with DELETE /workflows/{workflowId} (the `DeleteWorkflow` operationId).
-	DeleteWorkflowWithResponse(ctx context.Context, workflowId externalRef18.WorkflowIDParam, reqEditors ...RequestEditorFn) (*DeleteWorkflowResponse, error)
+	DeleteWorkflowWithResponse(ctx context.Context, workflowId externalRef19.WorkflowIDParam, reqEditors ...RequestEditorFn) (*DeleteWorkflowResponse, error)
 
 	// GetWorkflowWithResponse Retrieve workflow
 	//
@@ -30072,7 +30403,7 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /workflows/{workflowId} (the `GetWorkflow` operationId).
-	GetWorkflowWithResponse(ctx context.Context, workflowId externalRef18.WorkflowIDParam, reqEditors ...RequestEditorFn) (*GetWorkflowResponse, error)
+	GetWorkflowWithResponse(ctx context.Context, workflowId externalRef19.WorkflowIDParam, reqEditors ...RequestEditorFn) (*GetWorkflowResponse, error)
 
 	// UpdateWorkflowWithBodyWithResponse Update workflow
 	//
@@ -30081,7 +30412,7 @@ type ClientWithResponsesInterface interface {
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with PATCH /workflows/{workflowId} (the `UpdateWorkflow` operationId).
-	UpdateWorkflowWithBodyWithResponse(ctx context.Context, workflowId externalRef18.WorkflowIDParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateWorkflowResponse, error)
+	UpdateWorkflowWithBodyWithResponse(ctx context.Context, workflowId externalRef19.WorkflowIDParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateWorkflowResponse, error)
 
 	// UpdateWorkflowWithResponse Update workflow
 	//
@@ -30090,7 +30421,7 @@ type ClientWithResponsesInterface interface {
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with PATCH /workflows/{workflowId} (the `UpdateWorkflow` operationId).
-	UpdateWorkflowWithResponse(ctx context.Context, workflowId externalRef18.WorkflowIDParam, body UpdateWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateWorkflowResponse, error)
+	UpdateWorkflowWithResponse(ctx context.Context, workflowId externalRef19.WorkflowIDParam, body UpdateWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateWorkflowResponse, error)
 
 	// ListWorkflowVersionsWithResponse List workflow versions
 	//
@@ -30126,7 +30457,7 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /workflowversions/{workflowVersionId} (the `GetWorkflowVersion` operationId).
-	GetWorkflowVersionWithResponse(ctx context.Context, workflowVersionId externalRef18.WorkflowVersionIDParam, reqEditors ...RequestEditorFn) (*GetWorkflowVersionResponse, error)
+	GetWorkflowVersionWithResponse(ctx context.Context, workflowVersionId externalRef19.WorkflowVersionIDParam, reqEditors ...RequestEditorFn) (*GetWorkflowVersionResponse, error)
 }
 
 // ListBlueprintsResponse429Headers the declared response headers of an HTTP 429 response for ListBlueprints
@@ -36620,7 +36951,7 @@ type StartFlowRunResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON202 the response for an HTTP 202 `application/json` response
-	JSON202 *externalRef18.FlowRun
+	JSON202 *externalRef19.FlowRun
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *N400BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
@@ -36640,7 +36971,7 @@ type StartFlowRunResponse struct {
 }
 
 // GetJSON202 returns the response for an HTTP 202 `application/json` response
-func (r StartFlowRunResponse) GetJSON202() *externalRef18.FlowRun {
+func (r StartFlowRunResponse) GetJSON202() *externalRef19.FlowRun {
 	return r.JSON202
 }
 
@@ -36813,7 +37144,7 @@ type GetFlowRunResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *externalRef18.FlowRunDetails
+	JSON200 *externalRef19.FlowRunDetails
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *N400BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
@@ -36833,7 +37164,7 @@ type GetFlowRunResponse struct {
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetFlowRunResponse) GetJSON200() *externalRef18.FlowRunDetails {
+func (r GetFlowRunResponse) GetJSON200() *externalRef19.FlowRunDetails {
 	return r.JSON200
 }
 
@@ -36913,7 +37244,7 @@ type ListFlowRunStepsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *[]FlowRunStepWithCursor
+	JSON200 *externalRef19.FlowRunStepsPage
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *N400BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
@@ -36933,7 +37264,7 @@ type ListFlowRunStepsResponse struct {
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r ListFlowRunStepsResponse) GetJSON200() *[]FlowRunStepWithCursor {
+func (r ListFlowRunStepsResponse) GetJSON200() *externalRef19.FlowRunStepsPage {
 	return r.JSON200
 }
 
@@ -37013,7 +37344,7 @@ type GetFlowRunStepResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *externalRef18.FlowRunStepDetails
+	JSON200 *externalRef19.FlowRunStepDetails
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *N400BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
@@ -37033,7 +37364,7 @@ type GetFlowRunStepResponse struct {
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetFlowRunStepResponse) GetJSON200() *externalRef18.FlowRunStepDetails {
+func (r GetFlowRunStepResponse) GetJSON200() *externalRef19.FlowRunStepDetails {
 	return r.JSON200
 }
 
@@ -37213,7 +37544,7 @@ type GetFlowResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *externalRef18.Flow
+	JSON200 *externalRef19.Flow
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *N401Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -37231,7 +37562,7 @@ type GetFlowResponse struct {
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetFlowResponse) GetJSON200() *externalRef18.Flow {
+func (r GetFlowResponse) GetJSON200() *externalRef19.Flow {
 	return r.JSON200
 }
 
@@ -41249,7 +41580,7 @@ type ListObjectsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *externalRef16.ListObjectsResponse
+	JSON200 *externalRef17.ListObjectsResponse
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *N401Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -41267,7 +41598,7 @@ type ListObjectsResponse struct {
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r ListObjectsResponse) GetJSON200() *externalRef16.ListObjectsResponse {
+func (r ListObjectsResponse) GetJSON200() *externalRef17.ListObjectsResponse {
 	return r.JSON200
 }
 
@@ -41428,7 +41759,7 @@ type GetObjectResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *externalRef16.GetObjectOutput
+	JSON200 *externalRef17.GetObjectOutput
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *N401Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -41446,7 +41777,7 @@ type GetObjectResponse struct {
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetObjectResponse) GetJSON200() *externalRef16.GetObjectOutput {
+func (r GetObjectResponse) GetJSON200() *externalRef17.GetObjectOutput {
 	return r.JSON200
 }
 
@@ -41521,7 +41852,7 @@ type PutObjectResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *externalRef16.PutObjectOutput
+	JSON200 *externalRef17.PutObjectOutput
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *N400BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
@@ -41541,7 +41872,7 @@ type PutObjectResponse struct {
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutObjectResponse) GetJSON200() *externalRef16.PutObjectOutput {
+func (r PutObjectResponse) GetJSON200() *externalRef17.PutObjectOutput {
 	return r.JSON200
 }
 
@@ -46763,6 +47094,320 @@ func (r ListSandboxGroupsResponse) ContentType() string {
 	return ""
 }
 
+// CreateSandboxGroupResponse429Headers the declared response headers of an HTTP 429 response for CreateSandboxGroup
+type CreateSandboxGroupResponse429Headers struct {
+	RateLimitLimit     *int
+	RateLimitRemaining *int
+	RateLimitReset     *int
+	RetryAfter         *int
+}
+
+type CreateSandboxGroupResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *externalRef15.SandboxGroup
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *N400BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *N401Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *N403Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *N404NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *N409Conflict
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *N429RateLimit
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *N500InternalServerError
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *N503ServiceUnavailable
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *CreateSandboxGroupResponse429Headers
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateSandboxGroupResponse) GetJSON201() *externalRef15.SandboxGroup {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreateSandboxGroupResponse) GetJSON400() *N400BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r CreateSandboxGroupResponse) GetJSON401() *N401Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateSandboxGroupResponse) GetJSON403() *N403Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r CreateSandboxGroupResponse) GetJSON404() *N404NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateSandboxGroupResponse) GetJSON409() *N409Conflict {
+	return r.JSON409
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r CreateSandboxGroupResponse) GetJSON429() *N429RateLimit {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r CreateSandboxGroupResponse) GetJSON500() *N500InternalServerError {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r CreateSandboxGroupResponse) GetJSON503() *N503ServiceUnavailable {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateSandboxGroupResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateSandboxGroupResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateSandboxGroupResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateSandboxGroupResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// RetrieveSandboxGroupResponse429Headers the declared response headers of an HTTP 429 response for RetrieveSandboxGroup
+type RetrieveSandboxGroupResponse429Headers struct {
+	RateLimitLimit     *int
+	RateLimitRemaining *int
+	RateLimitReset     *int
+	RetryAfter         *int
+}
+
+type RetrieveSandboxGroupResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *externalRef15.SandboxGroup
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *N400BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *N401Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *N403Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *N404NotFound
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *N429RateLimit
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *N500InternalServerError
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *N503ServiceUnavailable
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *RetrieveSandboxGroupResponse429Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r RetrieveSandboxGroupResponse) GetJSON200() *externalRef15.SandboxGroup {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r RetrieveSandboxGroupResponse) GetJSON400() *N400BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r RetrieveSandboxGroupResponse) GetJSON401() *N401Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r RetrieveSandboxGroupResponse) GetJSON403() *N403Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r RetrieveSandboxGroupResponse) GetJSON404() *N404NotFound {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r RetrieveSandboxGroupResponse) GetJSON429() *N429RateLimit {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r RetrieveSandboxGroupResponse) GetJSON500() *N500InternalServerError {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r RetrieveSandboxGroupResponse) GetJSON503() *N503ServiceUnavailable {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r RetrieveSandboxGroupResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RetrieveSandboxGroupResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RetrieveSandboxGroupResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RetrieveSandboxGroupResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// UpdateSandboxGroupResponse429Headers the declared response headers of an HTTP 429 response for UpdateSandboxGroup
+type UpdateSandboxGroupResponse429Headers struct {
+	RateLimitLimit     *int
+	RateLimitRemaining *int
+	RateLimitReset     *int
+	RetryAfter         *int
+}
+
+type UpdateSandboxGroupResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *externalRef15.SandboxGroup
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *N400BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *N401Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *N403Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *N404NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *N409Conflict
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *N429RateLimit
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *N500InternalServerError
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *N503ServiceUnavailable
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *UpdateSandboxGroupResponse429Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r UpdateSandboxGroupResponse) GetJSON200() *externalRef15.SandboxGroup {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r UpdateSandboxGroupResponse) GetJSON400() *N400BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r UpdateSandboxGroupResponse) GetJSON401() *N401Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UpdateSandboxGroupResponse) GetJSON403() *N403Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r UpdateSandboxGroupResponse) GetJSON404() *N404NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r UpdateSandboxGroupResponse) GetJSON409() *N409Conflict {
+	return r.JSON409
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r UpdateSandboxGroupResponse) GetJSON429() *N429RateLimit {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r UpdateSandboxGroupResponse) GetJSON500() *N500InternalServerError {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r UpdateSandboxGroupResponse) GetJSON503() *N503ServiceUnavailable {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r UpdateSandboxGroupResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateSandboxGroupResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateSandboxGroupResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateSandboxGroupResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // CreateSandboxBuildResponse429Headers the declared response headers of an HTTP 429 response for CreateSandboxBuild
 type CreateSandboxBuildResponse429Headers struct {
 	RateLimitLimit     *int
@@ -48491,113 +49136,6 @@ func (r RetrieveSandboxExecutionResponse) ContentType() string {
 	return ""
 }
 
-// ListSandboxFilesResponse429Headers the declared response headers of an HTTP 429 response for ListSandboxFiles
-type ListSandboxFilesResponse429Headers struct {
-	RateLimitLimit     *int
-	RateLimitRemaining *int
-	RateLimitReset     *int
-	RetryAfter         *int
-}
-
-type ListSandboxFilesResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *externalRef15.SandboxDirectoryListing
-	// JSON400 the response for an HTTP 400 `application/json` response
-	JSON400 *N400BadRequest
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *N401Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *N403Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *N404NotFound
-	// JSON409 the response for an HTTP 409 `application/json` response
-	JSON409 *N409Conflict
-	// JSON429 the response for an HTTP 429 `application/json` response
-	JSON429 *N429RateLimit
-	// JSON500 the response for an HTTP 500 `application/json` response
-	JSON500 *N500InternalServerError
-	// JSON503 the response for an HTTP 503 `application/json` response
-	JSON503 *N503ServiceUnavailable
-	// Headers429 the parsed response headers for an HTTP 429 response
-	Headers429 *ListSandboxFilesResponse429Headers
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r ListSandboxFilesResponse) GetJSON200() *externalRef15.SandboxDirectoryListing {
-	return r.JSON200
-}
-
-// GetJSON400 returns the response for an HTTP 400 `application/json` response
-func (r ListSandboxFilesResponse) GetJSON400() *N400BadRequest {
-	return r.JSON400
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r ListSandboxFilesResponse) GetJSON401() *N401Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r ListSandboxFilesResponse) GetJSON403() *N403Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r ListSandboxFilesResponse) GetJSON404() *N404NotFound {
-	return r.JSON404
-}
-
-// GetJSON409 returns the response for an HTTP 409 `application/json` response
-func (r ListSandboxFilesResponse) GetJSON409() *N409Conflict {
-	return r.JSON409
-}
-
-// GetJSON429 returns the response for an HTTP 429 `application/json` response
-func (r ListSandboxFilesResponse) GetJSON429() *N429RateLimit {
-	return r.JSON429
-}
-
-// GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r ListSandboxFilesResponse) GetJSON500() *N500InternalServerError {
-	return r.JSON500
-}
-
-// GetJSON503 returns the response for an HTTP 503 `application/json` response
-func (r ListSandboxFilesResponse) GetJSON503() *N503ServiceUnavailable {
-	return r.JSON503
-}
-
-// GetBody returns the raw response body bytes
-func (r ListSandboxFilesResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r ListSandboxFilesResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ListSandboxFilesResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r ListSandboxFilesResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
 // ConnectSandboxFilesResponse429Headers the declared response headers of an HTTP 429 response for ConnectSandboxFiles
 type ConnectSandboxFilesResponse429Headers struct {
 	RateLimitLimit     *int
@@ -48692,100 +49230,6 @@ func (r ConnectSandboxFilesResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ConnectSandboxFilesResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-// StreamSandboxLogsResponse200Headers the declared response headers of an HTTP 200 response for StreamSandboxLogs
-type StreamSandboxLogsResponse200Headers struct {
-	CacheControl *string
-	ContentType  *string
-}
-
-// StreamSandboxLogsResponse429Headers the declared response headers of an HTTP 429 response for StreamSandboxLogs
-type StreamSandboxLogsResponse429Headers struct {
-	RateLimitLimit     *int
-	RateLimitRemaining *int
-	RateLimitReset     *int
-	RetryAfter         *int
-}
-
-type StreamSandboxLogsResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON401 the response for an HTTP 401 `application/json` response
-	JSON401 *N401Unauthorized
-	// JSON403 the response for an HTTP 403 `application/json` response
-	JSON403 *N403Forbidden
-	// JSON404 the response for an HTTP 404 `application/json` response
-	JSON404 *N404NotFound
-	// JSON429 the response for an HTTP 429 `application/json` response
-	JSON429 *N429RateLimit
-	// JSON500 the response for an HTTP 500 `application/json` response
-	JSON500 *N500InternalServerError
-	// JSON503 the response for an HTTP 503 `application/json` response
-	JSON503 *N503ServiceUnavailable
-	// Headers200 the parsed response headers for an HTTP 200 response
-	Headers200 *StreamSandboxLogsResponse200Headers
-	// Headers429 the parsed response headers for an HTTP 429 response
-	Headers429 *StreamSandboxLogsResponse429Headers
-}
-
-// GetJSON401 returns the response for an HTTP 401 `application/json` response
-func (r StreamSandboxLogsResponse) GetJSON401() *N401Unauthorized {
-	return r.JSON401
-}
-
-// GetJSON403 returns the response for an HTTP 403 `application/json` response
-func (r StreamSandboxLogsResponse) GetJSON403() *N403Forbidden {
-	return r.JSON403
-}
-
-// GetJSON404 returns the response for an HTTP 404 `application/json` response
-func (r StreamSandboxLogsResponse) GetJSON404() *N404NotFound {
-	return r.JSON404
-}
-
-// GetJSON429 returns the response for an HTTP 429 `application/json` response
-func (r StreamSandboxLogsResponse) GetJSON429() *N429RateLimit {
-	return r.JSON429
-}
-
-// GetJSON500 returns the response for an HTTP 500 `application/json` response
-func (r StreamSandboxLogsResponse) GetJSON500() *N500InternalServerError {
-	return r.JSON500
-}
-
-// GetJSON503 returns the response for an HTTP 503 `application/json` response
-func (r StreamSandboxLogsResponse) GetJSON503() *N503ServiceUnavailable {
-	return r.JSON503
-}
-
-// GetBody returns the raw response body bytes
-func (r StreamSandboxLogsResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r StreamSandboxLogsResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r StreamSandboxLogsResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r StreamSandboxLogsResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -54390,6 +54834,106 @@ func (r SuspendServiceResponse) ContentType() string {
 	return ""
 }
 
+// ListSharedFilesystemsResponse429Headers the declared response headers of an HTTP 429 response for ListSharedFilesystems
+type ListSharedFilesystemsResponse429Headers struct {
+	RateLimitLimit     *int
+	RateLimitRemaining *int
+	RateLimitReset     *int
+	RetryAfter         *int
+}
+
+type ListSharedFilesystemsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]externalRef16.SharedFilesystem
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *N400BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *N401Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *N403Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *N404NotFound
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *N429RateLimit
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *N500InternalServerError
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *N503ServiceUnavailable
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *ListSharedFilesystemsResponse429Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListSharedFilesystemsResponse) GetJSON200() *[]externalRef16.SharedFilesystem {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListSharedFilesystemsResponse) GetJSON400() *N400BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListSharedFilesystemsResponse) GetJSON401() *N401Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListSharedFilesystemsResponse) GetJSON403() *N403Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ListSharedFilesystemsResponse) GetJSON404() *N404NotFound {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r ListSharedFilesystemsResponse) GetJSON429() *N429RateLimit {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListSharedFilesystemsResponse) GetJSON500() *N500InternalServerError {
+	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r ListSharedFilesystemsResponse) GetJSON503() *N503ServiceUnavailable {
+	return r.JSON503
+}
+
+// GetBody returns the raw response body bytes
+func (r ListSharedFilesystemsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListSharedFilesystemsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListSharedFilesystemsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListSharedFilesystemsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // ListTaskRunsResponse429Headers the declared response headers of an HTTP 429 response for ListTaskRuns
 type ListTaskRunsResponse429Headers struct {
 	RateLimitLimit     *int
@@ -54502,7 +55046,7 @@ type CreateTaskResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON202 the response for an HTTP 202 `application/json` response
-	JSON202 *externalRef18.TaskRun
+	JSON202 *externalRef19.TaskRun
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *N400BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
@@ -54522,7 +55066,7 @@ type CreateTaskResponse struct {
 }
 
 // GetJSON202 returns the response for an HTTP 202 `application/json` response
-func (r CreateTaskResponse) GetJSON202() *externalRef18.TaskRun {
+func (r CreateTaskResponse) GetJSON202() *externalRef19.TaskRun {
 	return r.JSON202
 }
 
@@ -54797,7 +55341,7 @@ type GetTaskRunResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *externalRef18.TaskRunDetails
+	JSON200 *externalRef19.TaskRunDetails
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *N400BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
@@ -54817,7 +55361,7 @@ type GetTaskRunResponse struct {
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetTaskRunResponse) GetJSON200() *externalRef18.TaskRunDetails {
+func (r GetTaskRunResponse) GetJSON200() *externalRef19.TaskRunDetails {
 	return r.JSON200
 }
 
@@ -54990,7 +55534,7 @@ type GetTaskResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *externalRef18.Task
+	JSON200 *externalRef19.Task
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *N401Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -55008,7 +55552,7 @@ type GetTaskResponse struct {
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetTaskResponse) GetJSON200() *externalRef18.Task {
+func (r GetTaskResponse) GetJSON200() *externalRef19.Task {
 	return r.JSON200
 }
 
@@ -55262,7 +55806,7 @@ type CreateWebhookResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON201 the response for an HTTP 201 `application/json` response
-	JSON201 *externalRef17.Webhook
+	JSON201 *externalRef18.Webhook
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *N400BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
@@ -55280,7 +55824,7 @@ type CreateWebhookResponse struct {
 }
 
 // GetJSON201 returns the response for an HTTP 201 `application/json` response
-func (r CreateWebhookResponse) GetJSON201() *externalRef17.Webhook {
+func (r CreateWebhookResponse) GetJSON201() *externalRef18.Webhook {
 	return r.JSON201
 }
 
@@ -55434,7 +55978,7 @@ type RetrieveWebhookResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *externalRef17.Webhook
+	JSON200 *externalRef18.Webhook
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *N401Unauthorized
 	// JSON404 the response for an HTTP 404 `application/json` response
@@ -55450,7 +55994,7 @@ type RetrieveWebhookResponse struct {
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r RetrieveWebhookResponse) GetJSON200() *externalRef17.Webhook {
+func (r RetrieveWebhookResponse) GetJSON200() *externalRef18.Webhook {
 	return r.JSON200
 }
 
@@ -55520,7 +56064,7 @@ type UpdateWebhookResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *externalRef17.Webhook
+	JSON200 *externalRef18.Webhook
 	// JSON400 the response for an HTTP 400 `application/json` response
 	JSON400 *N400BadRequest
 	// JSON401 the response for an HTTP 401 `application/json` response
@@ -55538,7 +56082,7 @@ type UpdateWebhookResponse struct {
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r UpdateWebhookResponse) GetJSON200() *externalRef17.Webhook {
+func (r UpdateWebhookResponse) GetJSON200() *externalRef18.Webhook {
 	return r.JSON200
 }
 
@@ -55799,7 +56343,7 @@ type CreateWorkflowResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON201 the response for an HTTP 201 `application/json` response
-	JSON201 *externalRef18.Workflow
+	JSON201 *externalRef19.Workflow
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *N401Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -55817,7 +56361,7 @@ type CreateWorkflowResponse struct {
 }
 
 // GetJSON201 returns the response for an HTTP 201 `application/json` response
-func (r CreateWorkflowResponse) GetJSON201() *externalRef18.Workflow {
+func (r CreateWorkflowResponse) GetJSON201() *externalRef19.Workflow {
 	return r.JSON201
 }
 
@@ -55978,7 +56522,7 @@ type GetWorkflowResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *externalRef18.Workflow
+	JSON200 *externalRef19.Workflow
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *N401Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -55996,7 +56540,7 @@ type GetWorkflowResponse struct {
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetWorkflowResponse) GetJSON200() *externalRef18.Workflow {
+func (r GetWorkflowResponse) GetJSON200() *externalRef19.Workflow {
 	return r.JSON200
 }
 
@@ -56071,7 +56615,7 @@ type UpdateWorkflowResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *externalRef18.Workflow
+	JSON200 *externalRef19.Workflow
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *N401Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -56089,7 +56633,7 @@ type UpdateWorkflowResponse struct {
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r UpdateWorkflowResponse) GetJSON200() *externalRef18.Workflow {
+func (r UpdateWorkflowResponse) GetJSON200() *externalRef19.Workflow {
 	return r.JSON200
 }
 
@@ -56343,7 +56887,7 @@ type GetWorkflowVersionResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *externalRef18.WorkflowVersion
+	JSON200 *externalRef19.WorkflowVersion
 	// JSON401 the response for an HTTP 401 `application/json` response
 	JSON401 *N401Unauthorized
 	// JSON403 the response for an HTTP 403 `application/json` response
@@ -56361,7 +56905,7 @@ type GetWorkflowVersionResponse struct {
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetWorkflowVersionResponse) GetJSON200() *externalRef18.WorkflowVersion {
+func (r GetWorkflowVersionResponse) GetJSON200() *externalRef19.WorkflowVersion {
 	return r.JSON200
 }
 
@@ -57901,7 +58445,7 @@ func (c *ClientWithResponses) StartFlowRunWithResponse(ctx context.Context, body
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with DELETE /flow-runs/{flowRunId} (the `CancelFlowRun` operationId).
-func (c *ClientWithResponses) CancelFlowRunWithResponse(ctx context.Context, flowRunId externalRef18.FlowRunIDParam, reqEditors ...RequestEditorFn) (*CancelFlowRunResponse, error) {
+func (c *ClientWithResponses) CancelFlowRunWithResponse(ctx context.Context, flowRunId externalRef19.FlowRunIDParam, reqEditors ...RequestEditorFn) (*CancelFlowRunResponse, error) {
 	rsp, err := c.CancelFlowRun(ctx, flowRunId, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -57916,7 +58460,7 @@ func (c *ClientWithResponses) CancelFlowRunWithResponse(ctx context.Context, flo
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /flow-runs/{flowRunId} (the `GetFlowRun` operationId).
-func (c *ClientWithResponses) GetFlowRunWithResponse(ctx context.Context, flowRunId externalRef18.FlowRunIDParam, reqEditors ...RequestEditorFn) (*GetFlowRunResponse, error) {
+func (c *ClientWithResponses) GetFlowRunWithResponse(ctx context.Context, flowRunId externalRef19.FlowRunIDParam, reqEditors ...RequestEditorFn) (*GetFlowRunResponse, error) {
 	rsp, err := c.GetFlowRun(ctx, flowRunId, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -57926,12 +58470,12 @@ func (c *ClientWithResponses) GetFlowRunWithResponse(ctx context.Context, flowRu
 
 // ListFlowRunStepsWithResponse List flow run steps
 //
-// List the steps a flow run has recorded, in the order the flow started them.
+// List the steps a flow run has recorded, in the order the flow started them. A page can hold fewer than `limit` steps and still have more after it, so page until `hasMore` is false.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /flow-runs/{flowRunId}/steps (the `ListFlowRunSteps` operationId).
-func (c *ClientWithResponses) ListFlowRunStepsWithResponse(ctx context.Context, flowRunId externalRef18.FlowRunIDParam, params *ListFlowRunStepsParams, reqEditors ...RequestEditorFn) (*ListFlowRunStepsResponse, error) {
+func (c *ClientWithResponses) ListFlowRunStepsWithResponse(ctx context.Context, flowRunId externalRef19.FlowRunIDParam, params *ListFlowRunStepsParams, reqEditors ...RequestEditorFn) (*ListFlowRunStepsResponse, error) {
 	rsp, err := c.ListFlowRunSteps(ctx, flowRunId, params, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -57941,13 +58485,13 @@ func (c *ClientWithResponses) ListFlowRunStepsWithResponse(ctx context.Context, 
 
 // GetFlowRunStepWithResponse Retrieve flow run step
 //
-// Retrieve a single step of a flow run, including its input, result, error, and failed attempts.
+// Retrieve a single step of a flow run, including its input, result and error. A sequence number can cover more than one step, so pass the `stepKey` the step listing reported to address one of those.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /flow-runs/{flowRunId}/steps/{stepSeq} (the `GetFlowRunStep` operationId).
-func (c *ClientWithResponses) GetFlowRunStepWithResponse(ctx context.Context, flowRunId externalRef18.FlowRunIDParam, stepSeq externalRef18.FlowRunStepSeqParam, reqEditors ...RequestEditorFn) (*GetFlowRunStepResponse, error) {
-	rsp, err := c.GetFlowRunStep(ctx, flowRunId, stepSeq, reqEditors...)
+func (c *ClientWithResponses) GetFlowRunStepWithResponse(ctx context.Context, flowRunId externalRef19.FlowRunIDParam, stepSeq externalRef19.FlowRunStepSeqParam, params *GetFlowRunStepParams, reqEditors ...RequestEditorFn) (*GetFlowRunStepResponse, error) {
+	rsp, err := c.GetFlowRunStep(ctx, flowRunId, stepSeq, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -57976,7 +58520,7 @@ func (c *ClientWithResponses) ListFlowsWithResponse(ctx context.Context, params 
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /flows/{flowId} (the `GetFlow` operationId).
-func (c *ClientWithResponses) GetFlowWithResponse(ctx context.Context, flowId externalRef18.FlowIDParam, reqEditors ...RequestEditorFn) (*GetFlowResponse, error) {
+func (c *ClientWithResponses) GetFlowWithResponse(ctx context.Context, flowId externalRef19.FlowIDParam, reqEditors ...RequestEditorFn) (*GetFlowResponse, error) {
 	rsp, err := c.GetFlow(ctx, flowId, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -58897,7 +59441,7 @@ func (c *ClientWithResponses) ListObjectsWithResponse(ctx context.Context, owner
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with DELETE /objects/{ownerId}/{region}/{key} (the `DeleteObject` operationId).
-func (c *ClientWithResponses) DeleteObjectWithResponse(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam, reqEditors ...RequestEditorFn) (*DeleteObjectResponse, error) {
+func (c *ClientWithResponses) DeleteObjectWithResponse(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam, reqEditors ...RequestEditorFn) (*DeleteObjectResponse, error) {
 	rsp, err := c.DeleteObject(ctx, ownerId, region, key, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -58913,7 +59457,7 @@ func (c *ClientWithResponses) DeleteObjectWithResponse(ctx context.Context, owne
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /objects/{ownerId}/{region}/{key} (the `GetObject` operationId).
-func (c *ClientWithResponses) GetObjectWithResponse(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam, reqEditors ...RequestEditorFn) (*GetObjectResponse, error) {
+func (c *ClientWithResponses) GetObjectWithResponse(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam, reqEditors ...RequestEditorFn) (*GetObjectResponse, error) {
 	rsp, err := c.GetObject(ctx, ownerId, region, key, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -58929,7 +59473,7 @@ func (c *ClientWithResponses) GetObjectWithResponse(ctx context.Context, ownerId
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with PUT /objects/{ownerId}/{region}/{key} (the `PutObject` operationId).
-func (c *ClientWithResponses) PutObjectWithBodyWithResponse(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutObjectResponse, error) {
+func (c *ClientWithResponses) PutObjectWithBodyWithResponse(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutObjectResponse, error) {
 	rsp, err := c.PutObjectWithBody(ctx, ownerId, region, key, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -58945,7 +59489,7 @@ func (c *ClientWithResponses) PutObjectWithBodyWithResponse(ctx context.Context,
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with PUT /objects/{ownerId}/{region}/{key} (the `PutObject` operationId).
-func (c *ClientWithResponses) PutObjectWithResponse(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef16.ObjectKeyPathParam, body PutObjectJSONRequestBody, reqEditors ...RequestEditorFn) (*PutObjectResponse, error) {
+func (c *ClientWithResponses) PutObjectWithResponse(ctx context.Context, ownerId OwnerIdPathParam, region RegionPathParam, key externalRef17.ObjectKeyPathParam, body PutObjectJSONRequestBody, reqEditors ...RequestEditorFn) (*PutObjectResponse, error) {
 	rsp, err := c.PutObject(ctx, ownerId, region, key, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -59948,7 +60492,9 @@ func (c *ClientWithResponses) UpdateRegistryCredentialWithResponse(ctx context.C
 
 // ListSandboxGroupsWithResponse List sandbox groups
 //
-// List sandbox groups for a single workspace.
+// List sandbox groups for a single workspace, newest first. The default
+// page size is 20 and the maximum is 100.
+// Use the last item's cursor to fetch the next page, until it is empty.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -59959,6 +60505,87 @@ func (c *ClientWithResponses) ListSandboxGroupsWithResponse(ctx context.Context,
 		return nil, err
 	}
 	return ParseListSandboxGroupsResponse(rsp)
+}
+
+// CreateSandboxGroupWithBodyWithResponse Create sandbox group
+//
+// Create a sandbox group. The workspace's first group becomes its default.
+// Returns 409 if the `name` is taken.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /sandbox-groups (the `CreateSandboxGroup` operationId).
+func (c *ClientWithResponses) CreateSandboxGroupWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSandboxGroupResponse, error) {
+	rsp, err := c.CreateSandboxGroupWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateSandboxGroupResponse(rsp)
+}
+
+// CreateSandboxGroupWithResponse Create sandbox group
+//
+// Create a sandbox group. The workspace's first group becomes its default.
+// Returns 409 if the `name` is taken.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /sandbox-groups (the `CreateSandboxGroup` operationId).
+func (c *ClientWithResponses) CreateSandboxGroupWithResponse(ctx context.Context, body CreateSandboxGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSandboxGroupResponse, error) {
+	rsp, err := c.CreateSandboxGroup(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateSandboxGroupResponse(rsp)
+}
+
+// RetrieveSandboxGroupWithResponse Retrieve sandbox group
+//
+// Retrieve a sandbox group. 400 `invalid_sandbox_group_id` for a malformed ID.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /sandbox-groups/{sandboxGroupId} (the `RetrieveSandboxGroup` operationId).
+func (c *ClientWithResponses) RetrieveSandboxGroupWithResponse(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, reqEditors ...RequestEditorFn) (*RetrieveSandboxGroupResponse, error) {
+	rsp, err := c.RetrieveSandboxGroup(ctx, sandboxGroupId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRetrieveSandboxGroupResponse(rsp)
+}
+
+// UpdateSandboxGroupWithBodyWithResponse Update sandbox group
+//
+// Update a sandbox group's concurrency limit. Returns 400 for a malformed
+// ID (`invalid_sandbox_group_id`), missing `concurrencyLimit`, or a value
+// below 1. The response returns the effective limit after applying Render's cap.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /sandbox-groups/{sandboxGroupId} (the `UpdateSandboxGroup` operationId).
+func (c *ClientWithResponses) UpdateSandboxGroupWithBodyWithResponse(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateSandboxGroupResponse, error) {
+	rsp, err := c.UpdateSandboxGroupWithBody(ctx, sandboxGroupId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateSandboxGroupResponse(rsp)
+}
+
+// UpdateSandboxGroupWithResponse Update sandbox group
+//
+// Update a sandbox group's concurrency limit. Returns 400 for a malformed
+// ID (`invalid_sandbox_group_id`), missing `concurrencyLimit`, or a value
+// below 1. The response returns the effective limit after applying Render's cap.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /sandbox-groups/{sandboxGroupId} (the `UpdateSandboxGroup` operationId).
+func (c *ClientWithResponses) UpdateSandboxGroupWithResponse(ctx context.Context, sandboxGroupId externalRef15.SandboxGroupId, body UpdateSandboxGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSandboxGroupResponse, error) {
+	rsp, err := c.UpdateSandboxGroup(ctx, sandboxGroupId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateSandboxGroupResponse(rsp)
 }
 
 // CreateSandboxBuildWithBodyWithResponse Create sandbox build
@@ -60019,8 +60646,8 @@ func (c *ClientWithResponses) CreateSandboxBuildWithResponse(ctx context.Context
 
 // RetrieveSandboxBuildWithResponse Retrieve sandbox build
 //
-// One build by ID. A build that belongs to another sandbox group returns
-// 404.
+// One build by ID. 404 with `code: build_not_found` if the build doesn't
+// exist or belongs to another sandbox group.
 //
 // 400 with `code: invalid_sandbox_group_id` if `sandboxGroupId` is not a
 // well-formed `sbg-` ID, or `invalid build ID` if `buildId` is not a
@@ -60056,10 +60683,12 @@ func (c *ClientWithResponses) ListSandboxGroupCredentialsWithResponse(ctx contex
 // CreateSandboxGroupCredentialWithBodyWithResponse Create sandbox group credential
 //
 // Admin-only. Creates an independent credential with a caller-supplied ID.
-// Each sandbox group supports at most 25 credentials and 200 KiB (204800 bytes)
-// of serialized current credentials, including configuration and values. Three
-// distinct prior configurations per credential are retained by fingerprint, with
-// a 1 MiB total storage limit including version metadata and configurations. Limits are checked before saving.
+// Each sandbox group supports at most 25 credentials and 200 KiB (204800
+// bytes) of serialized current credentials, including configuration and
+// values. Three distinct prior configurations per credential are retained
+// by fingerprint, with a 1 MiB total storage limit including version
+// metadata and configurations. Limits are checked before saving. A
+// temporary synchronization conflicts return 429.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -60075,10 +60704,12 @@ func (c *ClientWithResponses) CreateSandboxGroupCredentialWithBodyWithResponse(c
 // CreateSandboxGroupCredentialWithResponse Create sandbox group credential
 //
 // Admin-only. Creates an independent credential with a caller-supplied ID.
-// Each sandbox group supports at most 25 credentials and 200 KiB (204800 bytes)
-// of serialized current credentials, including configuration and values. Three
-// distinct prior configurations per credential are retained by fingerprint, with
-// a 1 MiB total storage limit including version metadata and configurations. Limits are checked before saving.
+// Each sandbox group supports at most 25 credentials and 200 KiB (204800
+// bytes) of serialized current credentials, including configuration and
+// values. Three distinct prior configurations per credential are retained
+// by fingerprint, with a 1 MiB total storage limit including version
+// metadata and configurations. Limits are checked before saving. A
+// temporary synchronization conflicts return 429.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -60093,7 +60724,9 @@ func (c *ClientWithResponses) CreateSandboxGroupCredentialWithResponse(ctx conte
 
 // DeleteSandboxGroupCredentialWithResponse Delete sandbox group credential
 //
-// Admin-only. Removes the credential from the group's desired configuration.
+// Admin-only. Removes the credential if present and synchronizes the
+// group's gateway configuration. Repeated deletion requests are accepted.
+// A temporary synchronization conflict returns 429.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -60124,13 +60757,14 @@ func (c *ClientWithResponses) RetrieveSandboxGroupCredentialWithResponse(ctx con
 
 // UpdateSandboxGroupCredentialWithBodyWithResponse Update sandbox group credential
 //
-// Admins may update configuration. Developers may update injection, method/path
-// filters, and enabled state; destination or value changes require an admin.
-// Assigning a value creates a new version; omitting it preserves the value.
-// Other omitted fields are preserved; empty methods or paths arrays clear their
-// filters. The group's serialized current credentials must
-// remain within 200 KiB (204800 bytes). A successful response means desired
-// state was saved; runtime reconciliation may still be pending.
+// Admins may update configuration. Developers may update injection,
+// method/path filters, and enabled state; destination or value changes
+// require an admin. Assigning a value creates a new version; omitting it
+// preserves the value. Other omitted fields are preserved; empty methods
+// or paths arrays clear their filters. The group's serialized current
+// credentials must remain within 200 KiB (204800 bytes). A successful
+// response means desired state was saved; runtime reconciliation may still
+// be pending. A temporary synchronization conflict returns 429.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -60145,13 +60779,14 @@ func (c *ClientWithResponses) UpdateSandboxGroupCredentialWithBodyWithResponse(c
 
 // UpdateSandboxGroupCredentialWithResponse Update sandbox group credential
 //
-// Admins may update configuration. Developers may update injection, method/path
-// filters, and enabled state; destination or value changes require an admin.
-// Assigning a value creates a new version; omitting it preserves the value.
-// Other omitted fields are preserved; empty methods or paths arrays clear their
-// filters. The group's serialized current credentials must
-// remain within 200 KiB (204800 bytes). A successful response means desired
-// state was saved; runtime reconciliation may still be pending.
+// Admins may update configuration. Developers may update injection,
+// method/path filters, and enabled state; destination or value changes
+// require an admin. Assigning a value creates a new version; omitting it
+// preserves the value. Other omitted fields are preserved; empty methods
+// or paths arrays clear their filters. The group's serialized current
+// credentials must remain within 200 KiB (204800 bytes). A successful
+// response means desired state was saved; runtime reconciliation may still
+// be pending. A temporary synchronization conflict returns 429.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -60166,13 +60801,15 @@ func (c *ClientWithResponses) UpdateSandboxGroupCredentialWithResponse(ctx conte
 
 // RestoreSandboxGroupCredentialWithBodyWithResponse Restore sandbox credential configuration
 //
-// Admin-only. Creates a new current revision from the routing configuration,
-// injection configuration, and secret value of a retained version. The new revision
-// has an increasing version ID, the restoring identity and timestamp, the same
-// fingerprint as the source, and restoredFromVersionId identifying the source.
-// Each distinct configuration is stored once by fingerprint. The current and three
-// most recently active prior configurations are retained. Evicting a configuration
-// removes all version metadata referring to it. Values are never returned.
+// Admin-only. Creates a new current revision from the routing
+// configuration, injection configuration, and secret value of a retained
+// version. The new revision has an increasing version ID, the restoring
+// identity and timestamp, the same fingerprint as the source, and
+// restoredFromVersionId identifying the source. Each distinct
+// configuration is stored once by fingerprint. The current and three most
+// recently active prior configurations are retained. Evicting a
+// configuration removes all version metadata referring to it. Values are
+// never returned. A temporary synchronization conflict returns 429.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -60187,13 +60824,15 @@ func (c *ClientWithResponses) RestoreSandboxGroupCredentialWithBodyWithResponse(
 
 // RestoreSandboxGroupCredentialWithResponse Restore sandbox credential configuration
 //
-// Admin-only. Creates a new current revision from the routing configuration,
-// injection configuration, and secret value of a retained version. The new revision
-// has an increasing version ID, the restoring identity and timestamp, the same
-// fingerprint as the source, and restoredFromVersionId identifying the source.
-// Each distinct configuration is stored once by fingerprint. The current and three
-// most recently active prior configurations are retained. Evicting a configuration
-// removes all version metadata referring to it. Values are never returned.
+// Admin-only. Creates a new current revision from the routing
+// configuration, injection configuration, and secret value of a retained
+// version. The new revision has an increasing version ID, the restoring
+// identity and timestamp, the same fingerprint as the source, and
+// restoredFromVersionId identifying the source. Each distinct
+// configuration is stored once by fingerprint. The current and three most
+// recently active prior configurations are retained. Evicting a
+// configuration removes all version metadata referring to it. Values are
+// never returned. A temporary synchronization conflict returns 429.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -60322,6 +60961,12 @@ func (c *ClientWithResponses) ListSandboxesWithResponse(ctx context.Context, par
 // 400 with `code: sandbox_group_limit_reached` if the owner has no default
 // sandbox group and is already at its sandbox group limit.
 //
+// 400 with `code: invalid_sandbox_plan` if `plan` is not one the API currently
+// accepts. The message lists the accepted plans.
+//
+// 400 with `code: invalid_timeout_seconds` if `timeoutSeconds` is below 0 or
+// above 2592000 (30 days).
+//
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /sandboxes (the `CreateSandbox` operationId).
@@ -60351,6 +60996,12 @@ func (c *ClientWithResponses) CreateSandboxWithBodyWithResponse(ctx context.Cont
 //
 // 400 with `code: sandbox_group_limit_reached` if the owner has no default
 // sandbox group and is already at its sandbox group limit.
+//
+// 400 with `code: invalid_sandbox_plan` if `plan` is not one the API currently
+// accepts. The message lists the accepted plans.
+//
+// 400 with `code: invalid_timeout_seconds` if `timeoutSeconds` is below 0 or
+// above 2592000 (30 days).
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -60408,23 +61059,6 @@ func (c *ClientWithResponses) RetrieveSandboxExecutionWithResponse(ctx context.C
 	return ParseRetrieveSandboxExecutionResponse(rsp)
 }
 
-// ListSandboxFilesWithResponse List directory contents in sandbox
-//
-// List the contents of a directory in a running sandbox. Returns file and
-// directory metadata without transferring file contents. The sandbox must
-// be `running`.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /sandboxes/{sandboxId}/files/list (the `ListSandboxFiles` operationId).
-func (c *ClientWithResponses) ListSandboxFilesWithResponse(ctx context.Context, sandboxId externalRef15.SandboxId, params *ListSandboxFilesParams, reqEditors ...RequestEditorFn) (*ListSandboxFilesResponse, error) {
-	rsp, err := c.ListSandboxFiles(ctx, sandboxId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseListSandboxFilesResponse(rsp)
-}
-
 // ConnectSandboxFilesWithResponse Mint a connect token for a sandbox file transfer
 //
 // Mint a short-lived, capability-scoped connect token that authorizes a
@@ -60449,24 +61083,6 @@ func (c *ClientWithResponses) ConnectSandboxFilesWithResponse(ctx context.Contex
 		return nil, err
 	}
 	return ParseConnectSandboxFilesResponse(rsp)
-}
-
-// StreamSandboxLogsWithResponse Stream sandbox logs and lifecycle events
-//
-// Stream sandbox output and lifecycle events as a server-sent event stream.
-// Replays historical events from sandbox creation (or from `since`), then
-// continues live. The stream closes after the `terminated` or `errored`
-// lifecycle event.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /sandboxes/{sandboxId}/logs (the `StreamSandboxLogs` operationId).
-func (c *ClientWithResponses) StreamSandboxLogsWithResponse(ctx context.Context, sandboxId externalRef15.SandboxId, params *StreamSandboxLogsParams, reqEditors ...RequestEditorFn) (*StreamSandboxLogsResponse, error) {
-	rsp, err := c.StreamSandboxLogs(ctx, sandboxId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseStreamSandboxLogsResponse(rsp)
 }
 
 // ConnectSandboxRunWithBodyWithResponse Create a connect token for a sandbox run
@@ -60585,6 +61201,9 @@ func (c *ClientWithResponses) ListServicesWithResponse(ctx context.Context, para
 //
 // Creates a new Render service in the specified workspace with the specified configuration.
 //
+// 400 with `code: build_source_region_mismatch` if `buildSourceId` names a git-backed
+// Build Source in a different region than the service.
+//
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /services (the `CreateService` operationId).
@@ -60599,6 +61218,9 @@ func (c *ClientWithResponses) CreateServiceWithBodyWithResponse(ctx context.Cont
 // CreateServiceWithResponse Create service
 //
 // Creates a new Render service in the specified workspace with the specified configuration.
+//
+// 400 with `code: build_source_region_mismatch` if `buildSourceId` names a git-backed
+// Build Source in a different region than the service.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -60645,6 +61267,9 @@ func (c *ClientWithResponses) RetrieveServiceWithResponse(ctx context.Context, s
 //
 // Update the service with the provided ID.
 //
+// 400 with `code: build_source_region_mismatch` if `buildSourceId` names a git-backed
+// Build Source in a different region than the service.
+//
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with PATCH /services/{serviceId} (the `UpdateService` operationId).
@@ -60659,6 +61284,9 @@ func (c *ClientWithResponses) UpdateServiceWithBodyWithResponse(ctx context.Cont
 // UpdateServiceWithResponse Update service
 //
 // Update the service with the provided ID.
+//
+// 400 with `code: build_source_region_mismatch` if `buildSourceId` names a git-backed
+// Build Source in a different region than the service.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -61671,6 +62299,21 @@ func (c *ClientWithResponses) SuspendServiceWithResponse(ctx context.Context, se
 	return ParseSuspendServiceResponse(rsp)
 }
 
+// ListSharedFilesystemsWithResponse List shared filesystems
+//
+// List the shared filesystems in a single workspace.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /shared-filesystems (the `ListSharedFilesystems` operationId).
+func (c *ClientWithResponses) ListSharedFilesystemsWithResponse(ctx context.Context, params *ListSharedFilesystemsParams, reqEditors ...RequestEditorFn) (*ListSharedFilesystemsResponse, error) {
+	rsp, err := c.ListSharedFilesystems(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListSharedFilesystemsResponse(rsp)
+}
+
 // ListTaskRunsWithResponse List task runs
 //
 // List task runs that match the provided filters. If no filters are provided, all task runs accessible by the authenticated user are returned.
@@ -61753,7 +62396,7 @@ func (c *ClientWithResponses) StreamTaskRunsEventsWithResponse(ctx context.Conte
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with DELETE /task-runs/{taskRunId} (the `CancelTaskRun` operationId).
-func (c *ClientWithResponses) CancelTaskRunWithResponse(ctx context.Context, taskRunId externalRef18.TaskRunIDParam, reqEditors ...RequestEditorFn) (*CancelTaskRunResponse, error) {
+func (c *ClientWithResponses) CancelTaskRunWithResponse(ctx context.Context, taskRunId externalRef19.TaskRunIDParam, reqEditors ...RequestEditorFn) (*CancelTaskRunResponse, error) {
 	rsp, err := c.CancelTaskRun(ctx, taskRunId, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -61768,7 +62411,7 @@ func (c *ClientWithResponses) CancelTaskRunWithResponse(ctx context.Context, tas
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /task-runs/{taskRunId} (the `GetTaskRun` operationId).
-func (c *ClientWithResponses) GetTaskRunWithResponse(ctx context.Context, taskRunId externalRef18.TaskRunIDParam, reqEditors ...RequestEditorFn) (*GetTaskRunResponse, error) {
+func (c *ClientWithResponses) GetTaskRunWithResponse(ctx context.Context, taskRunId externalRef19.TaskRunIDParam, reqEditors ...RequestEditorFn) (*GetTaskRunResponse, error) {
 	rsp, err := c.GetTaskRun(ctx, taskRunId, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -61798,7 +62441,7 @@ func (c *ClientWithResponses) ListTasksWithResponse(ctx context.Context, params 
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /tasks/{taskId} (the `GetTask` operationId).
-func (c *ClientWithResponses) GetTaskWithResponse(ctx context.Context, taskId externalRef18.TaskIDParam, reqEditors ...RequestEditorFn) (*GetTaskResponse, error) {
+func (c *ClientWithResponses) GetTaskWithResponse(ctx context.Context, taskId externalRef19.TaskIDParam, reqEditors ...RequestEditorFn) (*GetTaskResponse, error) {
 	rsp, err := c.GetTask(ctx, taskId, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -61871,7 +62514,7 @@ func (c *ClientWithResponses) CreateWebhookWithResponse(ctx context.Context, bod
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with DELETE /webhooks/{webhookId} (the `DeleteWebhook` operationId).
-func (c *ClientWithResponses) DeleteWebhookWithResponse(ctx context.Context, webhookId externalRef17.WebhookIdParam, reqEditors ...RequestEditorFn) (*DeleteWebhookResponse, error) {
+func (c *ClientWithResponses) DeleteWebhookWithResponse(ctx context.Context, webhookId externalRef18.WebhookIdParam, reqEditors ...RequestEditorFn) (*DeleteWebhookResponse, error) {
 	rsp, err := c.DeleteWebhook(ctx, webhookId, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -61886,7 +62529,7 @@ func (c *ClientWithResponses) DeleteWebhookWithResponse(ctx context.Context, web
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /webhooks/{webhookId} (the `RetrieveWebhook` operationId).
-func (c *ClientWithResponses) RetrieveWebhookWithResponse(ctx context.Context, webhookId externalRef17.WebhookIdParam, reqEditors ...RequestEditorFn) (*RetrieveWebhookResponse, error) {
+func (c *ClientWithResponses) RetrieveWebhookWithResponse(ctx context.Context, webhookId externalRef18.WebhookIdParam, reqEditors ...RequestEditorFn) (*RetrieveWebhookResponse, error) {
 	rsp, err := c.RetrieveWebhook(ctx, webhookId, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -61901,7 +62544,7 @@ func (c *ClientWithResponses) RetrieveWebhookWithResponse(ctx context.Context, w
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with PATCH /webhooks/{webhookId} (the `UpdateWebhook` operationId).
-func (c *ClientWithResponses) UpdateWebhookWithBodyWithResponse(ctx context.Context, webhookId externalRef17.WebhookIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateWebhookResponse, error) {
+func (c *ClientWithResponses) UpdateWebhookWithBodyWithResponse(ctx context.Context, webhookId externalRef18.WebhookIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateWebhookResponse, error) {
 	rsp, err := c.UpdateWebhookWithBody(ctx, webhookId, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -61916,7 +62559,7 @@ func (c *ClientWithResponses) UpdateWebhookWithBodyWithResponse(ctx context.Cont
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with PATCH /webhooks/{webhookId} (the `UpdateWebhook` operationId).
-func (c *ClientWithResponses) UpdateWebhookWithResponse(ctx context.Context, webhookId externalRef17.WebhookIdParam, body UpdateWebhookJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateWebhookResponse, error) {
+func (c *ClientWithResponses) UpdateWebhookWithResponse(ctx context.Context, webhookId externalRef18.WebhookIdParam, body UpdateWebhookJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateWebhookResponse, error) {
 	rsp, err := c.UpdateWebhook(ctx, webhookId, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -61931,7 +62574,7 @@ func (c *ClientWithResponses) UpdateWebhookWithResponse(ctx context.Context, web
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /webhooks/{webhookId}/events (the `ListWebhookEvents` operationId).
-func (c *ClientWithResponses) ListWebhookEventsWithResponse(ctx context.Context, webhookId externalRef17.WebhookIdParam, params *ListWebhookEventsParams, reqEditors ...RequestEditorFn) (*ListWebhookEventsResponse, error) {
+func (c *ClientWithResponses) ListWebhookEventsWithResponse(ctx context.Context, webhookId externalRef18.WebhookIdParam, params *ListWebhookEventsParams, reqEditors ...RequestEditorFn) (*ListWebhookEventsResponse, error) {
 	rsp, err := c.ListWebhookEvents(ctx, webhookId, params, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -61991,7 +62634,7 @@ func (c *ClientWithResponses) CreateWorkflowWithResponse(ctx context.Context, bo
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with DELETE /workflows/{workflowId} (the `DeleteWorkflow` operationId).
-func (c *ClientWithResponses) DeleteWorkflowWithResponse(ctx context.Context, workflowId externalRef18.WorkflowIDParam, reqEditors ...RequestEditorFn) (*DeleteWorkflowResponse, error) {
+func (c *ClientWithResponses) DeleteWorkflowWithResponse(ctx context.Context, workflowId externalRef19.WorkflowIDParam, reqEditors ...RequestEditorFn) (*DeleteWorkflowResponse, error) {
 	rsp, err := c.DeleteWorkflow(ctx, workflowId, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -62006,7 +62649,7 @@ func (c *ClientWithResponses) DeleteWorkflowWithResponse(ctx context.Context, wo
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /workflows/{workflowId} (the `GetWorkflow` operationId).
-func (c *ClientWithResponses) GetWorkflowWithResponse(ctx context.Context, workflowId externalRef18.WorkflowIDParam, reqEditors ...RequestEditorFn) (*GetWorkflowResponse, error) {
+func (c *ClientWithResponses) GetWorkflowWithResponse(ctx context.Context, workflowId externalRef19.WorkflowIDParam, reqEditors ...RequestEditorFn) (*GetWorkflowResponse, error) {
 	rsp, err := c.GetWorkflow(ctx, workflowId, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -62021,7 +62664,7 @@ func (c *ClientWithResponses) GetWorkflowWithResponse(ctx context.Context, workf
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with PATCH /workflows/{workflowId} (the `UpdateWorkflow` operationId).
-func (c *ClientWithResponses) UpdateWorkflowWithBodyWithResponse(ctx context.Context, workflowId externalRef18.WorkflowIDParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateWorkflowResponse, error) {
+func (c *ClientWithResponses) UpdateWorkflowWithBodyWithResponse(ctx context.Context, workflowId externalRef19.WorkflowIDParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateWorkflowResponse, error) {
 	rsp, err := c.UpdateWorkflowWithBody(ctx, workflowId, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -62036,7 +62679,7 @@ func (c *ClientWithResponses) UpdateWorkflowWithBodyWithResponse(ctx context.Con
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with PATCH /workflows/{workflowId} (the `UpdateWorkflow` operationId).
-func (c *ClientWithResponses) UpdateWorkflowWithResponse(ctx context.Context, workflowId externalRef18.WorkflowIDParam, body UpdateWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateWorkflowResponse, error) {
+func (c *ClientWithResponses) UpdateWorkflowWithResponse(ctx context.Context, workflowId externalRef19.WorkflowIDParam, body UpdateWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateWorkflowResponse, error) {
 	rsp, err := c.UpdateWorkflow(ctx, workflowId, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -62096,7 +62739,7 @@ func (c *ClientWithResponses) CreateWorkflowVersionWithResponse(ctx context.Cont
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /workflowversions/{workflowVersionId} (the `GetWorkflowVersion` operationId).
-func (c *ClientWithResponses) GetWorkflowVersionWithResponse(ctx context.Context, workflowVersionId externalRef18.WorkflowVersionIDParam, reqEditors ...RequestEditorFn) (*GetWorkflowVersionResponse, error) {
+func (c *ClientWithResponses) GetWorkflowVersionWithResponse(ctx context.Context, workflowVersionId externalRef19.WorkflowVersionIDParam, reqEditors ...RequestEditorFn) (*GetWorkflowVersionResponse, error) {
 	rsp, err := c.GetWorkflowVersion(ctx, workflowVersionId, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -69225,7 +69868,7 @@ func ParseStartFlowRunResponse(rsp *http.Response) (*StartFlowRunResponse, error
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
-		var dest externalRef18.FlowRun
+		var dest externalRef19.FlowRun
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -69439,7 +70082,7 @@ func ParseGetFlowRunResponse(rsp *http.Response) (*GetFlowRunResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef18.FlowRunDetails
+		var dest externalRef19.FlowRunDetails
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -69548,7 +70191,7 @@ func ParseListFlowRunStepsResponse(rsp *http.Response) (*ListFlowRunStepsRespons
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest []FlowRunStepWithCursor
+		var dest externalRef19.FlowRunStepsPage
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -69657,7 +70300,7 @@ func ParseGetFlowRunStepResponse(rsp *http.Response) (*GetFlowRunStepResponse, e
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef18.FlowRunStepDetails
+		var dest externalRef19.FlowRunStepDetails
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -69875,7 +70518,7 @@ func ParseGetFlowResponse(rsp *http.Response) (*GetFlowResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef18.Flow
+		var dest externalRef19.Flow
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -73831,7 +74474,7 @@ func ParseListObjectsResponse(rsp *http.Response) (*ListObjectsResponse, error) 
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef16.ListObjectsResponse
+		var dest externalRef17.ListObjectsResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -74031,7 +74674,7 @@ func ParseGetObjectResponse(rsp *http.Response) (*GetObjectResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef16.GetObjectOutput
+		var dest externalRef17.GetObjectOutput
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -74133,7 +74776,7 @@ func ParsePutObjectResponse(rsp *http.Response) (*PutObjectResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef16.PutObjectOutput
+		var dest externalRef17.PutObjectOutput
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -79889,6 +80532,347 @@ func ParseListSandboxGroupsResponse(rsp *http.Response) (*ListSandboxGroupsRespo
 	return response, nil
 }
 
+// ParseCreateSandboxGroupResponse parses an HTTP response from a CreateSandboxGroupWithResponse call
+func ParseCreateSandboxGroupResponse(rsp *http.Response) (*CreateSandboxGroupResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateSandboxGroupResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest externalRef15.SandboxGroup
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest N400BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest N401Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest N403Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest N404NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest N409Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest N429RateLimit
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest N500InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest N503ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 429:
+		var headers CreateSandboxGroupResponse429Headers
+		if values := rsp.Header.Values("RateLimit-Limit"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Limit", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RateLimitLimit = &value
+		}
+		if values := rsp.Header.Values("RateLimit-Remaining"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Remaining", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RateLimitRemaining = &value
+		}
+		if values := rsp.Header.Values("RateLimit-Reset"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Reset", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RateLimitReset = &value
+		}
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseRetrieveSandboxGroupResponse parses an HTTP response from a RetrieveSandboxGroupWithResponse call
+func ParseRetrieveSandboxGroupResponse(rsp *http.Response) (*RetrieveSandboxGroupResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RetrieveSandboxGroupResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef15.SandboxGroup
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest N400BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest N401Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest N403Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest N404NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest N429RateLimit
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest N500InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest N503ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 429:
+		var headers RetrieveSandboxGroupResponse429Headers
+		if values := rsp.Header.Values("RateLimit-Limit"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Limit", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RateLimitLimit = &value
+		}
+		if values := rsp.Header.Values("RateLimit-Remaining"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Remaining", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RateLimitRemaining = &value
+		}
+		if values := rsp.Header.Values("RateLimit-Reset"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Reset", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RateLimitReset = &value
+		}
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseUpdateSandboxGroupResponse parses an HTTP response from a UpdateSandboxGroupWithResponse call
+func ParseUpdateSandboxGroupResponse(rsp *http.Response) (*UpdateSandboxGroupResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateSandboxGroupResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef15.SandboxGroup
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest N400BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest N401Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest N403Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest N404NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest N409Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest N429RateLimit
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest N500InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest N503ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 429:
+		var headers UpdateSandboxGroupResponse429Headers
+		if values := rsp.Header.Values("RateLimit-Limit"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Limit", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RateLimitLimit = &value
+		}
+		if values := rsp.Header.Values("RateLimit-Remaining"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Remaining", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RateLimitRemaining = &value
+		}
+		if values := rsp.Header.Values("RateLimit-Reset"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Reset", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RateLimitReset = &value
+		}
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	}
+
+	return response, nil
+}
+
 // ParseCreateSandboxBuildResponse parses an HTTP response from a CreateSandboxBuildWithResponse call
 func ParseCreateSandboxBuildResponse(rsp *http.Response) (*CreateSandboxBuildResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -80353,7 +81337,7 @@ func ParseDeleteSandboxGroupCredentialResponse(rsp *http.Response) (*DeleteSandb
 	}
 
 	switch {
-	case rsp.StatusCode == 204:
+	case rsp.StatusCode == 202:
 		break // No content-type
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
@@ -81776,122 +82760,6 @@ func ParseRetrieveSandboxExecutionResponse(rsp *http.Response) (*RetrieveSandbox
 	return response, nil
 }
 
-// ParseListSandboxFilesResponse parses an HTTP response from a ListSandboxFilesWithResponse call
-func ParseListSandboxFilesResponse(rsp *http.Response) (*ListSandboxFilesResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ListSandboxFilesResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef15.SandboxDirectoryListing
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest N400BadRequest
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest N401Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest N403Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest N404NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest N409Conflict
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest N429RateLimit
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest N500InternalServerError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest N503ServiceUnavailable
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	switch {
-	case rsp.StatusCode == 429:
-		var headers ListSandboxFilesResponse429Headers
-		if values := rsp.Header.Values("RateLimit-Limit"); len(values) > 0 {
-			var value int
-			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Limit", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.RateLimitLimit = &value
-		}
-		if values := rsp.Header.Values("RateLimit-Remaining"); len(values) > 0 {
-			var value int
-			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Remaining", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.RateLimitRemaining = &value
-		}
-		if values := rsp.Header.Values("RateLimit-Reset"); len(values) > 0 {
-			var value int
-			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Reset", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.RateLimitReset = &value
-		}
-		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
-			var value int
-			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.RetryAfter = &value
-		}
-		response.Headers429 = &headers
-	}
-
-	return response, nil
-}
-
 // ParseConnectSandboxFilesResponse parses an HTTP response from a ConnectSandboxFilesWithResponse call
 func ParseConnectSandboxFilesResponse(rsp *http.Response) (*ConnectSandboxFilesResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -81967,118 +82835,6 @@ func ParseConnectSandboxFilesResponse(rsp *http.Response) (*ConnectSandboxFilesR
 	switch {
 	case rsp.StatusCode == 429:
 		var headers ConnectSandboxFilesResponse429Headers
-		if values := rsp.Header.Values("RateLimit-Limit"); len(values) > 0 {
-			var value int
-			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Limit", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.RateLimitLimit = &value
-		}
-		if values := rsp.Header.Values("RateLimit-Remaining"); len(values) > 0 {
-			var value int
-			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Remaining", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.RateLimitRemaining = &value
-		}
-		if values := rsp.Header.Values("RateLimit-Reset"); len(values) > 0 {
-			var value int
-			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Reset", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.RateLimitReset = &value
-		}
-		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
-			var value int
-			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.RetryAfter = &value
-		}
-		response.Headers429 = &headers
-	}
-
-	return response, nil
-}
-
-// ParseStreamSandboxLogsResponse parses an HTTP response from a StreamSandboxLogsWithResponse call
-func ParseStreamSandboxLogsResponse(rsp *http.Response) (*StreamSandboxLogsResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &StreamSandboxLogsResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest N401Unauthorized
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest N403Forbidden
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest N404NotFound
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest N429RateLimit
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest N500InternalServerError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest N503ServiceUnavailable
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	switch {
-	case rsp.StatusCode == 200:
-		var headers StreamSandboxLogsResponse200Headers
-		if values := rsp.Header.Values("Cache-Control"); len(values) > 0 {
-			var value string
-			if err := runtime.BindStyledParameterWithOptions("simple", "Cache-Control", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.CacheControl = &value
-		}
-		if values := rsp.Header.Values("Content-Type"); len(values) > 0 {
-			var value string
-			if err := runtime.BindStyledParameterWithOptions("simple", "Content-Type", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.ContentType = &value
-		}
-		response.Headers200 = &headers
-	case rsp.StatusCode == 429:
-		var headers StreamSandboxLogsResponse429Headers
 		if values := rsp.Header.Values("RateLimit-Limit"); len(values) > 0 {
 			var value int
 			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Limit", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
@@ -88224,6 +88980,115 @@ func ParseSuspendServiceResponse(rsp *http.Response) (*SuspendServiceResponse, e
 	return response, nil
 }
 
+// ParseListSharedFilesystemsResponse parses an HTTP response from a ListSharedFilesystemsWithResponse call
+func ParseListSharedFilesystemsResponse(rsp *http.Response) (*ListSharedFilesystemsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListSharedFilesystemsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []externalRef16.SharedFilesystem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest N400BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest N401Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest N403Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest N404NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest N429RateLimit
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest N500InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest N503ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 429:
+		var headers ListSharedFilesystemsResponse429Headers
+		if values := rsp.Header.Values("RateLimit-Limit"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Limit", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RateLimitLimit = &value
+		}
+		if values := rsp.Header.Values("RateLimit-Remaining"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Remaining", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RateLimitRemaining = &value
+		}
+		if values := rsp.Header.Values("RateLimit-Reset"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "RateLimit-Reset", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RateLimitReset = &value
+		}
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	}
+
+	return response, nil
+}
+
 // ParseListTaskRunsResponse parses an HTTP response from a ListTaskRunsWithResponse call
 func ParseListTaskRunsResponse(rsp *http.Response) (*ListTaskRunsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -88348,7 +89213,7 @@ func ParseCreateTaskResponse(rsp *http.Response) (*CreateTaskResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
-		var dest externalRef18.TaskRun
+		var dest externalRef19.TaskRun
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -88688,7 +89553,7 @@ func ParseGetTaskRunResponse(rsp *http.Response) (*GetTaskRunResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef18.TaskRunDetails
+		var dest externalRef19.TaskRunDetails
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -88899,7 +89764,7 @@ func ParseGetTaskResponse(rsp *http.Response) (*GetTaskResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef18.Task
+		var dest externalRef19.Task
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -89198,7 +90063,7 @@ func ParseCreateWebhookResponse(rsp *http.Response) (*CreateWebhookResponse, err
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
-		var dest externalRef17.Webhook
+		var dest externalRef18.Webhook
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -89391,7 +90256,7 @@ func ParseRetrieveWebhookResponse(rsp *http.Response) (*RetrieveWebhookResponse,
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef17.Webhook
+		var dest externalRef18.Webhook
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -89486,7 +90351,7 @@ func ParseUpdateWebhookResponse(rsp *http.Response) (*UpdateWebhookResponse, err
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef17.Webhook
+		var dest externalRef18.Webhook
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -89792,7 +90657,7 @@ func ParseCreateWorkflowResponse(rsp *http.Response) (*CreateWorkflowResponse, e
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
-		var dest externalRef18.Workflow
+		var dest externalRef19.Workflow
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -89992,7 +90857,7 @@ func ParseGetWorkflowResponse(rsp *http.Response) (*GetWorkflowResponse, error) 
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef18.Workflow
+		var dest externalRef19.Workflow
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -90094,7 +90959,7 @@ func ParseUpdateWorkflowResponse(rsp *http.Response) (*UpdateWorkflowResponse, e
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef18.Workflow
+		var dest externalRef19.Workflow
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -90396,7 +91261,7 @@ func ParseGetWorkflowVersionResponse(rsp *http.Response) (*GetWorkflowVersionRes
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef18.WorkflowVersion
+		var dest externalRef19.WorkflowVersion
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

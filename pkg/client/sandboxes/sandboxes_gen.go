@@ -115,78 +115,6 @@ func (e SandboxEgressRuleProtocol) Valid() bool {
 	}
 }
 
-// Defines values for SandboxFileEntryType.
-const (
-	Directory SandboxFileEntryType = "directory"
-	File      SandboxFileEntryType = "file"
-	Symlink   SandboxFileEntryType = "symlink"
-)
-
-// Valid indicates whether the value is a known member of the SandboxFileEntryType enum.
-func (e SandboxFileEntryType) Valid() bool {
-	switch e {
-	case Directory:
-		return true
-	case File:
-		return true
-	case Symlink:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for SandboxLifecycleEventType.
-const (
-	SandboxLifecycleEventTypeCreating   SandboxLifecycleEventType = "creating"
-	SandboxLifecycleEventTypeErrored    SandboxLifecycleEventType = "errored"
-	SandboxLifecycleEventTypeResuming   SandboxLifecycleEventType = "resuming"
-	SandboxLifecycleEventTypeRunning    SandboxLifecycleEventType = "running"
-	SandboxLifecycleEventTypeSuspended  SandboxLifecycleEventType = "suspended"
-	SandboxLifecycleEventTypeSuspending SandboxLifecycleEventType = "suspending"
-	SandboxLifecycleEventTypeTerminated SandboxLifecycleEventType = "terminated"
-)
-
-// Valid indicates whether the value is a known member of the SandboxLifecycleEventType enum.
-func (e SandboxLifecycleEventType) Valid() bool {
-	switch e {
-	case SandboxLifecycleEventTypeCreating:
-		return true
-	case SandboxLifecycleEventTypeErrored:
-		return true
-	case SandboxLifecycleEventTypeResuming:
-		return true
-	case SandboxLifecycleEventTypeRunning:
-		return true
-	case SandboxLifecycleEventTypeSuspended:
-		return true
-	case SandboxLifecycleEventTypeSuspending:
-		return true
-	case SandboxLifecycleEventTypeTerminated:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for SandboxLogEventStream.
-const (
-	Stderr SandboxLogEventStream = "stderr"
-	Stdout SandboxLogEventStream = "stdout"
-)
-
-// Valid indicates whether the value is a known member of the SandboxLogEventStream enum.
-func (e SandboxLogEventStream) Valid() bool {
-	switch e {
-	case Stderr:
-		return true
-	case Stdout:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SandboxNetworkPolicyType.
 const (
 	AllowAll  SandboxNetworkPolicyType = "allow-all"
@@ -373,13 +301,19 @@ type Sandbox struct {
 	// Region Region the sandbox is running in.
 	//
 	// Example: oregon
-	Region string        `json:"region"`
-	Status SandboxStatus `json:"status"`
+	Region string `json:"region"`
+
+	// SandboxGroupId The sandbox group this sandbox belongs to.
+	SandboxGroupId *SandboxGroupId `json:"sandboxGroupId,omitempty"`
+
+	// SharedFilesystems Shared filesystems mounted in the sandbox. Absent when there are none.
+	SharedFilesystems *[]SandboxSharedFilesystem `json:"sharedFilesystems,omitempty"`
+	Status            SandboxStatus              `json:"status"`
 
 	// TerminatedAt When the sandbox was terminated, or null.
 	TerminatedAt *time.Time `json:"terminatedAt,omitempty"`
 
-	// TimeoutSeconds Maximum sandbox lifetime in seconds.
+	// TimeoutSeconds Maximum sandbox lifetime in seconds. 0 means the sandbox has no timeout.
 	//
 	// Example: 86400
 	TimeoutSeconds int `json:"timeoutSeconds"`
@@ -610,16 +544,6 @@ type SandboxCredentialVersion struct {
 	UpdatedBy string `json:"updatedBy"`
 }
 
-// SandboxDirectoryListing Directory listing response.
-type SandboxDirectoryListing struct {
-	Entries []SandboxFileEntry `json:"entries"`
-
-	// Path The absolute path that was listed.
-	//
-	// Example: /app
-	Path string `json:"path"`
-}
-
 // SandboxEgressRule defines model for sandboxEgressRule.
 type SandboxEgressRule struct {
 	// Domain Hostname to apply the rule to. Matching is exact: `foo.local` does not
@@ -639,34 +563,9 @@ type SandboxEgressRule struct {
 // under `allow-list` every other outbound protocol is dropped.
 type SandboxEgressRuleProtocol string
 
-// SandboxFileEntry A file or directory entry in a sandbox filesystem listing.
-type SandboxFileEntry struct {
-	// ModifiedAt Last-modified timestamp.
-	ModifiedAt time.Time `json:"modifiedAt"`
-
-	// Name File or directory name (basename, not full path).
-	//
-	// Example: main.py
-	Name string `json:"name"`
-
-	// Size Size in bytes. 0 for directories and symlinks.
-	//
-	// Example: 2048
-	Size int `json:"size"`
-
-	// Target Symlink target path. Present only when type is `symlink`.
-	Target *string `json:"target,omitempty"`
-
-	// Type Entry type.
-	Type SandboxFileEntryType `json:"type"`
-}
-
-// SandboxFileEntryType Entry type.
-type SandboxFileEntryType string
-
 // SandboxGroup defines model for sandboxGroup.
 type SandboxGroup struct {
-	// ConcurrencyLimit Effective maximum number of concurrently active (non-terminated) sandboxes allowed in this group.
+	// ConcurrencyLimit The effective limit on active sandboxes in this group, capped by Render's limit for this workspace.
 	ConcurrencyLimit int `json:"concurrencyLimit"`
 
 	// CreatedAt Example: 2026-07-02T18:30:00Z
@@ -678,7 +577,8 @@ type SandboxGroup struct {
 	// Id Example: sbg-cph1rs3idesc73a2b2mg
 	Id SandboxGroupId `json:"id"`
 
-	// IsDefault Whether this is the workspace's default group. Exactly one group per workspace is the default.
+	// IsDefault Whether this is the workspace's default group. Sandboxes are created
+	// here unless a group is given.
 	IsDefault bool `json:"isDefault"`
 
 	// Name Human-friendly name for the group.
@@ -703,34 +603,37 @@ type SandboxGroup struct {
 // SandboxGroupId Example: sbg-cph1rs3idesc73a2b2mg
 type SandboxGroupId = string
 
+// SandboxGroupPATCH defines model for sandboxGroupPATCH.
+type SandboxGroupPATCH struct {
+	// ConcurrencyLimit Maximum active sandboxes in the group. The configured value is capped
+	// by Render's limit for this workspace. Responses return the effective limit.
+	// Lowering the limit does not stop existing sandboxes.
+	//
+	//
+	// Example: 10
+	ConcurrencyLimit int `json:"concurrencyLimit"`
+}
+
+// SandboxGroupPOST defines model for sandboxGroupPOST.
+type SandboxGroupPOST struct {
+	// Name Name, unique within the workspace.
+	//
+	// Example: CI agents
+	Name string `json:"name"`
+
+	// OwnerId Workspace ID.
+	//
+	// Example: tea-cph1rs3idesc73a2b2mg
+	OwnerId string `json:"ownerId"`
+
+	// Region Region for the group's sandboxes. Defaults to Render's default sandbox region.
+	//
+	// Example: oregon
+	Region *string `json:"region,omitempty"`
+}
+
 // SandboxId Example: sbx-1cd4gcph1rs3idesc73a2b2mg
 type SandboxId = string
-
-// SandboxLifecycleEvent A lifecycle event from the sandbox logs stream.
-type SandboxLifecycleEvent struct {
-	At   time.Time                 `json:"at"`
-	Type SandboxLifecycleEventType `json:"type"`
-}
-
-// SandboxLifecycleEventType defines model for SandboxLifecycleEvent.Type.
-type SandboxLifecycleEventType string
-
-// SandboxLogEvent A log event from the sandbox logs stream.
-type SandboxLogEvent struct {
-	At time.Time `json:"at"`
-
-	// Data Output chunk.
-	Data string `json:"data"`
-
-	// ExecId Groups output by command for the event timeline. Absent for system-level output (container startup, OOM, etc.).
-	//
-	// Example: exe-cph1rs3idesc73a2b2mg
-	ExecId *string               `json:"execId,omitempty"`
-	Stream SandboxLogEventStream `json:"stream"`
-}
-
-// SandboxLogEventStream defines model for SandboxLogEvent.Stream.
-type SandboxLogEventStream string
 
 // SandboxNetworkPolicy defines model for sandboxNetworkPolicy.
 type SandboxNetworkPolicy struct {
@@ -773,6 +676,20 @@ type SandboxNetworkPolicyType string
 
 // SandboxPOST defines model for sandboxPOST.
 type SandboxPOST struct {
+	// BuildId Start from this build's image instead of the base image. The build
+	// must have succeeded and be in the sandbox's group: 404 with `code:
+	// build_not_found` if it isn't in the group, and 409 with `code:
+	// build_not_succeeded` if it hasn't succeeded. Mutually exclusive
+	// with `buildName`, `snapshotId` and `snapshotName`.
+	BuildId *SandboxBuildId `json:"buildId,omitempty"`
+
+	// BuildName Start from the newest succeeded build with this name in the
+	// sandbox's group. 404 with `code: build_not_found` if the group has
+	// no build with the name, and 409 with `code: build_not_succeeded` if
+	// none of them has succeeded. Mutually exclusive with `buildId`,
+	// `snapshotId` and `snapshotName`.
+	BuildName *string `json:"buildName,omitempty"`
+
 	// Env Inline environment variables injected into the sandbox at creation.
 	Env *map[string]string `json:"env,omitempty"`
 
@@ -789,8 +706,12 @@ type SandboxPOST struct {
 	// Plan Compute plan. See `sandboxPlan` for known values.
 	Plan *SandboxPlan `json:"plan,omitempty"`
 
-	// Region Render region. Defaults to the workspace default.
-	Region *string `json:"region,omitempty"`
+	// SandboxGroupId Group to create the sandbox in; defaults to the workspace's default group.
+	SandboxGroupId *SandboxGroupId `json:"sandboxGroupId,omitempty"`
+
+	// SharedFilesystems Shared filesystems to mount in the sandbox. At most one is
+	// supported.
+	SharedFilesystems *[]SandboxSharedFilesystem `json:"sharedFilesystems,omitempty"`
 
 	// SnapshotId Start from this snapshot instead of the base image. Must be `available`
 	// and in the same sandbox group. For a `runtime` snapshot, `plan` must
@@ -802,12 +723,31 @@ type SandboxPOST struct {
 	// `snapshotId`.
 	SnapshotName *SandboxSnapshotName `json:"snapshotName,omitempty"`
 
-	// TimeoutSeconds Maximum sandbox lifetime in seconds. Sandbox is terminated when reached.
+	// TimeoutSeconds Maximum sandbox lifetime in seconds. Sandbox is terminated when reached. Use 0 for no timeout.
 	TimeoutSeconds *int `json:"timeoutSeconds,omitempty"`
 }
 
 // SandboxPlan The compute plan to use. `starter`, `standard` and `pro` are deprecated.
 type SandboxPlan string
+
+// SandboxSharedFilesystem defines model for sandboxSharedFilesystem.
+type SandboxSharedFilesystem struct {
+	// MountPath Absolute path in the sandbox where the filesystem is mounted. Must
+	// not be `/` or inside a system directory such as `/proc`, `/etc`,
+	// or `/usr`.
+	//
+	//
+	// Example: /data
+	MountPath string `json:"mountPath"`
+
+	// Name Name of the shared filesystem in the workspace. The first sandbox
+	// that uses a name creates the filesystem; later sandboxes in the
+	// workspace that use the same name share it.
+	//
+	//
+	// Example: data
+	Name string `json:"name"`
+}
 
 // SandboxSnapshot defines model for sandboxSnapshot.
 type SandboxSnapshot struct {

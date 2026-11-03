@@ -46,6 +46,7 @@ func TestGetBlueprintResponse(t *testing.T) {
 			name: "preserves details before the first sync is approved",
 			body: `{
 				"id": "exs-test",
+				"ownerId": "tea-test",
 				"name": "my-app",
 				"repo": "https://github.com/example/my-app",
 				"branch": "main",
@@ -59,6 +60,7 @@ func TestGetBlueprintResponse(t *testing.T) {
 			name: "preserves Blueprint settings, status, and managed resources",
 			body: `{
 				"id": "exs-test",
+				"ownerId": "tea-test",
 				"name": "my-app",
 				"repo": "https://github.com/example/my-app",
 				"branch": "release",

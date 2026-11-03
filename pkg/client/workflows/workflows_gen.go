@@ -424,9 +424,6 @@ type FlowRunStep struct {
 	ChildTaskRunId *string    `json:"childTaskRunId,omitempty"`
 	CompletedAt    *time.Time `json:"completedAt,omitempty"`
 
-	// FlowRunAttempt The 0-indexed flow run attempt that recorded the step.
-	FlowRunAttempt int `json:"flowRunAttempt"`
-
 	// Name For inline steps, the function's name. For detached steps, the task's registered name. Omitted for sleep steps.
 	Name *string `json:"name,omitempty"`
 
@@ -447,25 +444,8 @@ type FlowRunStep struct {
 	WakeAt *time.Time `json:"wakeAt,omitempty"`
 }
 
-// FlowRunStepAttempt defines model for FlowRunStepAttempt.
-type FlowRunStepAttempt struct {
-	// Attempt The step's attempt number. It continues across flow run attempts.
-	Attempt     int       `json:"attempt"`
-	CompletedAt time.Time `json:"completedAt"`
-
-	// Error Error message of the failed attempt.
-	Error string `json:"error"`
-
-	// FlowRunAttempt The 0-indexed flow run attempt this step attempt ran in.
-	FlowRunAttempt int       `json:"flowRunAttempt"`
-	StartedAt      time.Time `json:"startedAt"`
-}
-
 // FlowRunStepDetails defines model for FlowRunStepDetails.
 type FlowRunStepDetails struct {
-	// Attempts Failed attempts of an inline step, in attempt order. Empty for other step types.
-	Attempts []FlowRunStepAttempt `json:"attempts"`
-
 	// ChildTaskRunId For detached steps, the ID of the task run the step started.
 	//
 	// Example: trn-d0hp8fs9c44c73a6f1qg
@@ -474,9 +454,6 @@ type FlowRunStepDetails struct {
 
 	// Error Error message if the step failed.
 	Error *string `json:"error,omitempty"`
-
-	// FlowRunAttempt The 0-indexed flow run attempt that recorded the step.
-	FlowRunAttempt int `json:"flowRunAttempt"`
 
 	// Input The step's input. For detached steps, the input of the child task run.
 	Input interface{} `json:"input,omitempty"`
@@ -509,6 +486,16 @@ type FlowRunStepStatus string
 
 // FlowRunStepType The kind of step. `inline` runs a function inside the flow's process and retries in place. `detached` runs a registered task as its own task run. `sleep` is a durable sleep.
 type FlowRunStepType string
+
+// FlowRunStepsPage defines model for FlowRunStepsPage.
+type FlowRunStepsPage struct {
+	// Cursor Pass as the `cursor` query parameter to fetch the next page. Absent on the last page.
+	Cursor *string `json:"cursor,omitempty"`
+
+	// HasMore Whether another page of steps follows this one.
+	HasMore bool          `json:"hasMore"`
+	Steps   []FlowRunStep `json:"steps"`
+}
 
 // FlowSlug A flow slug in the format workflow-slug/flow-name. An optional version can be appended (workflow-slug/flow-name:version). If no version is provided, the latest version is used. Cannot be blank.
 //
@@ -751,6 +738,9 @@ type FlowRunIDParam = string
 
 // FlowRunStatusFilterParam defines model for FlowRunStatusFilterParam.
 type FlowRunStatusFilterParam = []FlowRunStatus
+
+// FlowRunStepKeyParam defines model for FlowRunStepKeyParam.
+type FlowRunStepKeyParam = string
 
 // FlowRunStepSeqParam defines model for FlowRunStepSeqParam.
 type FlowRunStepSeqParam = int

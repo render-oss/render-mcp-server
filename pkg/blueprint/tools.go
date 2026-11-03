@@ -147,7 +147,7 @@ func updateBlueprint(repo *Repo) server.ServerTool {
 				response.Blueprint = *updated
 			} else {
 				response.Blueprint = blueprintclient.Blueprint{
-					Id: current.Id, Name: current.Name, Branch: current.Branch, Path: current.Path,
+					Id: current.Id, OwnerId: current.OwnerId, Name: current.Name, Branch: current.Branch, Path: current.Path,
 					AutoSync: current.AutoSync, Repo: current.Repo, Status: current.Status, LastSync: current.LastSync,
 				}
 			}

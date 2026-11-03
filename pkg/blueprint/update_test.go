@@ -352,14 +352,14 @@ func TestUpdateBlueprintUnchanged(t *testing.T) {
 			fakeClient := &fakes.FakeBlueprintRepoClient{}
 			fakeClient.RetrieveBlueprintWithResponseReturns(&client.RetrieveBlueprintResponse{
 				HTTPResponse: &http.Response{StatusCode: http.StatusOK},
-				JSON200:      &blueprintclient.BlueprintDetail{Id: "exs-test", Name: "my-app", Branch: "main", Path: "render.yaml", Repo: "https://github.com/example/app", Status: blueprintclient.StatusCreated},
+				JSON200:      &blueprintclient.BlueprintDetail{Id: "exs-test", OwnerId: "tea-test", Name: "my-app", Branch: "main", Path: "render.yaml", Repo: "https://github.com/example/app", Status: blueprintclient.StatusCreated},
 			}, nil)
 			tt.args["blueprintId"] = "exs-test"
 
 			result := callUpdateBlueprint(t, NewRepo(fakeClient), tt.args)
 
 			require.False(t, result.IsError)
-			assert.JSONEq(t, `{"blueprint":{"id":"exs-test","name":"my-app","branch":"main","path":"render.yaml","repo":"https://github.com/example/app","status":"created","autoSync":false},"planningOutcome":null,"sync":null,"notices":[],"error":null}`, textContent(t, result))
+			assert.JSONEq(t, `{"blueprint":{"id":"exs-test","ownerId":"tea-test","name":"my-app","branch":"main","path":"render.yaml","repo":"https://github.com/example/app","status":"created","autoSync":false},"planningOutcome":null,"sync":null,"notices":[],"error":null}`, textContent(t, result))
 			require.Len(t, result.Content, 2)
 			assert.Equal(t, mcp.NewTextContent("The Blueprint already has the supplied settings. No update was needed, and planning was skipped."), result.Content[1])
 			assert.Equal(t, 1, fakeClient.RetrieveBlueprintWithResponseCallCount())
