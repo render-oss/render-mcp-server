@@ -10,7 +10,9 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	blueprintclient "github.com/render-oss/render-mcp-server/pkg/client/blueprints"
+	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/fakes"
+	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -51,12 +53,12 @@ func TestUpdateBlueprintRequestValuesFaithfulToToolCallInputs(t *testing.T) {
 			fakeClient := &fakes.FakeBlueprintRepoClient{}
 			fakeClient.RetrieveBlueprintWithResponseReturns(&client.RetrieveBlueprintResponse{
 				HTTPResponse: &http.Response{StatusCode: http.StatusOK},
-				JSON200:      &blueprintclient.BlueprintDetail{Id: "exs-test", Branch: "main", Path: "render.yaml", AutoSync: true},
+				JSON200:      &blueprintclient.BlueprintDetail{Id: "exs-test", OwnerId: "tea-test", Branch: "main", Path: "render.yaml", AutoSync: true},
 			}, nil)
 			fakeClient.UpdateBlueprintWithResponseReturns(nil, assert.AnError)
 			tt.args["blueprintId"] = "exs-test"
 
-			callUpdateBlueprint(t, NewRepo(fakeClient), tt.args)
+			callUpdateBlueprintInTestWorkspace(t, NewRepo(fakeClient), tt.args)
 
 			require.Equal(t, 1, fakeClient.UpdateBlueprintWithResponseCallCount())
 			_, id, body, _ := fakeClient.UpdateBlueprintWithResponseArgsForCall(0)
@@ -70,7 +72,7 @@ func TestUpdateBlueprintResponseValuesFaithfulToClientResponse(t *testing.T) {
 	fakeClient := &fakes.FakeBlueprintRepoClient{}
 	fakeClient.RetrieveBlueprintWithResponseReturns(&client.RetrieveBlueprintResponse{
 		HTTPResponse: &http.Response{StatusCode: http.StatusOK},
-		JSON200:      &blueprintclient.BlueprintDetail{Id: "exs-test", Name: "old-name"},
+		JSON200:      &blueprintclient.BlueprintDetail{Id: "exs-test", OwnerId: "tea-test", Name: "old-name"},
 	}, nil)
 	want := blueprintclient.Blueprint{
 		Id:       "exs-test",
@@ -86,7 +88,7 @@ func TestUpdateBlueprintResponseValuesFaithfulToClientResponse(t *testing.T) {
 		HTTPResponse: &http.Response{StatusCode: http.StatusOK}, JSON200: &want,
 	}, nil)
 
-	result := callUpdateBlueprint(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test", "name": "renamed"})
+	result := callUpdateBlueprintInTestWorkspace(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test", "name": "renamed"})
 
 	require.False(t, result.IsError, textContent(t, result))
 	var got updateBlueprintResponse
@@ -125,7 +127,7 @@ func TestUpdateBlueprintOutputFaithfulToPlanningResponse(t *testing.T) {
 			fakeClient := &fakes.FakeBlueprintRepoClient{}
 			fakeClient.RetrieveBlueprintWithResponseReturns(&client.RetrieveBlueprintResponse{
 				HTTPResponse: &http.Response{StatusCode: http.StatusOK},
-				JSON200:      &blueprintclient.BlueprintDetail{Id: "exs-test", Branch: "main", Path: "render.yaml", AutoSync: true},
+				JSON200:      &blueprintclient.BlueprintDetail{Id: "exs-test", OwnerId: "tea-test", Branch: "main", Path: "render.yaml", AutoSync: true},
 			}, nil)
 			fakeClient.UpdateBlueprintWithResponseReturns(&client.UpdateBlueprintResponse{
 				HTTPResponse: &http.Response{StatusCode: http.StatusOK}, JSON200: &blueprint,
@@ -134,7 +136,7 @@ func TestUpdateBlueprintOutputFaithfulToPlanningResponse(t *testing.T) {
 				HTTPResponse: &http.Response{StatusCode: http.StatusOK}, JSON200: &planning,
 			}, nil)
 
-			result := callUpdateBlueprint(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test", "branch": "preview"})
+			result := callUpdateBlueprintInTestWorkspace(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test", "branch": "preview"})
 
 			require.False(t, result.IsError, textContent(t, result))
 			var got updateBlueprintResponse
@@ -190,7 +192,7 @@ func TestUpdateBlueprintBadInputsRejectedBeforeAPI(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClient := &fakes.FakeBlueprintRepoClient{}
-			result := callUpdateBlueprint(t, NewRepo(fakeClient), tt.args)
+			result := callUpdateBlueprintInTestWorkspace(t, NewRepo(fakeClient), tt.args)
 			assert.True(t, result.IsError)
 			assert.Contains(t, textContent(t, result), tt.message)
 			assert.Zero(t, fakeClient.RetrieveBlueprintWithResponseCallCount())
@@ -217,7 +219,7 @@ func TestUpdateBlueprintRequestErrors(t *testing.T) {
 			fakeClient := &fakes.FakeBlueprintRepoClient{}
 			fakeClient.RetrieveBlueprintWithResponseReturns(&client.RetrieveBlueprintResponse{
 				HTTPResponse: &http.Response{StatusCode: http.StatusOK},
-				JSON200:      &blueprintclient.BlueprintDetail{Id: "exs-test", Branch: "main", Path: "render.yaml", AutoSync: true},
+				JSON200:      &blueprintclient.BlueprintDetail{Id: "exs-test", OwnerId: "tea-test", Branch: "main", Path: "render.yaml", AutoSync: true},
 			}, nil)
 			body, err := json.Marshal(map[string]string{"message": tt.message})
 			require.NoError(t, err)
@@ -225,7 +227,7 @@ func TestUpdateBlueprintRequestErrors(t *testing.T) {
 				HTTPResponse: &http.Response{StatusCode: tt.status}, Body: body,
 			}, tt.err)
 
-			result := callUpdateBlueprint(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test", "branch": "preview"})
+			result := callUpdateBlueprintInTestWorkspace(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test", "branch": "preview"})
 
 			assert.True(t, result.IsError)
 			message := textContent(t, result)
@@ -271,14 +273,14 @@ func TestUpdateBlueprintPlanningRequestErrors(t *testing.T) {
 			fakeClient := &fakes.FakeBlueprintRepoClient{}
 			fakeClient.RetrieveBlueprintWithResponseReturns(&client.RetrieveBlueprintResponse{
 				HTTPResponse: &http.Response{StatusCode: http.StatusOK},
-				JSON200:      &blueprintclient.BlueprintDetail{Id: "exs-test", Branch: "main", Path: "render.yaml", AutoSync: true},
+				JSON200:      &blueprintclient.BlueprintDetail{Id: "exs-test", OwnerId: "tea-test", Branch: "main", Path: "render.yaml", AutoSync: true},
 			}, nil)
 			fakeClient.UpdateBlueprintWithResponseReturns(&client.UpdateBlueprintResponse{
 				HTTPResponse: &http.Response{StatusCode: http.StatusOK}, JSON200: &blueprint,
 			}, nil)
 			fakeClient.CreateBlueprintSyncWithResponseReturns(tt.response, tt.err)
 
-			result := callUpdateBlueprint(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test", "branch": "preview"})
+			result := callUpdateBlueprintInTestWorkspace(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test", "branch": "preview"})
 
 			require.False(t, result.IsError, textContent(t, result))
 			var got updateBlueprintResponse
@@ -306,7 +308,7 @@ func TestUpdateBlueprintPlansAfterUpdate(t *testing.T) {
 		calls = append(calls, "retrieve")
 		return &client.RetrieveBlueprintResponse{
 			HTTPResponse: &http.Response{StatusCode: http.StatusOK},
-			JSON200:      &blueprintclient.BlueprintDetail{Id: "exs-test", Branch: "main"},
+			JSON200:      &blueprintclient.BlueprintDetail{Id: "exs-test", OwnerId: "tea-test", Branch: "main"},
 		}, nil
 	}
 	fakeClient.UpdateBlueprintWithResponseStub = func(context.Context, string, client.UpdateBlueprintJSONRequestBody, ...client.RequestEditorFn) (*client.UpdateBlueprintResponse, error) {
@@ -321,16 +323,16 @@ func TestUpdateBlueprintPlansAfterUpdate(t *testing.T) {
 		return nil, assert.AnError
 	}
 
-	callUpdateBlueprint(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test", "branch": "preview"})
+	callUpdateBlueprintInTestWorkspace(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test", "branch": "preview"})
 
 	assert.Equal(t, []string{"retrieve", "update", "plan"}, calls)
 }
 
-func callUpdateBlueprint(t *testing.T, repo *Repo, args map[string]any) *mcp.CallToolResult {
+func callUpdateBlueprintInTestWorkspace(t *testing.T, repo *Repo, args map[string]any) *mcp.CallToolResult {
 	t.Helper()
 	request := mcp.CallToolRequest{}
 	request.Params.Arguments = args
-	result, err := updateBlueprint(repo).Handler(t.Context(), request)
+	result, err := updateBlueprint(repo).Handler(session.ContextWithWorkspace(t.Context(), "tea-test"), request)
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	return result
@@ -356,7 +358,7 @@ func TestUpdateBlueprintUnchanged(t *testing.T) {
 			}, nil)
 			tt.args["blueprintId"] = "exs-test"
 
-			result := callUpdateBlueprint(t, NewRepo(fakeClient), tt.args)
+			result := callUpdateBlueprintInTestWorkspace(t, NewRepo(fakeClient), tt.args)
 
 			require.False(t, result.IsError)
 			assert.JSONEq(t, `{"blueprint":{"id":"exs-test","ownerId":"tea-test","name":"my-app","branch":"main","path":"render.yaml","repo":"https://github.com/example/app","status":"created","autoSync":false},"planningOutcome":null,"sync":null,"notices":[],"error":null}`, textContent(t, result))
@@ -374,14 +376,14 @@ func TestUpdateBlueprintChangesThatDoNotCausePlanning(t *testing.T) {
 		fakeClient := &fakes.FakeBlueprintRepoClient{}
 		fakeClient.RetrieveBlueprintWithResponseReturns(&client.RetrieveBlueprintResponse{
 			HTTPResponse: &http.Response{StatusCode: http.StatusOK},
-			JSON200:      &blueprintclient.BlueprintDetail{Id: "exs-test", Name: "old-name", Branch: "main", Path: "render.yaml"},
+			JSON200:      &blueprintclient.BlueprintDetail{Id: "exs-test", OwnerId: "tea-test", Name: "old-name", Branch: "main", Path: "render.yaml"},
 		}, nil)
 		blueprint := &blueprintclient.Blueprint{Id: "exs-test", Name: "new-name", Branch: "main", Path: "render.yaml"}
 		fakeClient.UpdateBlueprintWithResponseReturns(&client.UpdateBlueprintResponse{
 			HTTPResponse: &http.Response{StatusCode: http.StatusOK}, JSON200: blueprint,
 		}, nil)
 
-		result := callUpdateBlueprint(t, NewRepo(fakeClient), map[string]any{
+		result := callUpdateBlueprintInTestWorkspace(t, NewRepo(fakeClient), map[string]any{
 			"blueprintId": "exs-test", "name": "new-name", "branch": " main ", "path": "render.yaml",
 		})
 
@@ -402,14 +404,14 @@ func TestUpdateBlueprintChangesThatDoNotCausePlanning(t *testing.T) {
 		fakeClient := &fakes.FakeBlueprintRepoClient{}
 		fakeClient.RetrieveBlueprintWithResponseReturns(&client.RetrieveBlueprintResponse{
 			HTTPResponse: &http.Response{StatusCode: http.StatusOK},
-			JSON200:      &blueprintclient.BlueprintDetail{Id: "exs-test", Branch: "main", Path: "render.yaml", AutoSync: true},
+			JSON200:      &blueprintclient.BlueprintDetail{Id: "exs-test", OwnerId: "tea-test", Branch: "main", Path: "render.yaml", AutoSync: true},
 		}, nil)
 		fakeClient.UpdateBlueprintWithResponseReturns(&client.UpdateBlueprintResponse{
 			HTTPResponse: &http.Response{StatusCode: http.StatusOK},
 			JSON200:      &blueprintclient.Blueprint{Id: "exs-test", Branch: "main", Path: "render.yaml", AutoSync: false},
 		}, nil)
 
-		result := callUpdateBlueprint(t, NewRepo(fakeClient), map[string]any{
+		result := callUpdateBlueprintInTestWorkspace(t, NewRepo(fakeClient), map[string]any{
 			"blueprintId": "exs-test", "autoSync": false,
 		})
 
@@ -417,6 +419,21 @@ func TestUpdateBlueprintChangesThatDoNotCausePlanning(t *testing.T) {
 		assert.Equal(t, 1, fakeClient.UpdateBlueprintWithResponseCallCount())
 		assert.Zero(t, fakeClient.CreateBlueprintSyncWithResponseCallCount())
 	})
+}
+
+func TestUpdateBlueprintRequiresWorkspace(t *testing.T) {
+	fakeClient := newTestBlueprintClient()
+	request := mcp.CallToolRequest{}
+	request.Params.Arguments = map[string]any{"blueprintId": "exs-test", "branch": "preview"}
+
+	result, err := updateBlueprint(NewRepo(fakeClient)).Handler(sessionContextWithoutWorkspace(t), request)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.IsError)
+	assert.Contains(t, textContent(t, result), config.ErrNoWorkspace.Error())
+	assert.Zero(t, fakeClient.UpdateBlueprintWithResponseCallCount())
+	assert.Zero(t, fakeClient.CreateBlueprintSyncWithResponseCallCount())
 }
 
 func TestUpdateBlueprintReadErrors(t *testing.T) {
@@ -446,7 +463,7 @@ func TestUpdateBlueprintReadErrors(t *testing.T) {
 			fakeClient := &fakes.FakeBlueprintRepoClient{}
 			fakeClient.RetrieveBlueprintWithResponseReturns(tt.response, tt.err)
 
-			result := callUpdateBlueprint(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test", "branch": "preview"})
+			result := callUpdateBlueprintInTestWorkspace(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test", "branch": "preview"})
 
 			assert.True(t, result.IsError)
 			assert.Contains(t, textContent(t, result), tt.message)

@@ -10,6 +10,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/render-oss/render-mcp-server/pkg/client"
+	blueprintclient "github.com/render-oss/render-mcp-server/pkg/client/blueprints"
 	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/render-oss/render-mcp-server/pkg/workspace"
 	"github.com/stretchr/testify/assert"
@@ -164,6 +165,7 @@ func TestScopeToolsRejectsResourcesFromAnotherWorkspaceBeforeCallingTool(t *test
 		{name: "service tools", parameter: "serviceId", resource: "srv-other"},
 		{name: "postgres tools", parameter: "postgresId", resource: "dpg-other"},
 		{name: "key value tools", parameter: "keyValueId", resource: "red-other"},
+		{name: "blueprint tools", parameter: "blueprintId", resource: "exs-other"},
 		{name: "metrics tools", parameter: "resourceId", resource: "srv-other"},
 	}
 
@@ -178,6 +180,9 @@ func TestScopeToolsRejectsResourcesFromAnotherWorkspaceBeforeCallingTool(t *test
 				},
 				keyValues: map[string]*client.KeyValueDetail{
 					"red-other": {Id: "red-other", Owner: client.Owner{Id: otherWorkspaceID}},
+				},
+				blueprints: map[string]*blueprintclient.BlueprintDetail{
+					"exs-other": {Id: "exs-other", OwnerId: otherWorkspaceID},
 				},
 			}
 			handlerCalled := false
@@ -235,6 +240,53 @@ func TestScopeToolsAllowsResourcesFromExplicitWorkspace(t *testing.T) {
 	require.False(t, result.IsError)
 	assert.True(t, handlerCalled)
 	assert.Equal(t, 0, ownerClient.totalCalls(), "resource ownership should avoid a redundant owner lookup")
+}
+
+func TestScopeToolsAllowsBlueprintFromExplicitWorkspace(t *testing.T) {
+	const workspaceID = "tea-explicit"
+
+	ownerClient := &fakeOwnerClient{
+		owners: map[string]*client.Owner{
+			workspaceID: {Id: workspaceID, Name: "Explicit workspace"},
+		},
+		blueprints: map[string]*blueprintclient.BlueprintDetail{
+			"exs-draft": {
+				Id:        "exs-draft",
+				OwnerId:   workspaceID,
+				Name:      "my-app",
+				Repo:      "https://github.com/example/my-app",
+				Branch:    "main",
+				Path:      "render.yaml",
+				Status:    blueprintclient.StatusCreated,
+				Resources: []blueprintclient.ResourceRef{},
+			},
+		},
+	}
+	var handledWorkspace string
+	scopedTool := scopedTestTool(
+		ownerClient,
+		"get_blueprint",
+		func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			var err error
+			handledWorkspace, err = session.FromContext(ctx).GetWorkspace(ctx)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			return mcp.NewToolResultText("read resource"), nil
+		},
+	)
+	result, err := scopedTool.Handler(
+		contextWithHTTPSession(t, session.NewInMemoryStore(), "session-b"),
+		toolRequest(map[string]interface{}{
+			"workspaceId": workspaceID,
+			"blueprintId": "exs-draft",
+		}),
+	)
+
+	require.NoError(t, err)
+	require.False(t, result.IsError, "%+v", result.Content)
+	assert.Equal(t, workspaceID, handledWorkspace)
+	assert.Zero(t, ownerClient.totalCalls(), "resource ownership should avoid a redundant owner lookup")
 }
 
 func TestScopeToolsValidatesMetricsResourcesEfficiently(t *testing.T) {
@@ -502,10 +554,22 @@ func TestScopeToolsSurfacesResourceLookupFailures(t *testing.T) {
 			expectedMessage: "key value store red-foreign: forbidden",
 		},
 		{
-			name:            "transport error names the resource",
+			name:            "forbidden blueprint names the resource",
+			arguments:       map[string]interface{}{"workspaceId": "tea-mine", "blueprintId": "exs-foreign"},
+			forbidden:       map[string]bool{"exs-foreign": true},
+			expectedMessage: "blueprint exs-foreign: forbidden",
+		},
+		{
+			name:            "blueprint transport error preserves the cause and names the resource",
+			arguments:       map[string]interface{}{"workspaceId": "tea-mine", "blueprintId": "exs-flaky"},
+			resourceErr:     assert.AnError,
+			expectedMessage: "blueprint exs-flaky: " + assert.AnError.Error(),
+		},
+		{
+			name:            "service transport error preserves the cause and names the resource",
 			arguments:       map[string]interface{}{"workspaceId": "tea-mine", "serviceId": "srv-flaky"},
 			resourceErr:     assert.AnError,
-			expectedMessage: "service srv-flaky",
+			expectedMessage: "service srv-flaky: " + assert.AnError.Error(),
 		},
 	}
 
@@ -548,6 +612,7 @@ func TestScopeToolsFallsBackToOwnerCheckWhenResourceMissing(t *testing.T) {
 		{name: "service", parameter: "serviceId", resource: "srv-typo"},
 		{name: "postgres", parameter: "postgresId", resource: "dpg-typo"},
 		{name: "key value", parameter: "keyValueId", resource: "red-typo"},
+		{name: "blueprint", parameter: "blueprintId", resource: "exs-typo"},
 	}
 
 	for _, tt := range tests {
@@ -657,6 +722,7 @@ type fakeOwnerClient struct {
 	services      map[string]*client.Service
 	postgres      map[string]*client.PostgresDetail
 	keyValues     map[string]*client.KeyValueDetail
+	blueprints    map[string]*blueprintclient.BlueprintDetail
 	ownerErr      error
 	resourceErr   error
 	forbidden     map[string]bool
@@ -763,6 +829,32 @@ func (f *fakeOwnerClient) RetrieveKeyValueWithResponse(
 	}
 	return &client.RetrieveKeyValueResponse{
 		JSON200:      keyValue,
+		HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+	}, nil
+}
+
+func (f *fakeOwnerClient) RetrieveBlueprintWithResponse(
+	_ context.Context,
+	blueprintID string,
+	_ ...client.RequestEditorFn,
+) (*client.RetrieveBlueprintResponse, error) {
+	f.recordResourceCall()
+	if f.resourceErr != nil {
+		return nil, f.resourceErr
+	}
+	if f.forbidden[blueprintID] {
+		return &client.RetrieveBlueprintResponse{
+			HTTPResponse: &http.Response{StatusCode: http.StatusForbidden},
+		}, nil
+	}
+	blueprint, ok := f.blueprints[blueprintID]
+	if !ok {
+		return &client.RetrieveBlueprintResponse{
+			HTTPResponse: &http.Response{StatusCode: http.StatusNotFound},
+		}, nil
+	}
+	return &client.RetrieveBlueprintResponse{
+		JSON200:      blueprint,
 		HTTPResponse: &http.Response{StatusCode: http.StatusOK},
 	}, nil
 }

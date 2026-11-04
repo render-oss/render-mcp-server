@@ -1,12 +1,14 @@
 package blueprint
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	blueprintclient "github.com/render-oss/render-mcp-server/pkg/client/blueprints"
 	"github.com/render-oss/render-mcp-server/pkg/config"
@@ -16,6 +18,66 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestBlueprintWorkspaceMismatch(t *testing.T) {
+	ctx := session.ContextWithWorkspace(t.Context(), "tea-selected")
+	for _, tt := range []struct {
+		name string
+		tool func(*Repo) server.ServerTool
+		args map[string]any
+	}{
+		{
+			name: "get",
+			tool: getBlueprint,
+		},
+		{
+			name: "plan",
+			tool: planBlueprint,
+		},
+		{
+			name: "approve draft",
+			tool: approveBlueprint,
+		},
+		{
+			name: "update",
+			tool: updateBlueprint,
+			args: map[string]any{"branch": "preview"},
+		},
+		{
+			name: "unchanged update",
+			tool: updateBlueprint,
+			args: map[string]any{"branch": "main"},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeClient := &fakes.FakeBlueprintRepoClient{}
+			fakeClient.RetrieveBlueprintWithResponseReturns(&client.RetrieveBlueprintResponse{
+				HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+				JSON200: &blueprintclient.BlueprintDetail{
+					Id: "exs-test", OwnerId: "tea-other", Branch: "main",
+					Status: blueprintclient.StatusCreated, Resources: []blueprintclient.ResourceRef{},
+				},
+			}, nil)
+			request := mcp.CallToolRequest{}
+			request.Params.Arguments = map[string]any{"blueprintId": "exs-test"}
+			for key, value := range tt.args {
+				request.GetArguments()[key] = value
+			}
+
+			result, err := tt.tool(NewRepo(fakeClient)).Handler(ctx, request)
+
+			require.NoError(t, err)
+			require.NotNil(t, result)
+			assert.True(t, result.IsError)
+			assert.Contains(t, textContent(t, result), "belongs to workspace tea-other")
+			assert.Contains(t, textContent(t, result), "targets workspace tea-selected")
+			assert.Equal(t, 1, fakeClient.RetrieveBlueprintWithResponseCallCount())
+			assert.Zero(t, fakeClient.CreateBlueprintSyncWithResponseCallCount())
+			assert.Zero(t, fakeClient.ApproveBlueprintWithResponseCallCount())
+			assert.Zero(t, fakeClient.UpdateBlueprintWithResponseCallCount())
+		})
+	}
+}
 
 func TestCreateBlueprintResourceModes(t *testing.T) {
 	property := createBlueprint(nil).Tool.InputSchema.Properties["existingResources"].(map[string]any)
@@ -212,7 +274,7 @@ func TestCreateBlueprintRequiresWorkspace(t *testing.T) {
 	fakeClient := &fakes.FakeBlueprintRepoClient{}
 	request := mcp.CallToolRequest{}
 	request.Params.Arguments = map[string]any{"repoUrl": "https://github.com/example/my-app"}
-	ctx := session.ContextWithWorkspace(t.Context(), "")
+	ctx := sessionContextWithoutWorkspace(t)
 	result, err := createBlueprint(NewRepo(fakeClient)).Handler(ctx, request)
 	require.NoError(t, err)
 	assert.True(t, result.IsError)
@@ -301,7 +363,7 @@ func TestCreateBlueprintPreservesRESTPlanningResponse(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			response := &blueprintclient.CreateBlueprintResponse{
-				Blueprint:       blueprintclient.Blueprint{Id: "exs-created"},
+				Blueprint:       blueprintclient.Blueprint{Id: "exs-created", OwnerId: "tea-test"},
 				PlanningOutcome: tt.planningOutcome,
 				Sync:            tt.sync,
 				Notices:         tt.notices,
@@ -359,12 +421,39 @@ func TestCreateBlueprintClientErrors(t *testing.T) {
 	}
 }
 
+func sessionContextWithoutWorkspace(t *testing.T) context.Context {
+	t.Helper()
+	ctx := (&server.MCPServer{}).WithContext(t.Context(), server.NewInProcessSession(t.Name(), nil))
+	return session.ContextWithHTTPSession(session.NewInMemoryStore())(ctx, nil)
+}
+
+// newTestBlueprintClient preloads a happy-path RetrieveBlueprintWithResponseReturns call, as most tool calls
+// exercise that call. Use a fresh &fakes.FakeBlueprintRepoClient{} when you need to fail the retrieval call.
+func newTestBlueprintClient() *fakes.FakeBlueprintRepoClient {
+	fakeClient := &fakes.FakeBlueprintRepoClient{}
+	fakeClient.RetrieveBlueprintWithResponseReturns(&client.RetrieveBlueprintResponse{
+		HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+		JSON200: &blueprintclient.BlueprintDetail{
+			Id:        "exs-test",
+			OwnerId:   "tea-test",
+			Name:      "my-app",
+			Repo:      "https://github.com/example/my-app",
+			Branch:    "main",
+			Path:      "render.yaml",
+			AutoSync:  true,
+			Status:    blueprintclient.StatusCreated,
+			Resources: []blueprintclient.ResourceRef{},
+		},
+	}, nil)
+	return fakeClient
+}
+
 func newTestRepo() (*fakes.FakeBlueprintRepoClient, *Repo) {
 	fakeClient := &fakes.FakeBlueprintRepoClient{}
 	fakeClient.CreateBlueprintWithResponseReturns(&client.CreateBlueprintResponse{
 		HTTPResponse: &http.Response{StatusCode: http.StatusCreated},
 		JSON201: &blueprintclient.CreateBlueprintResponse{
-			Blueprint:       blueprintclient.Blueprint{Id: "exs-created"},
+			Blueprint:       blueprintclient.Blueprint{Id: "exs-created", OwnerId: "tea-test"},
 			PlanningOutcome: blueprintclient.PlanningOutcomeNoChanges,
 			Notices:         []blueprintclient.BlueprintNotice{},
 		},

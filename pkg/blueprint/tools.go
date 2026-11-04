@@ -17,10 +17,6 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
-const workspaceIsolationWarning = "This tool does not enforce workspace isolation. " +
-	"It acts on the supplied Blueprint ID regardless of the selected workspace. " +
-	"Confirm that the Blueprint belongs to the user's intended workspace before calling this tool."
-
 const planningOutcomeGuidance = "Read planningOutcome to determine the next step. " +
 	"If planningOutcome is \"failed\", inspect the errors in notices. Address the reported " +
 	"issues and push any Blueprint file changes, then call plan_blueprint with the " +
@@ -32,7 +28,6 @@ const planningOutcomeGuidance = "Read planningOutcome to determine the next step
 	"To apply the changes, call approve_blueprint with the Blueprint ID and follow its " +
 	"guidance for supplying any required environment variable values."
 
-// Tools returns Blueprint tools that do not require workspace context.
 func Tools(c *client.ClientWithResponses) []server.ServerTool {
 	repo := NewRepo(c)
 	return []server.ServerTool{
@@ -40,13 +35,6 @@ func Tools(c *client.ClientWithResponses) []server.ServerTool {
 		planBlueprint(repo),
 		approveBlueprint(repo),
 		updateBlueprint(repo),
-	}
-}
-
-// WorkspaceScopedTools returns Blueprint tools that require workspace context.
-func WorkspaceScopedTools(c *client.ClientWithResponses) []server.ServerTool {
-	repo := NewRepo(c)
-	return []server.ServerTool{
 		createBlueprint(repo),
 	}
 }
@@ -56,7 +44,6 @@ func getBlueprint(repo *Repo) server.ServerTool {
 		Tool: mcp.NewTool("get_blueprint",
 			mcp.WithDescription("This tool is in public alpha (early access). Access to this tool and its contract are subject to change. "+
 				"Retrieve a Blueprint's settings and status, along with the IDs of the resources it manages. "+
-				workspaceIsolationWarning+" "+
 				"This tool does not create a plan or apply infrastructure changes."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:           "Get Blueprint details",
@@ -76,7 +63,7 @@ func getBlueprint(repo *Repo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
-			response, err := repo.RetrieveBlueprint(ctx, blueprintID)
+			response, err := repo.RetrieveBlueprintAndCheckWorkspace(ctx, blueprintID)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
@@ -94,7 +81,6 @@ func updateBlueprint(repo *Repo) server.ServerTool {
 		Tool: mcp.NewTool("update_blueprint",
 			mcp.WithDescription("This tool is in public alpha (early access). Access to this tool and its contract are subject to change. "+
 				"Update a Blueprint's name, Git branch, Blueprint file path, or auto-sync setting. "+
-				workspaceIsolationWarning+" "+
 				"Provide the Blueprint ID and at least one setting. Omitted settings retain their current values. "+
 				"Empty or whitespace-only names, branches, and paths are rejected. "+
 				"If all supplied values match the Blueprint's current settings, the tool returns the Blueprint without updating it or creating a plan. "+
@@ -129,7 +115,7 @@ func updateBlueprint(repo *Repo) server.ServerTool {
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			current, err := repo.RetrieveBlueprint(ctx, blueprintID)
+			current, err := repo.RetrieveBlueprintAndCheckWorkspace(ctx, blueprintID)
 			if err != nil {
 				return mcp.NewToolResultError(fmt.Sprintf("The Blueprint could not be retrieved: %v. This call did not update it or start planning.", err)), nil
 			}
@@ -184,7 +170,6 @@ func planBlueprint(repo *Repo) server.ServerTool {
 		Tool: mcp.NewTool("plan_blueprint",
 			mcp.WithDescription("This tool is in public alpha (early access). Access to this tool and its contract are subject to change. "+
 				"Preview infrastructure changes for an existing Blueprint using its configured Git branch and Blueprint file path. "+
-				workspaceIsolationWarning+" "+
 				"Push any local Blueprint file changes before calling this tool so that the plan includes them. "+
 				"Planning does not apply infrastructure changes. Review the plan with the user before calling approve_blueprint, "+
 				"even when auto-sync is enabled. If another sync is pending or running, wait for it to finish before requesting a new plan. "+
@@ -209,6 +194,9 @@ func planBlueprint(repo *Repo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
+			if err := repo.CheckBlueprintWorkspace(ctx, blueprintID); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
 			response, err := repo.PlanBlueprint(ctx, blueprintID)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
@@ -227,7 +215,6 @@ func approveBlueprint(repo *Repo) server.ServerTool {
 		Tool: mcp.NewTool("approve_blueprint",
 			mcp.WithDescription("This tool is in public alpha (early access). Access to this tool and its contract are subject to change. "+
 				"Approve and apply the Blueprint's newest planned sync after confirming that planning succeeded. "+
-				workspaceIsolationWarning+" "+
 				"Approval can update existing resources. After the first approval, Git pushes apply changes automatically "+
 				"when autoSync is enabled. Manually requested plans require approval even when autoSync is enabled. "+
 				"Supply a user-provided value in manualEnvVars for every entry in sync.requiredManualEnvVars. "+
@@ -270,6 +257,9 @@ func approveBlueprint(repo *Repo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
 
+			if err := repo.CheckBlueprintWorkspace(ctx, blueprintID); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
 			response, err := repo.ApproveBlueprint(ctx, blueprintID, input)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil

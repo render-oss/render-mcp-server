@@ -43,6 +43,11 @@ type renderClient interface {
 		keyValueID string,
 		reqEditors ...client.RequestEditorFn,
 	) (*client.RetrieveKeyValueResponse, error)
+	RetrieveBlueprintWithResponse(
+		ctx context.Context,
+		blueprintID string,
+		reqEditors ...client.RequestEditorFn,
+	) (*client.RetrieveBlueprintResponse, error)
 }
 
 type Resolver struct {
@@ -109,6 +114,12 @@ func (r *Resolver) validateResourceWorkspace(ctx context.Context, request mcp.Ca
 		return r.validateKeyValueWorkspace(ctx, keyValueID)
 	}
 
+	if blueprintID, ok, err := validate.OptionalToolParam[string](request, "blueprintId"); err != nil {
+		return false, err
+	} else if ok {
+		return r.validateBlueprintWorkspace(ctx, strings.TrimSpace(blueprintID))
+	}
+
 	if resourceID, ok, err := validate.OptionalToolParam[string](request, "resourceId"); err != nil {
 		return false, err
 	} else if ok {
@@ -162,6 +173,21 @@ func (r *Resolver) validateKeyValueWorkspace(ctx context.Context, keyValueID str
 		return false, fmt.Errorf("key value store %s: %w", keyValueID, err)
 	}
 	return true, validate.WorkspaceMatches(ctx, keyValue.Owner.Id)
+}
+
+func (r *Resolver) validateBlueprintWorkspace(ctx context.Context, blueprintID string) (bool, error) {
+	response, err := r.client.RetrieveBlueprintWithResponse(ctx, blueprintID)
+	if err != nil {
+		return false, fmt.Errorf("blueprint %s: %w", blueprintID, err)
+	}
+	if response.StatusCode() == 404 {
+		return false, nil
+	}
+	blueprint, err := client.BodyFromResponse(response.JSON200, response)
+	if err != nil {
+		return false, fmt.Errorf("blueprint %s: %w", blueprintID, err)
+	}
+	return true, validate.WorkspaceMatches(ctx, blueprint.OwnerId)
 }
 
 func (r *Resolver) validateMetricsResourceWorkspace(ctx context.Context, resourceID string) error {

@@ -8,13 +8,15 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	blueprintclient "github.com/render-oss/render-mcp-server/pkg/client/blueprints"
+	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/fakes"
+	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestPlanBlueprintMapsToolInputsToRESTRequest(t *testing.T) {
-	fakeClient := &fakes.FakeBlueprintRepoClient{}
+	fakeClient := newTestBlueprintClient()
 	fakeClient.CreateBlueprintSyncWithResponseReturns(&client.CreateBlueprintSyncResponse{
 		HTTPResponse: &http.Response{StatusCode: http.StatusOK},
 		JSON200: &blueprintclient.CreateBlueprintSyncResponse{
@@ -23,7 +25,7 @@ func TestPlanBlueprintMapsToolInputsToRESTRequest(t *testing.T) {
 		},
 	}, nil)
 
-	result := callPlanBlueprint(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test"})
+	result := callPlanBlueprintInTestWorkspace(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test"})
 
 	require.False(t, result.IsError, textContent(t, result))
 	require.Equal(t, 1, fakeClient.CreateBlueprintSyncWithResponseCallCount())
@@ -146,10 +148,10 @@ func TestPlanBlueprintPreservesRESTPlanningResponse(t *testing.T) {
 			} else {
 				clientResponse.JSON200 = response
 			}
-			fakeClient := &fakes.FakeBlueprintRepoClient{}
+			fakeClient := newTestBlueprintClient()
 			fakeClient.CreateBlueprintSyncWithResponseReturns(clientResponse, nil)
 
-			result := callPlanBlueprint(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test"})
+			result := callPlanBlueprintInTestWorkspace(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test"})
 
 			require.False(t, result.IsError, textContent(t, result))
 			var got blueprintclient.CreateBlueprintSyncResponse
@@ -162,7 +164,7 @@ func TestPlanBlueprintPreservesRESTPlanningResponse(t *testing.T) {
 func TestPlanBlueprintIDValidation(t *testing.T) {
 	t.Run("rejects an invalid Blueprint ID before calling REST", func(t *testing.T) {
 		fakeClient := &fakes.FakeBlueprintRepoClient{}
-		result := callPlanBlueprint(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exe-test"})
+		result := callPlanBlueprintInTestWorkspace(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exe-test"})
 
 		assert.True(t, result.IsError)
 		assert.Contains(t, textContent(t, result), "Blueprint ID starting with exs-")
@@ -170,48 +172,80 @@ func TestPlanBlueprintIDValidation(t *testing.T) {
 	})
 }
 
+func TestPlanBlueprintRequiresWorkspace(t *testing.T) {
+	fakeClient := newTestBlueprintClient()
+	request := mcp.CallToolRequest{}
+	request.Params.Arguments = map[string]any{"blueprintId": "exs-test"}
+
+	result, err := planBlueprint(NewRepo(fakeClient)).Handler(sessionContextWithoutWorkspace(t), request)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.IsError)
+	assert.Contains(t, textContent(t, result), config.ErrNoWorkspace.Error())
+	assert.Zero(t, fakeClient.CreateBlueprintSyncWithResponseCallCount())
+}
+
+func TestPlanBlueprintOwnershipLookupFailure(t *testing.T) {
+	ctx := session.ContextWithWorkspace(t.Context(), "tea-test")
+	request := mcp.CallToolRequest{}
+	request.Params.Arguments = map[string]any{"blueprintId": "exs-test"}
+
+	fakeClient := &fakes.FakeBlueprintRepoClient{}
+	fakeClient.RetrieveBlueprintWithResponseReturns(nil, assert.AnError)
+
+	result, err := planBlueprint(NewRepo(fakeClient)).Handler(ctx, request)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.IsError)
+	assert.Contains(t, textContent(t, result), assert.AnError.Error())
+	assert.Equal(t, 1, fakeClient.RetrieveBlueprintWithResponseCallCount())
+	assert.Zero(t, fakeClient.CreateBlueprintSyncWithResponseCallCount())
+}
+
 func TestPlanBlueprintClientErrors(t *testing.T) {
 	t.Run("preserves REST response error message when another sync is active", func(t *testing.T) {
-		fakeClient := &fakes.FakeBlueprintRepoClient{}
+		fakeClient := newTestBlueprintClient()
 		fakeClient.CreateBlueprintSyncWithResponseReturns(&client.CreateBlueprintSyncResponse{
 			HTTPResponse: &http.Response{StatusCode: http.StatusConflict},
 			Body:         []byte(`{"message":"Wait for sync exe-active to finish, then re-plan."}`),
 		}, nil)
 
-		result := callPlanBlueprint(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test"})
+		result := callPlanBlueprintInTestWorkspace(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test"})
 
 		assert.True(t, result.IsError)
 		assert.Contains(t, textContent(t, result), "Wait for sync exe-active to finish, then re-plan.")
 	})
 
 	t.Run("missing success body is a tool error", func(t *testing.T) {
-		fakeClient := &fakes.FakeBlueprintRepoClient{}
+		fakeClient := newTestBlueprintClient()
 		fakeClient.CreateBlueprintSyncWithResponseReturns(&client.CreateBlueprintSyncResponse{
 			HTTPResponse: &http.Response{StatusCode: http.StatusCreated},
 		}, nil)
 
-		result := callPlanBlueprint(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test"})
+		result := callPlanBlueprintInTestWorkspace(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test"})
 
 		assert.True(t, result.IsError)
 		assert.Contains(t, textContent(t, result), "unexpected empty body")
 	})
 
 	t.Run("transport failure is a tool error", func(t *testing.T) {
-		fakeClient := &fakes.FakeBlueprintRepoClient{}
+		fakeClient := newTestBlueprintClient()
 		fakeClient.CreateBlueprintSyncWithResponseReturns(nil, assert.AnError)
 
-		result := callPlanBlueprint(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test"})
+		result := callPlanBlueprintInTestWorkspace(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test"})
 
 		assert.True(t, result.IsError)
 		assert.Equal(t, assert.AnError.Error(), textContent(t, result))
 	})
 }
 
-func callPlanBlueprint(t *testing.T, repo *Repo, args map[string]any) *mcp.CallToolResult {
+func callPlanBlueprintInTestWorkspace(t *testing.T, repo *Repo, args map[string]any) *mcp.CallToolResult {
 	t.Helper()
 	request := mcp.CallToolRequest{}
 	request.Params.Arguments = args
-	result, err := planBlueprint(repo).Handler(t.Context(), request)
+	result, err := planBlueprint(repo).Handler(session.ContextWithWorkspace(t.Context(), "tea-test"), request)
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	return result

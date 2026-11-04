@@ -8,28 +8,17 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	blueprintclient "github.com/render-oss/render-mcp-server/pkg/client/blueprints"
+	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/fakes"
+	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGetBlueprintRequest(t *testing.T) {
-	fakeClient := &fakes.FakeBlueprintRepoClient{}
-	fakeClient.RetrieveBlueprintWithResponseReturns(&client.RetrieveBlueprintResponse{
-		HTTPResponse: &http.Response{StatusCode: http.StatusOK},
-		JSON200: &blueprintclient.BlueprintDetail{
-			Id:        "exs-test",
-			Name:      "my-app",
-			Repo:      "https://github.com/example/my-app",
-			Branch:    "main",
-			Path:      "render.yaml",
-			AutoSync:  true,
-			Status:    blueprintclient.StatusCreated,
-			Resources: []blueprintclient.ResourceRef{},
-		},
-	}, nil)
+	fakeClient := newTestBlueprintClient()
 
-	result := callGetBlueprint(t, NewRepo(fakeClient), map[string]any{"blueprintId": " \texs-test\n"})
+	result := callGetBlueprintInTestWorkspace(t, NewRepo(fakeClient), map[string]any{"blueprintId": " \texs-test\n"})
 
 	require.False(t, result.IsError, textContent(t, result))
 	require.Equal(t, 1, fakeClient.RetrieveBlueprintWithResponseCallCount())
@@ -84,7 +73,7 @@ func TestGetBlueprintResponse(t *testing.T) {
 				JSON200:      &response,
 			}, nil)
 
-			result := callGetBlueprint(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test"})
+			result := callGetBlueprintInTestWorkspace(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test"})
 
 			require.False(t, result.IsError, textContent(t, result))
 			assert.JSONEq(t, tt.body, textContent(t, result))
@@ -95,11 +84,24 @@ func TestGetBlueprintResponse(t *testing.T) {
 func TestGetBlueprintIDValidation(t *testing.T) {
 	fakeClient := &fakes.FakeBlueprintRepoClient{}
 
-	result := callGetBlueprint(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exe-test"})
+	result := callGetBlueprintInTestWorkspace(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exe-test"})
 
 	assert.True(t, result.IsError)
 	assert.Contains(t, textContent(t, result), "Blueprint ID starting with exs-")
 	assert.Zero(t, fakeClient.RetrieveBlueprintWithResponseCallCount())
+}
+
+func TestGetBlueprintRequiresWorkspace(t *testing.T) {
+	fakeClient := newTestBlueprintClient()
+	request := mcp.CallToolRequest{}
+	request.Params.Arguments = map[string]any{"blueprintId": "exs-test"}
+
+	result, err := getBlueprint(NewRepo(fakeClient)).Handler(sessionContextWithoutWorkspace(t), request)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.IsError)
+	assert.Contains(t, textContent(t, result), config.ErrNoWorkspace.Error())
 }
 
 func TestGetBlueprintClientErrors(t *testing.T) {
@@ -134,7 +136,7 @@ func TestGetBlueprintClientErrors(t *testing.T) {
 			fakeClient := &fakes.FakeBlueprintRepoClient{}
 			fakeClient.RetrieveBlueprintWithResponseReturns(tt.response, tt.err)
 
-			result := callGetBlueprint(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test"})
+			result := callGetBlueprintInTestWorkspace(t, NewRepo(fakeClient), map[string]any{"blueprintId": "exs-test"})
 
 			assert.True(t, result.IsError)
 			assert.Contains(t, textContent(t, result), tt.message)
@@ -142,11 +144,11 @@ func TestGetBlueprintClientErrors(t *testing.T) {
 	}
 }
 
-func callGetBlueprint(t *testing.T, repo *Repo, args map[string]any) *mcp.CallToolResult {
+func callGetBlueprintInTestWorkspace(t *testing.T, repo *Repo, args map[string]any) *mcp.CallToolResult {
 	t.Helper()
 	request := mcp.CallToolRequest{}
 	request.Params.Arguments = args
-	result, err := getBlueprint(repo).Handler(t.Context(), request)
+	result, err := getBlueprint(repo).Handler(session.ContextWithWorkspace(t.Context(), "tea-test"), request)
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	return result

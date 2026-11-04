@@ -9,6 +9,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	blueprintclient "github.com/render-oss/render-mcp-server/pkg/client/blueprints"
+	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/fakes"
 	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/stretchr/testify/assert"
@@ -23,7 +24,7 @@ func TestApproveBlueprintAcceptsAdvertisedServiceTypes(t *testing.T) {
 
 	for _, serviceType := range serviceTypes {
 		t.Run("tool call accepts "+serviceType, func(t *testing.T) {
-			fakeClient := &fakes.FakeBlueprintRepoClient{}
+			fakeClient := newTestBlueprintClient()
 			fakeClient.ApproveBlueprintWithResponseReturns(&client.ApproveBlueprintResponse{
 				HTTPResponse: &http.Response{StatusCode: http.StatusOK},
 				JSON200:      &blueprintclient.ApprovedSync{},
@@ -134,7 +135,7 @@ func TestValidateApproveBlueprintParams(t *testing.T) {
 }
 
 func TestApproveBlueprintMapsToolInputsToRESTRequest(t *testing.T) {
-	fakeClient := &fakes.FakeBlueprintRepoClient{}
+	fakeClient := newTestBlueprintClient()
 	fakeClient.ApproveBlueprintWithResponseReturns(&client.ApproveBlueprintResponse{
 		HTTPResponse: &http.Response{StatusCode: http.StatusOK},
 		JSON200:      &blueprintclient.ApprovedSync{},
@@ -186,7 +187,7 @@ func TestApproveBlueprintPreservesRESTApprovalResponse(t *testing.T) {
 		Commit:       blueprintclient.CommitRef{Id: "commit-123"},
 		DashboardUrl: "https://dashboard.render.com/blueprint/exs-test/sync/exe-queued",
 	}
-	fakeClient := &fakes.FakeBlueprintRepoClient{}
+	fakeClient := newTestBlueprintClient()
 	fakeClient.ApproveBlueprintWithResponseReturns(&client.ApproveBlueprintResponse{
 		HTTPResponse: &http.Response{StatusCode: http.StatusOK},
 		JSON200:      response,
@@ -308,19 +309,36 @@ func TestApproveBlueprintManualEnvVarValidation(t *testing.T) {
 	}
 }
 
-func TestApproveBlueprintDoesNotRequireWorkspace(t *testing.T) {
-	fakeClient := &fakes.FakeBlueprintRepoClient{}
-	fakeClient.ApproveBlueprintWithResponseReturns(&client.ApproveBlueprintResponse{
-		HTTPResponse: &http.Response{StatusCode: http.StatusOK},
-		JSON200:      &blueprintclient.ApprovedSync{},
-	}, nil)
+func TestApproveBlueprintRequiresWorkspace(t *testing.T) {
+	fakeClient := newTestBlueprintClient()
 	request := mcp.CallToolRequest{}
 	request.Params.Arguments = map[string]any{"blueprintId": "exs-test"}
-	result, err := approveBlueprint(NewRepo(fakeClient)).Handler(session.ContextWithWorkspace(t.Context(), ""), request)
+
+	result, err := approveBlueprint(NewRepo(fakeClient)).Handler(sessionContextWithoutWorkspace(t), request)
 
 	require.NoError(t, err)
-	require.False(t, result.IsError, textContent(t, result))
-	assert.Equal(t, 1, fakeClient.ApproveBlueprintWithResponseCallCount())
+	require.NotNil(t, result)
+	assert.True(t, result.IsError)
+	assert.Contains(t, textContent(t, result), config.ErrNoWorkspace.Error())
+	assert.Zero(t, fakeClient.ApproveBlueprintWithResponseCallCount())
+}
+
+func TestApproveBlueprintOwnershipLookupFailure(t *testing.T) {
+	ctx := session.ContextWithWorkspace(t.Context(), "tea-test")
+	request := mcp.CallToolRequest{}
+	request.Params.Arguments = map[string]any{"blueprintId": "exs-test"}
+
+	fakeClient := &fakes.FakeBlueprintRepoClient{}
+	fakeClient.RetrieveBlueprintWithResponseReturns(nil, assert.AnError)
+
+	result, err := approveBlueprint(NewRepo(fakeClient)).Handler(ctx, request)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.IsError)
+	assert.Contains(t, textContent(t, result), assert.AnError.Error())
+	assert.Equal(t, 1, fakeClient.RetrieveBlueprintWithResponseCallCount())
+	assert.Zero(t, fakeClient.ApproveBlueprintWithResponseCallCount())
 }
 
 func TestApproveBlueprintClientErrors(t *testing.T) {
@@ -360,7 +378,7 @@ func TestApproveBlueprintClientErrors(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			fakeClient := &fakes.FakeBlueprintRepoClient{}
+			fakeClient := newTestBlueprintClient()
 			fakeClient.ApproveBlueprintWithResponseReturns(tt.response, tt.err)
 			result := callApproveBlueprint(t, NewRepo(fakeClient), map[string]any{
 				"blueprintId": "exs-test",

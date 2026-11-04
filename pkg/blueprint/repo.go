@@ -39,8 +39,6 @@ func (r *Repo) CreateBlueprint(ctx context.Context, input client.CreateBlueprint
 }
 
 func (r *Repo) ApproveBlueprint(ctx context.Context, blueprintID string, input client.ApproveBlueprintJSONRequestBody) (*blueprintclient.ApprovedSync, error) {
-	// The Blueprint ID identifies the target; REST authorizes access independently
-	// of the selected MCP workspace.
 	response, err := r.client.ApproveBlueprintWithResponse(ctx, blueprintID, input)
 	if err != nil {
 		return nil, err
@@ -49,7 +47,6 @@ func (r *Repo) ApproveBlueprint(ctx context.Context, blueprintID string, input c
 }
 
 func (r *Repo) PlanBlueprint(ctx context.Context, blueprintID string) (*blueprintclient.CreateBlueprintSyncResponse, error) {
-	// REST authorizes the Blueprint ID independently of the selected MCP workspace.
 	response, err := r.client.CreateBlueprintSyncWithResponse(ctx, blueprintID)
 	if err != nil {
 		return nil, err
@@ -61,7 +58,6 @@ func (r *Repo) PlanBlueprint(ctx context.Context, blueprintID string) (*blueprin
 }
 
 func (r *Repo) UpdateBlueprint(ctx context.Context, blueprintID string, input client.UpdateBlueprintJSONRequestBody) (*blueprintclient.Blueprint, error) {
-	// REST authorizes the Blueprint ID independently of the selected MCP workspace.
 	response, err := r.client.UpdateBlueprintWithResponse(ctx, blueprintID, input)
 	if err != nil {
 		return nil, err
@@ -69,11 +65,22 @@ func (r *Repo) UpdateBlueprint(ctx context.Context, blueprintID string, input cl
 	return client.BodyFromResponse(response.JSON200, response)
 }
 
-func (r *Repo) RetrieveBlueprint(ctx context.Context, blueprintID string) (*blueprintclient.BlueprintDetail, error) {
-	// REST authorizes the Blueprint ID independently of the selected MCP workspace.
+func (r *Repo) CheckBlueprintWorkspace(ctx context.Context, blueprintID string) error {
+	_, err := r.RetrieveBlueprintAndCheckWorkspace(ctx, blueprintID)
+	return err
+}
+
+func (r *Repo) RetrieveBlueprintAndCheckWorkspace(ctx context.Context, blueprintID string) (*blueprintclient.BlueprintDetail, error) {
 	response, err := r.client.RetrieveBlueprintWithResponse(ctx, blueprintID)
 	if err != nil {
 		return nil, err
 	}
-	return client.BodyFromResponse(response.JSON200, response)
+	blueprint, err := client.BodyFromResponse(response.JSON200, response)
+	if err != nil {
+		return nil, err
+	}
+	if err := validate.WorkspaceMatches(ctx, blueprint.OwnerId); err != nil {
+		return nil, err
+	}
+	return blueprint, nil
 }
