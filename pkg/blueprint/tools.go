@@ -17,6 +17,9 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/validate"
 )
 
+const approvalGuidance = "Call approve_blueprint only after the user authorizes applying the reviewed plan. " +
+	"Providing or allowing generation of manual environment values, or accepting costs, does not by itself authorize deployment."
+
 const planningOutcomeGuidance = "Read planningOutcome to determine the next step. " +
 	"If planningOutcome is \"failed\", inspect the errors in notices. Address the reported " +
 	"issues and push any Blueprint file changes, then call plan_blueprint with the " +
@@ -26,7 +29,8 @@ const planningOutcomeGuidance = "Read planningOutcome to determine the next step
 	"If planningOutcome is \"planned\", sync contains the proposed infrastructure changes. " +
 	"Summarize them for the user or share sync.dashboardUrl for review. " +
 	"To apply the changes, call approve_blueprint with the Blueprint ID and follow its " +
-	"guidance for supplying any required environment variable values."
+	"guidance for supplying any required environment variable values. " +
+	approvalGuidance
 
 func Tools(c *client.ClientWithResponses) []server.ServerTool {
 	repo := NewRepo(c)
@@ -44,6 +48,21 @@ func getBlueprint(repo *Repo) server.ServerTool {
 		Tool: mcp.NewTool("get_blueprint",
 			mcp.WithDescription("This tool is in public alpha (early access). Access to this tool and its contract are subject to change. "+
 				"Retrieve a Blueprint's settings and status, along with the IDs of the resources it manages. "+
+				"The tool returns the Blueprint detail object from the REST API. "+
+				"When autoSync is true, the Blueprint is configured to sync automatically on Git pushes "+
+				"to its configured branch. Automatic syncing requires approval of the Blueprint's first sync. "+
+				"When autoSync is false, syncing requires manual planning and approval. "+
+				"The Blueprint's status remains \"created\" until its first sync has been approved. "+
+				"After that approval, the status is \"paused\" whenever autoSync is false, regardless of "+
+				"the state of any manual sync. You can still use plan_blueprint and approve_blueprint "+
+				"while automatic syncing is paused. "+
+				"When autoSync is true and the first sync has been approved, the status reflects the "+
+				"latest sync. A status of \"syncing\" means that the sync is queued or running, and "+
+				"\"error\" means that it failed. The status can be \"in_sync\" when the latest sync "+
+				"has succeeded or when a plan is awaiting approval. "+
+				"Do not use the status alone to determine whether services are healthy or whether the "+
+				"infrastructure matches the current Blueprint file. To check for infrastructure changes, "+
+				"use plan_blueprint and follow its guidance for reviewing the plan with the user before approval. "+
 				"This tool does not create a plan or apply infrastructure changes."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:           "Get Blueprint details",
@@ -217,6 +236,7 @@ func approveBlueprint(repo *Repo) server.ServerTool {
 				"Approve and apply the Blueprint's newest planned sync after confirming that planning succeeded. "+
 				"Approval can update existing resources. After the first approval, Git pushes apply changes automatically "+
 				"when autoSync is enabled. Manually requested plans require approval even when autoSync is enabled. "+
+				approvalGuidance+" "+
 				"Supply a user-provided value in manualEnvVars for every entry in sync.requiredManualEnvVars. "+
 				"Use values the user has already supplied and ask only for missing values. Never invent a value. "+
 				"These values appear as plaintext in the agent context. If the user prefers to keep secrets outside "+

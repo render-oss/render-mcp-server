@@ -357,3 +357,58 @@ session-based behavior is deprecated and is scheduled for removal.
     - `journal_snapshot`: Append all writes to a journal and periodically save a snapshot to disk
     - `snapshot`: Periodically save a snapshot to disk
     - `off`: Disable persistence completely to prioritize write performance
+
+### Blueprints
+
+The Blueprint tools are in public alpha (early access). Their availability and contracts are subject to change.
+
+All Blueprint tools require a workspace, supplied through `workspaceId` or the selected workspace. Calls using a Blueprint ID verify that it belongs to that workspace before returning details or making changes, including before its first sync is approved.
+
+- **create_blueprint** - Create a Blueprint from a remote repository and plan its first sync
+
+  - `repoUrl`: Public repository URL or a repository accessible through a connected Git provider (string, required). Accepts `https://` or `ssh://` URLs without query strings or fragments. SSH URLs are converted to HTTPS; SCP-style remotes such as `git@host:path` are not accepted.
+  - `branch`: Branch containing the Blueprint file (string, optional). Defaults to the repository's default branch.
+  - `path`: Blueprint file path relative to the repository root (string, optional). Defaults to `render.yaml`.
+  - `name`: Blueprint name (string, optional). Defaults to the repository name without the `.git` suffix.
+  - `autoSync`: Whether later Git pushes automatically apply changes after the first sync is approved (boolean, optional). Defaults to `true`.
+  - `existingResources`: How planning handles existing resources (string, optional). Accepted values: `create_new` (default), which creates separate resources with a Blueprint-specific suffix, and `adopt`, which brings matching resources under the Blueprint's management. Infrastructure changes require approval.
+  - `workspaceId`: Workspace in which to create the Blueprint (string, optional). Falls back to the selected workspace when omitted; one of these must be available.
+
+- **get_blueprint** - Retrieve Blueprint settings, status, and managed resource IDs
+
+  - `blueprintId`: Blueprint ID starting with `exs-` (string, required)
+  - `workspaceId`: Workspace owning the Blueprint (string, optional). Falls back to the selected workspace when omitted.
+
+  The Blueprint's `status` describes syncing, not service health. `created` means its first sync has not been approved. After approval, `paused` means auto-sync is disabled; manual planning and approval remain available.
+
+- **plan_blueprint** - Plan infrastructure changes using the Blueprint's configured Git branch and file path
+
+  - `blueprintId`: Blueprint ID starting with `exs-` (string, required)
+  - `workspaceId`: Workspace owning the Blueprint (string, optional). Falls back to the selected workspace when omitted.
+
+- **approve_blueprint** - Approve and apply the Blueprint's newest successfully planned sync after user review
+
+  - `blueprintId`: Blueprint ID starting with `exs-`, not a sync ID (string, required)
+  - `workspaceId`: Workspace owning the Blueprint (string, optional). Falls back to the selected workspace when omitted.
+  - `manualEnvVars`: Values for every entry in `sync.requiredManualEnvVars` (array of objects, optional when no values are required). Each object requires these fields:
+    - `serviceType`: Resource type from the required entry (string). Accepted values: `buildSource`, `cron`, `pserv`, `web`, `worker`, `workflow`.
+    - `serviceName`: Resource name from the required entry (string)
+    - `key`: Environment variable key from the required entry (string)
+    - `value`: Exact user-provided value (string). Empty strings are allowed. Values appear as plaintext in the agent context.
+
+  Apply only after the user authorizes the reviewed plan. Providing or allowing generation of manual values, or accepting costs, does not itself authorize deployment. The tool returns the sync state and `dashboardUrl` before the sync and deployments finish.
+
+- **update_blueprint** - Update Blueprint settings and plan changes when the branch or file path changes
+
+  - `blueprintId`: Blueprint ID starting with `exs-` (string, required)
+  - `workspaceId`: Workspace owning the Blueprint (string, optional). Falls back to the selected workspace when omitted.
+  - `name`: New Blueprint name (string, optional)
+  - `branch`: New Git branch (string, optional)
+  - `path`: New Blueprint file path relative to the repository root (string, optional)
+  - `autoSync`: Whether later Git pushes automatically apply changes after first-sync approval (boolean, optional)
+
+  Supply at least one setting. Omitted settings keep their current values. Settings take effect immediately.
+
+Planning reads the remote repository, so push Blueprint file changes first. Review successfully planned
+changes before approval, including when auto-sync is enabled. Failed plans and plans with no changes must
+not be approved.

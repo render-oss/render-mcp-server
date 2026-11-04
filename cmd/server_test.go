@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"testing/synctest"
 
@@ -24,8 +25,11 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/render-oss/render-mcp-server/pkg/client"
+	blueprintclient "github.com/render-oss/render-mcp-server/pkg/client/blueprints"
+	"github.com/render-oss/render-mcp-server/pkg/config"
 	"github.com/render-oss/render-mcp-server/pkg/oauth"
 	"github.com/render-oss/render-mcp-server/pkg/session"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -497,11 +501,397 @@ func TestHTTPQueryPostgresExplainsIPAllowList(t *testing.T) {
 	}
 }
 
-func TestBlueprintToolsAreNotRegistered(t *testing.T) {
-	s := newMCPServer(nil)
-	for _, name := range []string{"get_blueprint", "create_blueprint", "plan_blueprint", "approve_blueprint", "update_blueprint"} {
-		require.Nil(t, s.GetTool(name), name)
+func createdBlueprintWithPlan(ownerID, repoURL string) blueprintclient.CreateBlueprintResponse {
+	return blueprintclient.CreateBlueprintResponse{
+		Blueprint: blueprintclient.Blueprint{
+			Id: "exs-created", OwnerId: ownerID, Name: "my-app",
+			Repo: repoURL, Branch: "main", Path: "render.yaml",
+			AutoSync: true, Status: blueprintclient.StatusCreated,
+		},
+		PlanningOutcome: blueprintclient.PlanningOutcomePlanned,
+		Sync: &blueprintclient.SyncWithPlan{
+			Id: "exe-first", State: blueprintclient.SyncStateCreated,
+			Commit:                blueprintclient.CommitRef{Id: "abc123"},
+			DashboardUrl:          "https://dashboard.render.com/blueprints/exs-created/syncs/exe-first",
+			RequiredManualEnvVars: []blueprintclient.RequiredManualEnvVar{},
+		},
+		Notices: []blueprintclient.BlueprintNotice{},
 	}
+}
+
+func plannedBlueprintSync() blueprintclient.CreateBlueprintSyncResponse {
+	return blueprintclient.CreateBlueprintSyncResponse{
+		PlanningOutcome: blueprintclient.PlanningOutcomePlanned,
+		Sync: &blueprintclient.SyncWithPlan{
+			Id: "exe-planned", State: blueprintclient.SyncStateCreated,
+			Commit:                blueprintclient.CommitRef{Id: "abc123"},
+			DashboardUrl:          "https://dashboard.render.com/blueprints/exs-existing/syncs/exe-planned",
+			RequiredManualEnvVars: []blueprintclient.RequiredManualEnvVar{},
+		},
+		Notices: []blueprintclient.BlueprintNotice{},
+	}
+}
+
+func inSyncBlueprintWithResources(ownerID string) blueprintclient.BlueprintDetail {
+	return blueprintclient.BlueprintDetail{
+		Id: "exs-existing", OwnerId: ownerID, Name: "my-app",
+		Repo: "https://github.com/example/my-app", Branch: "main", Path: "render.yaml",
+		AutoSync: true, Status: blueprintclient.StatusInSync,
+		Resources: []blueprintclient.ResourceRef{
+			{Id: "srv-web", Name: "web", Type: blueprintclient.WebService},
+		},
+	}
+}
+
+func unapprovedBlueprintAndSync(ownerID string) (
+	blueprintclient.BlueprintDetail, blueprintclient.ApprovedSync,
+) {
+	blueprint := blueprintclient.BlueprintDetail{
+		Id: "exs-draft", OwnerId: ownerID, Name: "draft",
+		Repo: "https://github.com/example/my-app", Branch: "main", Path: "render.yaml",
+		Status:    blueprintclient.StatusCreated,
+		Resources: []blueprintclient.ResourceRef{},
+	}
+	sync := blueprintclient.ApprovedSync{
+		Id: "exe-queued", State: blueprintclient.SyncStatePending,
+		Commit:       blueprintclient.CommitRef{Id: "commit-123"},
+		DashboardUrl: "https://dashboard.render.com/blueprint/exs-draft/sync/exe-queued",
+	}
+	return blueprint, sync
+}
+
+func TestBlueprintToolRegistration(t *testing.T) {
+	s := newMCPServer(nil)
+	for _, name := range []string{"create_blueprint", "get_blueprint", "plan_blueprint", "approve_blueprint", "update_blueprint"} {
+		t.Run(name, func(t *testing.T) {
+			tool := s.GetTool(name)
+			require.NotNil(t, tool)
+			workspaceSchema, ok := tool.Tool.InputSchema.Properties["workspaceId"].(map[string]any)
+			require.True(t, ok)
+			require.Equal(t, "string", workspaceSchema["type"])
+			require.Contains(t, workspaceSchema["description"], "list_workspaces")
+			require.NotContains(t, tool.Tool.InputSchema.Required, "workspaceId")
+		})
+	}
+}
+
+// TestBlueprintToolsOverHTTP exercises the tool happy paths over a fully configured mcp server
+func TestBlueprintToolsOverHTTP(t *testing.T) {
+	t.Run("create forwards its inputs and returns the Blueprint and first plan", func(t *testing.T) {
+		workspaceID := "tea-blueprints"
+		repoURL := "https://github.com/example/my-app"
+		want := createdBlueprintWithPlan(workspaceID, repoURL)
+
+		ownerLookupReply := jsonReply(t, http.StatusOK, client.Owner{
+			Id: workspaceID, Name: "Blueprints", Type: client.OwnerTypeTeam,
+		})
+		createBlueprintReply := jsonReply(t, http.StatusCreated, want)
+		mux := http.NewServeMux()
+		mux.HandleFunc("GET /v1/owners/"+workspaceID, ownerLookupReply)
+		mux.HandleFunc("POST /v1/blueprints", func(w http.ResponseWriter, r *http.Request) {
+			var request client.CreateBlueprintJSONRequestBody
+			if !decodeJSONRequest(t, w, r, &request) {
+				return
+			}
+			assert.Equal(t, workspaceID, request.OwnerId)
+			assert.Equal(t, repoURL, request.Source.Repo)
+			createBlueprintReply(w, r)
+		})
+		httpTransport := newHTTPTransportWithAPIMux(t, mux)
+
+		sessionID := initializeHTTPSession(t, httpTransport)
+		result := callHTTPTool(t, httpTransport, sessionID, "create_blueprint", map[string]any{
+			"repoUrl":     repoURL,
+			"workspaceId": workspaceID,
+		})
+
+		require.False(t, result.IsError, "%+v", result.Content)
+		var got blueprintclient.CreateBlueprintResponse
+		require.NoError(t, json.Unmarshal([]byte(toolResultText(t, result)), &got))
+		assert.Equal(t, want.Blueprint.Id, got.Blueprint.Id)
+		assert.Equal(t, want.PlanningOutcome, got.PlanningOutcome)
+		require.NotNil(t, got.Sync)
+		assert.Equal(t, want.Sync.Id, got.Sync.Id)
+	})
+
+	t.Run("get returns owned Blueprint details", func(t *testing.T) {
+		const workspaceID = "tea-selected"
+		want := inSyncBlueprintWithResources(workspaceID)
+
+		getBlueprintReply := jsonReply(t, http.StatusOK, want)
+		mux := http.NewServeMux()
+		mux.HandleFunc("GET /v1/blueprints/"+want.Id, getBlueprintReply)
+		httpTransport := newHTTPTransportWithAPIMux(t, mux)
+
+		sessionID := initializeHTTPSession(t, httpTransport)
+		result := callHTTPTool(t, httpTransport, sessionID, "get_blueprint",
+			map[string]any{"blueprintId": want.Id, "workspaceId": workspaceID})
+
+		require.False(t, result.IsError, "%+v", result.Content)
+		var got blueprintclient.BlueprintDetail
+		require.NoError(t, json.Unmarshal([]byte(toolResultText(t, result)), &got))
+		assert.Equal(t, want.Id, got.Id)
+		assert.Equal(t, want.OwnerId, got.OwnerId)
+		assert.Equal(t, want.Resources, got.Resources)
+	})
+
+	t.Run("plan returns a planned sync", func(t *testing.T) {
+		const workspaceID = "tea-selected"
+		blueprint := inSyncBlueprintWithResources(workspaceID)
+		want := plannedBlueprintSync()
+
+		getBlueprintReply := jsonReply(t, http.StatusOK, blueprint)
+		planBlueprintReply := jsonReply(t, http.StatusCreated, want)
+		mux := http.NewServeMux()
+		mux.HandleFunc("GET /v1/blueprints/"+blueprint.Id, getBlueprintReply)
+		mux.HandleFunc("POST /v1/blueprints/"+blueprint.Id+"/syncs", planBlueprintReply)
+		httpTransport := newHTTPTransportWithAPIMux(t, mux)
+
+		sessionID := initializeHTTPSession(t, httpTransport)
+		result := callHTTPTool(t, httpTransport, sessionID, "plan_blueprint",
+			map[string]any{"blueprintId": blueprint.Id, "workspaceId": workspaceID})
+
+		require.False(t, result.IsError, "%+v", result.Content)
+		var got blueprintclient.CreateBlueprintSyncResponse
+		require.NoError(t, json.Unmarshal([]byte(toolResultText(t, result)), &got))
+		assert.Equal(t, want.PlanningOutcome, got.PlanningOutcome)
+		require.NotNil(t, got.Sync)
+		assert.Equal(t, want.Sync.Id, got.Sync.Id)
+	})
+
+	t.Run("approve sends manual values and returns a queued sync", func(t *testing.T) {
+		const workspaceID = "tea-selected"
+		blueprint, want := unapprovedBlueprintAndSync(workspaceID)
+		manualValue := "example-value"
+		wantManualEnvVars := []blueprintclient.SuppliedManualEnvVar{{
+			ServiceType: blueprintclient.ManualEnvVarTargetTypeWeb,
+			ServiceName: "web", Key: "TOKEN", Value: &manualValue,
+		}}
+
+		getBlueprintReply := jsonReply(t, http.StatusOK, blueprint)
+		approveBlueprintReply := jsonReply(t, http.StatusOK, want)
+		mux := http.NewServeMux()
+		mux.HandleFunc("GET /v1/blueprints/"+blueprint.Id, getBlueprintReply)
+		mux.HandleFunc("POST /v1/blueprints/"+blueprint.Id+"/approve",
+			func(w http.ResponseWriter, r *http.Request) {
+				var request client.ApproveBlueprintJSONRequestBody
+				if !decodeJSONRequest(t, w, r, &request) {
+					return
+				}
+				assert.Equal(t, &wantManualEnvVars, request.ManualEnvVars)
+				approveBlueprintReply(w, r)
+			})
+		httpTransport := newHTTPTransportWithAPIMux(t, mux)
+
+		sessionID := initializeHTTPSession(t, httpTransport)
+		result := callHTTPTool(t, httpTransport, sessionID, "approve_blueprint", map[string]any{
+			"blueprintId": blueprint.Id,
+			"workspaceId": workspaceID,
+			"manualEnvVars": []any{map[string]any{
+				"serviceType": "web", "serviceName": "web", "key": "TOKEN", "value": manualValue,
+			}},
+		})
+
+		require.False(t, result.IsError, "%+v", result.Content)
+		var got blueprintclient.ApprovedSync
+		require.NoError(t, json.Unmarshal([]byte(toolResultText(t, result)), &got))
+		assert.Equal(t, want.Id, got.Id)
+		assert.Equal(t, want.State, got.State)
+	})
+
+	t.Run("update changes the branch and returns a plan", func(t *testing.T) {
+		const workspaceID = "tea-selected"
+		current := inSyncBlueprintWithResources(workspaceID)
+		updated := blueprintclient.Blueprint{
+			Id: current.Id, OwnerId: current.OwnerId, Name: current.Name,
+			Repo: current.Repo, Branch: "preview", Path: current.Path,
+			AutoSync: current.AutoSync, Status: current.Status,
+		}
+		plan := plannedBlueprintSync()
+
+		getBlueprintReply := jsonReply(t, http.StatusOK, current)
+		updateBlueprintReply := jsonReply(t, http.StatusOK, updated)
+		planReply := jsonReply(t, http.StatusCreated, plan)
+		mux := http.NewServeMux()
+		mux.HandleFunc("GET /v1/blueprints/"+current.Id, getBlueprintReply)
+		mux.HandleFunc("PATCH /v1/blueprints/"+current.Id,
+			func(w http.ResponseWriter, r *http.Request) {
+				var request client.UpdateBlueprintJSONRequestBody
+				if !decodeJSONRequest(t, w, r, &request) {
+					return
+				}
+				assert.Equal(t, &updated.Branch, request.Branch)
+				updateBlueprintReply(w, r)
+			})
+		mux.HandleFunc("POST /v1/blueprints/"+current.Id+"/syncs", planReply)
+		httpTransport := newHTTPTransportWithAPIMux(t, mux)
+
+		sessionID := initializeHTTPSession(t, httpTransport)
+		result := callHTTPTool(t, httpTransport, sessionID, "update_blueprint", map[string]any{
+			"blueprintId": current.Id,
+			"workspaceId": workspaceID,
+			"branch":      updated.Branch,
+		})
+
+		require.False(t, result.IsError, "%+v", result.Content)
+		var got struct {
+			Blueprint       blueprintclient.Blueprint        `json:"blueprint"`
+			PlanningOutcome *blueprintclient.PlanningOutcome `json:"planningOutcome"`
+			Sync            *blueprintclient.SyncWithPlan    `json:"sync"`
+		}
+		require.NoError(t, json.Unmarshal([]byte(toolResultText(t, result)), &got))
+		assert.Equal(t, updated.Branch, got.Blueprint.Branch)
+		require.NotNil(t, got.PlanningOutcome)
+		assert.Equal(t, plan.PlanningOutcome, *got.PlanningOutcome)
+		require.NotNil(t, got.Sync)
+		assert.Equal(t, plan.Sync.Id, got.Sync.Id)
+	})
+}
+
+func TestBlueprintWorkspaceResolutionOverHTTP(t *testing.T) {
+	t.Run("requires a workspace when none is selected or supplied", func(t *testing.T) {
+		for _, tt := range []struct {
+			name string
+			args map[string]any
+		}{
+			{
+				name: "create_blueprint",
+				args: map[string]any{"repoUrl": "https://github.com/example/my-app"},
+			},
+			{
+				name: "get_blueprint",
+				args: map[string]any{"blueprintId": "exs-existing"},
+			},
+			{
+				name: "plan_blueprint",
+				args: map[string]any{"blueprintId": "exs-existing"},
+			},
+			{
+				name: "approve_blueprint",
+				args: map[string]any{"blueprintId": "exs-existing"},
+			},
+			{
+				name: "update_blueprint",
+				args: map[string]any{"blueprintId": "exs-existing", "branch": "preview"},
+			},
+		} {
+			t.Run(tt.name, func(t *testing.T) {
+				existing := inSyncBlueprintWithResources("tea-blueprints")
+				blueprintReply := jsonReply(t, http.StatusOK, existing)
+				mux := http.NewServeMux()
+				mux.HandleFunc("GET /v1/blueprints/"+existing.Id, blueprintReply)
+				httpTransport := newHTTPTransportWithAPIMux(t, mux)
+
+				sessionID := initializeHTTPSession(t, httpTransport)
+				result := callHTTPTool(t, httpTransport, sessionID, tt.name, tt.args)
+
+				require.True(t, result.IsError)
+				assert.Contains(t, toolResultText(t, result), config.ErrNoWorkspace.Error())
+			})
+		}
+	})
+
+	t.Run("uses the selected session workspace when omitted", func(t *testing.T) {
+		const workspaceID = "tea-selected"
+		want := inSyncBlueprintWithResources(workspaceID)
+		blueprintReply := jsonReply(t, http.StatusOK, want)
+
+		mux := http.NewServeMux()
+		mux.HandleFunc("GET /v1/blueprints/"+want.Id, blueprintReply)
+		httpTransport, sessionID := startSelectedWorkspaceSession(t, mux, workspaceID)
+
+		result := callHTTPTool(t, httpTransport, sessionID, "get_blueprint",
+			map[string]any{"blueprintId": want.Id})
+
+		require.False(t, result.IsError, "%+v", result.Content)
+		var got blueprintclient.BlueprintDetail
+		require.NoError(t, json.Unmarshal([]byte(toolResultText(t, result)), &got))
+		assert.Equal(t, want.Id, got.Id)
+		assert.Equal(t, workspaceID, got.OwnerId)
+	})
+
+	t.Run("uses a per-call override without changing the session selection", func(t *testing.T) {
+		const selectedWorkspaceID = "tea-selected"
+		blueprint, wantSync := unapprovedBlueprintAndSync("tea-other")
+		getBlueprintReply := jsonReply(t, http.StatusOK, blueprint)
+		approveBlueprintReply := jsonReply(t, http.StatusOK, wantSync)
+
+		mux := http.NewServeMux()
+		mux.HandleFunc("GET /v1/blueprints/"+blueprint.Id, getBlueprintReply)
+		var approvalCalls atomic.Int32
+		mux.HandleFunc("POST /v1/blueprints/"+blueprint.Id+"/approve",
+			func(w http.ResponseWriter, r *http.Request) {
+				approvalCalls.Add(1)
+				approveBlueprintReply(w, r)
+			})
+		httpTransport, sessionID := startSelectedWorkspaceSession(t, mux, selectedWorkspaceID)
+
+		result := callHTTPTool(t, httpTransport, sessionID, "approve_blueprint", map[string]any{
+			"blueprintId": blueprint.Id,
+			"workspaceId": blueprint.OwnerId,
+		})
+
+		require.False(t, result.IsError, "%+v", result.Content)
+		var got blueprintclient.ApprovedSync
+		require.NoError(t, json.Unmarshal([]byte(toolResultText(t, result)), &got))
+		assert.Equal(t, wantSync.Id, got.Id)
+		assert.Equal(t, int32(1), approvalCalls.Load())
+
+		selection := callHTTPTool(t, httpTransport, sessionID, "get_selected_workspace", nil)
+		require.False(t, selection.IsError, "%+v", selection.Content)
+		assert.Equal(t, "The currently selected workspace is: "+selectedWorkspaceID,
+			toolResultText(t, selection))
+	})
+}
+
+func TestBlueprintWorkspaceAccessOverHTTP(t *testing.T) {
+	t.Run("create rejects an inaccessible workspace before the API request", func(t *testing.T) {
+		workspaceID := "tea-inaccessible"
+		ownerLookupReply := jsonReply(t, http.StatusForbidden, map[string]string{"message": "Forbidden"})
+
+		mux := http.NewServeMux()
+		mux.HandleFunc("GET /v1/owners/"+workspaceID, ownerLookupReply)
+		httpTransport := newHTTPTransportWithAPIMux(t, mux)
+
+		sessionID := initializeHTTPSession(t, httpTransport)
+		result := callHTTPTool(t, httpTransport, sessionID, "create_blueprint", map[string]any{
+			"repoUrl":     "https://github.com/example/my-app",
+			"workspaceId": workspaceID,
+		})
+
+		require.True(t, result.IsError)
+		assert.Contains(t, toolResultText(t, result),
+			"cannot access workspace tea-inaccessible: forbidden")
+	})
+
+	t.Run("tools reject a Blueprint owned by another workspace", func(t *testing.T) {
+		const selectedWorkspaceID = "tea-selected"
+		foreign, _ := unapprovedBlueprintAndSync("tea-other")
+
+		for _, tt := range []struct {
+			name string
+			args map[string]any
+		}{
+			{name: "get_blueprint", args: map[string]any{"blueprintId": foreign.Id}},
+			{name: "plan_blueprint", args: map[string]any{"blueprintId": foreign.Id}},
+			{name: "approve_blueprint", args: map[string]any{"blueprintId": foreign.Id}},
+			{name: "update_blueprint", args: map[string]any{"blueprintId": foreign.Id, "branch": "preview"}},
+		} {
+			t.Run(tt.name, func(t *testing.T) {
+				blueprintReply := jsonReply(t, http.StatusOK, foreign)
+				mux := http.NewServeMux()
+				mux.HandleFunc("GET /v1/blueprints/"+foreign.Id, blueprintReply)
+				httpTransport, sessionID := startSelectedWorkspaceSession(t, mux, selectedWorkspaceID)
+
+				result := callHTTPTool(t, httpTransport, sessionID, tt.name, tt.args)
+
+				require.True(t, result.IsError)
+				text := toolResultText(t, result)
+				assert.Contains(t, text, "belongs to workspace "+foreign.OwnerId)
+				assert.Contains(t, text, "targets workspace "+selectedWorkspaceID)
+			})
+		}
+	})
 }
 
 func TestWorkspaceScopedToolsAcceptOptionalWorkspaceID(t *testing.T) {
@@ -689,6 +1079,73 @@ func (f *fakeRenderAPI) lastWorkspaceID() string {
 		return ""
 	}
 	return f.workspaceIDs[len(f.workspaceIDs)-1]
+}
+
+func jsonReply(t *testing.T, status int, value any) http.HandlerFunc {
+	t.Helper()
+	body, err := json.Marshal(value)
+	require.NoError(t, err)
+
+	return func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		if _, err := w.Write(body); err != nil {
+			t.Errorf("write API response: %v", err)
+		}
+	}
+}
+
+// decodeJSONRequest reports malformed fixture requests and writes a 400 response.
+func decodeJSONRequest(t *testing.T, w http.ResponseWriter, r *http.Request, request any) bool {
+	t.Helper()
+	if err := json.NewDecoder(r.Body).Decode(request); err != nil {
+		t.Errorf("decode API request %s %s: %v", r.Method, r.URL.Path, err)
+		w.WriteHeader(http.StatusBadRequest)
+		return false
+	}
+	return true
+}
+
+// newHTTPTransportWithAPIMux fails on any API request the test did not register.
+func newHTTPTransportWithAPIMux(t *testing.T, mux *http.ServeMux) *server.StreamableHTTPServer {
+	t.Helper()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		t.Errorf("unexpected API request: %s %s", r.Method, r.URL.Path)
+		http.NotFound(w, r)
+	})
+
+	renderAPI := httptest.NewServer(mux)
+	t.Cleanup(renderAPI.Close)
+	apiClient, err := client.NewClientWithResponses(renderAPI.URL + "/v1")
+	require.NoError(t, err)
+	// use the same constructor as the actual http server
+	_, httpTransport := newStreamableHTTPServer(apiClient, session.NewInMemoryStore())
+	t.Cleanup(func() { require.NoError(t, httpTransport.Shutdown(t.Context())) })
+	return httpTransport
+}
+
+func startSelectedWorkspaceSession(
+	t *testing.T, mux *http.ServeMux, workspaceID string,
+) (*server.StreamableHTTPServer, string) {
+	t.Helper()
+	mux.HandleFunc("GET /v1/owners/"+workspaceID, jsonReply(t, http.StatusOK, client.Owner{
+		Id: workspaceID, Name: "Selected workspace", Type: client.OwnerTypeTeam,
+	}))
+	httpTransport := newHTTPTransportWithAPIMux(t, mux)
+	sessionID := initializeHTTPSession(t, httpTransport)
+
+	selection := callHTTPTool(t, httpTransport, sessionID, "select_workspace",
+		map[string]any{"ownerID": workspaceID})
+	require.False(t, selection.IsError, "%+v", selection.Content)
+	return httpTransport, sessionID
+}
+
+func toolResultText(t *testing.T, result mcp.CallToolResult) string {
+	t.Helper()
+	require.Len(t, result.Content, 1)
+	content, ok := result.Content[0].(mcp.TextContent)
+	require.True(t, ok)
+	return content.Text
 }
 
 // initializeHTTPSession performs the MCP handshake and returns the ID clients

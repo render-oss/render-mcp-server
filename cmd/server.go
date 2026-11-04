@@ -16,6 +16,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/render-oss/render-mcp-server/pkg/authn"
+	"github.com/render-oss/render-mcp-server/pkg/blueprint"
 	"github.com/render-oss/render-mcp-server/pkg/cfg"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	"github.com/render-oss/render-mcp-server/pkg/deploy"
@@ -172,6 +173,7 @@ func buildWorkspaceScopedTools(c *client.ClientWithResponses) []server.ServerToo
 	tools = append(tools, keyvalue.Tools(c)...)
 	tools = append(tools, logs.Tools(c)...)
 	tools = append(tools, metrics.Tools(c)...)
+	tools = append(tools, blueprint.Tools(c)...)
 
 	tools = workspace.AddWorkspaceIDParam(tools...)
 	return workspace.ScopeTools(workspace.NewResolver(c), tools...)
