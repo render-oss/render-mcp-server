@@ -42,7 +42,20 @@ func listLogs(logRepo *LogRepo) server.ServerTool {
 			}),
 			mcp.WithArray("resource",
 				mcp.Required(),
-				mcp.Description("Filter logs by their resource. A resource is the id of a server, cronjob, job, postgres, or redis."),
+				mcp.Description("Filter logs by their resource. A resource is the id of a server, cronjob, job, postgres, redis, or workflow."),
+				mcp.Items(map[string]interface{}{
+					"type": "string",
+				}),
+			),
+			mcp.WithArray("task",
+				mcp.Description("Filter workflow logs by task or flow ID. Requires the workflow ID in resource."),
+				mcp.Items(map[string]interface{}{
+					"type": "string",
+				}),
+			),
+			mcp.WithArray("taskRun",
+				mcp.Description("Filter workflow logs by task run or flow run ID, for example the id start_flow_run returns. Requires the workflow ID in resource. "+
+					"Set startTime to before the run started: the default window is the last hour."),
 				mcp.Items(map[string]interface{}{
 					"type": "string",
 				}),
@@ -143,6 +156,18 @@ func listLogs(logRepo *LogRepo) server.ServerTool {
 				return mcp.NewToolResultError(err.Error()), nil
 			} else if ok {
 				llParams.Type = &typeFilters
+			}
+
+			if taskFilters, ok, err := validate.OptionalToolArrayParam[string](request, "task"); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			} else if ok {
+				llParams.Task = &taskFilters
+			}
+
+			if taskRunFilters, ok, err := validate.OptionalToolArrayParam[string](request, "taskRun"); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			} else if ok {
+				llParams.TaskRun = &taskRunFilters
 			}
 
 			if instanceFilters, ok, err := validate.OptionalToolArrayParam[string](request, "instance"); err != nil {

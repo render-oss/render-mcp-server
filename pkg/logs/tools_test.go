@@ -109,3 +109,39 @@ func TestListLogsToolRejectsInvalidParamsBeforeCallingAPI(t *testing.T) {
 	assert.Equal(t, []string{"50"}, query["limit"])
 	assert.Equal(t, []string{"forward"}, query["direction"])
 }
+
+func TestListLogsToolPassesWorkflowRunFilters(t *testing.T) {
+	t.Setenv("RENDER_CONFIG_PATH", filepath.Join(t.TempDir(), "mcp-server.yaml"))
+	ctx := session.ContextWithStdioSession(context.Background())
+	session.FromContext(ctx).SetWorkspace(ctx, "own-123")
+
+	var lastQuery atomic.Value
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		lastQuery.Store(r.URL.Query())
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"logs":[],"hasMore":false}`))
+	}))
+	defer srv.Close()
+
+	c, err := client.NewClientWithResponses(srv.URL)
+	require.NoError(t, err)
+	var handler func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error)
+	for _, tool := range Tools(c) {
+		if tool.Tool.Name == "list_logs" {
+			handler = tool.Handler
+		}
+	}
+	require.NotNil(t, handler)
+
+	result, err := handler(ctx, toolRequest(map[string]any{
+		"resource": []any{"wfl-1"},
+		"task":     []any{"flw-1"},
+		"taskRun":  []any{"frn-1", "trn-2"},
+	}))
+	require.NoError(t, err)
+	assert.False(t, result.IsError)
+	query := lastQuery.Load().(url.Values)
+	assert.Equal(t, []string{"wfl-1"}, query["resource"])
+	assert.Equal(t, []string{"flw-1"}, query["task"])
+	assert.Equal(t, []string{"frn-1", "trn-2"}, query["taskRun"])
+}
