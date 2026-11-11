@@ -10,6 +10,7 @@ import (
 
 // HTTPContext stores HTTP metadata extracted from incoming requests.
 type HTTPContext struct {
+	RequestID    string // Opaque Rndr-Id header; empty when absent
 	UserAgent    string // Client's User-Agent header
 	ForwardedFor string // X-Forwarded-For chain
 }
@@ -32,6 +33,7 @@ func ContextWithHTTPContext(ctx context.Context, hc HTTPContext) context.Context
 // ContextWithHTTPRequest extracts HTTP metadata from a request and stores it in context.
 func ContextWithHTTPRequest(ctx context.Context, req *http.Request) context.Context {
 	hc := HTTPContext{
+		RequestID:    req.Header.Get("Rndr-Id"),
 		UserAgent:    req.Header.Get("User-Agent"),
 		ForwardedFor: buildXFF(req.Header.Get("X-Forwarded-For"), req.RemoteAddr),
 	}

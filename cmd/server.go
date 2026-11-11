@@ -80,8 +80,12 @@ func Serve(transport string) *server.MCPServer {
 		mux := newHTTPMux(httpTransport, oauthCfg, os.Getenv("OPENAI_VERIFICATION_TOKEN"), slog.Default())
 
 		httpServer := &http.Server{
-			Addr:        ":10000",
-			Handler:     logging.HTTPMiddleware(mux),
+			Addr: ":10000",
+			Handler: withMiddleware(
+				mux,
+				logging.HTTPMiddleware,
+				httpContextMiddleware,
+			),
 			ReadTimeout: 5 * time.Second,
 		}
 		err = httpServer.ListenAndServe()
@@ -137,7 +141,6 @@ func newStreamableHTTPServer(apiClient *client.ClientWithResponses, sessionStore
 		server.WithHTTPContextFunc(multicontext.MultiHTTPContextFunc(
 			session.ContextWithHTTPSession(sessionStore),
 			authn.ContextWithAPITokenFromHeader,
-			httpcontext.ContextWithHTTPRequest,
 		)),
 	)
 	return mcpServer, httpTransport
@@ -212,6 +215,13 @@ func newHTTPMux(
 		})
 	}
 	return mux
+}
+
+func httpContextMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := httpcontext.ContextWithHTTPRequest(r.Context(), r)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 // withMiddleware applies middleware in request execution order.

@@ -3,37 +3,53 @@ package httpcontext
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-func TestFromContext_EmptyContext(t *testing.T) {
-	ctx := context.Background()
-	hc := FromContext(ctx)
+func TestHTTPContext(t *testing.T) {
+	t.Run("absent metadata", func(t *testing.T) {
+		actual := FromContext(t.Context())
 
-	if hc.UserAgent != "" {
-		t.Errorf("expected empty UserAgent, got %q", hc.UserAgent)
-	}
-	if hc.ForwardedFor != "" {
-		t.Errorf("expected empty ForwardedFor, got %q", hc.ForwardedFor)
-	}
+		require.Equal(t, HTTPContext{
+			RequestID:    "",
+			UserAgent:    "",
+			ForwardedFor: "",
+		}, actual)
+	})
+
+	t.Run("stored metadata", func(t *testing.T) {
+		expected := HTTPContext{
+			RequestID:    "opaque-request-id",
+			UserAgent:    "TestAgent/1.0",
+			ForwardedFor: "10.0.0.1, 192.168.1.1",
+		}
+
+		ctx := ContextWithHTTPContext(t.Context(), expected)
+
+		require.Equal(t, expected, FromContext(ctx))
+	})
 }
 
-func TestContextWithHTTPContext_RoundTrip(t *testing.T) {
-	ctx := context.Background()
-	expected := HTTPContext{
-		UserAgent:    "TestAgent/1.0",
-		ForwardedFor: "10.0.0.1, 192.168.1.1",
-	}
+func TestHTTPRequestID(t *testing.T) {
+	t.Run("preserves opaque header", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/mcp", nil)
+		req.Header.Set("Rndr-ID", "opaque/request-id:123")
 
-	ctx = ContextWithHTTPContext(ctx, expected)
-	actual := FromContext(ctx)
+		ctx := ContextWithHTTPRequest(t.Context(), req)
 
-	if actual.UserAgent != expected.UserAgent {
-		t.Errorf("expected UserAgent %q, got %q", expected.UserAgent, actual.UserAgent)
-	}
-	if actual.ForwardedFor != expected.ForwardedFor {
-		t.Errorf("expected ForwardedFor %q, got %q", expected.ForwardedFor, actual.ForwardedFor)
-	}
+		require.Equal(t, "opaque/request-id:123", FromContext(ctx).RequestID)
+	})
+
+	t.Run("missing header has no request ID", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/mcp", nil)
+
+		ctx := ContextWithHTTPRequest(t.Context(), req)
+
+		require.Empty(t, FromContext(ctx).RequestID)
+	})
 }
 
 func TestContextWithHTTPRequest_UserAgent(t *testing.T) {
