@@ -43,7 +43,7 @@ func (r *Repo) ListOwners(ctx context.Context, input ListInput) ([]*client.Owner
 		return nil, err
 	}
 
-	res, err := client.BodyFromResponse(resp.JSON200, resp)
+	res, err := client.BodyFromResponse(ctx, resp.JSON200, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -62,5 +62,5 @@ func (r *Repo) RetrieveOwner(ctx context.Context, id string) (*client.Owner, err
 		return nil, err
 	}
 
-	return client.BodyFromResponse(resp.JSON200, resp)
+	return client.BodyFromResponse(ctx, resp.JSON200, resp)
 }

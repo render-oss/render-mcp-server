@@ -3,7 +3,6 @@ package authn
 import (
 	"context"
 	"errors"
-	"log"
 	"net/http"
 	"strings"
 
@@ -42,7 +41,10 @@ func ContextWithAPITokenFromHeader(ctx context.Context, req *http.Request) conte
 	token := req.Header.Get("Authorization")
 
 	if token == "" {
-		logging.Error("auth: no Authorization header on %s %s", req.Method, req.URL.Path)
+		logging.From(ctx).Debug("auth: no Authorization header",
+			logging.OneOffField("method", req.Method),
+			logging.OneOffField("path", req.URL.Path),
+		)
 		return ctx
 	}
 
@@ -52,7 +54,7 @@ func ContextWithAPITokenFromHeader(ctx context.Context, req *http.Request) conte
 func ContextWithAPITokenFromConfig(ctx context.Context) context.Context {
 	token := cfg.GetAPIKey()
 	if token == "" {
-		log.Fatal("Error getting API token from config")
+		logging.Fatal("Error getting API token from config")
 	}
 	return ContextWithAPIToken(ctx, token)
 }

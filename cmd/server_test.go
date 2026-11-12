@@ -27,6 +27,7 @@ import (
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	blueprintclient "github.com/render-oss/render-mcp-server/pkg/client/blueprints"
 	"github.com/render-oss/render-mcp-server/pkg/config"
+	"github.com/render-oss/render-mcp-server/pkg/logging"
 	"github.com/render-oss/render-mcp-server/pkg/oauth"
 	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/stretchr/testify/assert"
@@ -144,6 +145,7 @@ func TestHTTPRejectsSessionlessToolCalls(t *testing.T) {
 	body, err := json.Marshal(request)
 	require.NoError(t, err)
 	req := httptest.NewRequest(http.MethodPost, "/mcp", bytes.NewReader(body))
+	req = req.WithContext(logging.ContextWithDefaultLogger(req.Context()))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Mcp-Protocol-Version", sessionlessProtocol)
 	req.Header.Set("Mcp-Method", "tools/call")
@@ -183,7 +185,7 @@ func TestStdioProtocolCompatibility(t *testing.T) {
 		stdoutReader, stdoutWriter := io.Pipe()
 		listenErr := make(chan error, 1)
 		go func() {
-			listenErr <- stdioTransport.Listen(t.Context(), stdinReader, stdoutWriter)
+			listenErr <- stdioTransport.Listen(logging.ContextWithDefaultLogger(t.Context()), stdinReader, stdoutWriter)
 			stdoutWriter.Close()
 		}()
 		encoder := json.NewEncoder(stdinWriter)
@@ -318,10 +320,11 @@ func TestRequestBodyLimitMiddleware(t *testing.T) {
 
 	t.Run("at limit", func(t *testing.T) {
 		var output bytes.Buffer
-		logger := slog.New(slog.NewTextHandler(&output, nil))
-		handler := requestBodyLimitMiddleware(wantLimitBytes, logger)(readBody)
+		logger := logging.New(&output, slog.LevelInfo)
+		handler := requestBodyLimitMiddleware(wantLimitBytes)(readBody)
 		body := strings.Repeat("x", wantLimitBytes)
 		req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(body))
+		req = req.WithContext(logging.ContextWithLogger(req.Context(), logger))
 		// ensure max bytes is measured, not believed from content length
 		req.ContentLength = -1
 		rec := httptest.NewRecorder()
@@ -334,11 +337,12 @@ func TestRequestBodyLimitMiddleware(t *testing.T) {
 
 	t.Run("over limit propagates read error", func(t *testing.T) {
 		var output bytes.Buffer
-		logger := slog.New(slog.NewTextHandler(&output, nil))
-		handler := requestBodyLimitMiddleware(wantLimitBytes, logger)(readBody)
+		logger := logging.New(&output, slog.LevelInfo).WithFields(logging.OneOffField("request", "body-limit"))
+		handler := requestBodyLimitMiddleware(wantLimitBytes)(readBody)
 		body := strings.Repeat("x", wantLimitBytes+64)
 		reader := strings.NewReader(body)
 		req := httptest.NewRequest(http.MethodPost, "/mcp", reader)
+		req = req.WithContext(logging.ContextWithLogger(req.Context(), logger))
 		// ensure max bytes is measured, not believed from content length
 		req.ContentLength = -1
 		rec := httptest.NewRecorder()
@@ -348,15 +352,20 @@ func TestRequestBodyLimitMiddleware(t *testing.T) {
 		require.Equal(t, http.StatusInternalServerError, rec.Code)
 		require.Contains(t, rec.Body.String(), "http: request body too large")
 		require.LessOrEqual(t, len(body)-reader.Len(), wantLimitBytes+1)
-		require.Contains(t, output.String(), "HTTP request body limit exceeded")
+		var record map[string]any
+		require.NoError(t, json.Unmarshal(output.Bytes(), &record))
+		require.Equal(t, "HTTP request body limit exceeded", record["msg"])
+		require.Equal(t, "WARN", record["level"])
+		require.Equal(t, "body-limit", record["request"])
 	})
 
 	t.Run("over limit SDK returns bad request", func(t *testing.T) {
 		apiClient, _ := newTestRenderClient(t)
 		_, httpTransport := newStreamableHTTPServer(apiClient, session.NewInMemoryStore())
 		t.Cleanup(func() { require.NoError(t, httpTransport.Shutdown(t.Context())) })
-		handler := requestBodyLimitMiddleware(wantLimitBytes, slog.New(slog.DiscardHandler))(httpTransport)
+		handler := requestBodyLimitMiddleware(wantLimitBytes)(httpTransport)
 		req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(strings.Repeat("x", wantLimitBytes+1)))
+		req = req.WithContext(logging.ContextWithLogger(req.Context(), logging.New(io.Discard, slog.LevelInfo)))
 		req.ContentLength = -1
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
@@ -369,10 +378,9 @@ func TestRequestBodyLimitMiddleware(t *testing.T) {
 }
 
 func TestNewHTTPMux_OAuth(t *testing.T) {
-	logger := slog.New(slog.DiscardHandler)
 	t.Run("disabled allows MCP requests without a challenge", func(t *testing.T) {
 		mcp, called := recordingHandler()
-		mux := newHTTPMux(mcp, oauth.Config{}, "", logger)
+		mux := newHTTPMux(mcp, oauth.Config{}, "")
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/mcp", nil))
@@ -384,7 +392,7 @@ func TestNewHTTPMux_OAuth(t *testing.T) {
 
 	t.Run("disabled does not advertise metadata", func(t *testing.T) {
 		mcp, _ := recordingHandler()
-		mux := newHTTPMux(mcp, oauth.Config{}, "", logger)
+		mux := newHTTPMux(mcp, oauth.Config{}, "")
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/.well-known/oauth-protected-resource", nil))
@@ -400,7 +408,7 @@ func TestNewHTTPMux_OAuth(t *testing.T) {
 			APIKeyPassthrough:      true,
 		}
 		mcp, _ := recordingHandler()
-		mux := newHTTPMux(mcp, cfg, "", logger)
+		mux := newHTTPMux(mcp, cfg, "")
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/.well-known/oauth-protected-resource/mcp", nil))
@@ -417,7 +425,7 @@ func TestNewHTTPMux_OAuth(t *testing.T) {
 			APIKeyPassthrough:      true,
 		}
 		mcp, called := recordingHandler()
-		mux := newHTTPMux(mcp, cfg, "", logger)
+		mux := newHTTPMux(mcp, cfg, "")
 		body := strings.NewReader(strings.Repeat("x", 1024))
 		rec := httptest.NewRecorder()
 
@@ -431,10 +439,9 @@ func TestNewHTTPMux_OAuth(t *testing.T) {
 }
 
 func TestNewHTTPMux_OpenAIChallenge(t *testing.T) {
-	logger := slog.New(slog.DiscardHandler)
 	t.Run("configured token is served", func(t *testing.T) {
 		mcp, _ := recordingHandler()
-		mux := newHTTPMux(mcp, oauth.Config{}, "verify-token", logger)
+		mux := newHTTPMux(mcp, oauth.Config{}, "verify-token")
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/.well-known/openai-apps-challenge", nil))
@@ -445,7 +452,7 @@ func TestNewHTTPMux_OpenAIChallenge(t *testing.T) {
 
 	t.Run("route is absent without a token", func(t *testing.T) {
 		mcp, _ := recordingHandler()
-		mux := newHTTPMux(mcp, oauth.Config{}, "", logger)
+		mux := newHTTPMux(mcp, oauth.Config{}, "")
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/.well-known/openai-apps-challenge", nil))
@@ -974,7 +981,7 @@ func newSessionlessStdioTestClient(t *testing.T, apiClient *client.ClientWithRes
 	t.Helper()
 	_, stdioTransport := newStdioServer(apiClient)
 	clientConn, serverConn := net.Pipe()
-	ctx := t.Context()
+	ctx := logging.ContextWithDefaultLogger(t.Context())
 	var serverTasks sync.WaitGroup
 	serverTasks.Go(func() {
 		err := stdioTransport.Listen(ctx, serverConn, serverConn)
@@ -1192,6 +1199,7 @@ func postMCP(t *testing.T, handler http.Handler, sessionID, method string, param
 	})
 	require.NoError(t, err)
 	req := httptest.NewRequest(http.MethodPost, "/mcp", bytes.NewReader(body))
+	req = req.WithContext(logging.ContextWithDefaultLogger(req.Context()))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json, text/event-stream")
 	req.Header.Set("Mcp-Session-Id", sessionID)

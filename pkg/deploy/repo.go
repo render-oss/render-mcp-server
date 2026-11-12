@@ -32,7 +32,7 @@ func (r *Repo) ListDeploys(ctx context.Context, serviceId string, params *client
 		return nil, nil, err
 	}
 
-	if err := client.ErrorFromResponse(resp); err != nil {
+	if err := client.ErrorFromResponse(ctx, resp); err != nil {
 		return nil, nil, err
 	}
 	if resp.JSON200 == nil || len(*resp.JSON200) == 0 {
@@ -54,7 +54,7 @@ func (r *Repo) GetDeploy(ctx context.Context, serviceId string, deployId string)
 		return nil, err
 	}
 
-	return client.BodyFromResponse(resp.JSON200, resp)
+	return client.BodyFromResponse(ctx, resp.JSON200, resp)
 }
 
 // TriggerDeploy triggers a new deploy for a service. It returns (nil, nil)
@@ -67,7 +67,7 @@ func (r *Repo) TriggerDeploy(ctx context.Context, serviceId string, clearCache b
 	if err != nil {
 		return nil, err
 	}
-	service, err := client.BodyFromResponse(serviceResp.JSON200, serviceResp)
+	service, err := client.BodyFromResponse(ctx, serviceResp.JSON200, serviceResp)
 	if err != nil {
 		return nil, err
 	}
@@ -92,5 +92,5 @@ func (r *Repo) TriggerDeploy(ctx context.Context, serviceId string, clearCache b
 		return nil, nil
 	}
 
-	return client.BodyFromResponse(resp.JSON201, resp)
+	return client.BodyFromResponse(ctx, resp.JSON201, resp)
 }

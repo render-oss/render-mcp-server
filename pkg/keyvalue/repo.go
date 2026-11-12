@@ -38,7 +38,7 @@ func (r *Repo) ListKeyValue(ctx context.Context, params *client.ListKeyValuePara
 		return nil, err
 	}
 
-	res, err := client.BodyFromResponse(resp.JSON200, resp)
+	res, err := client.BodyFromResponse(ctx, resp.JSON200, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (r *Repo) GetKeyValue(ctx context.Context, id string) (*client.KeyValueDeta
 		return nil, err
 	}
 
-	return client.BodyFromResponse(resp.JSON200, resp)
+	return client.BodyFromResponse(ctx, resp.JSON200, resp)
 }
 
 func (r *Repo) CreateKeyValue(ctx context.Context, input client.KeyValuePOSTInput) (*client.KeyValueDetail, error) {
@@ -70,5 +70,5 @@ func (r *Repo) CreateKeyValue(ctx context.Context, input client.KeyValuePOSTInpu
 		return nil, err
 	}
 
-	return client.BodyFromResponse(resp.JSON201, resp)
+	return client.BodyFromResponse(ctx, resp.JSON201, resp)
 }

@@ -9,6 +9,14 @@ server that allows you to interact with your Render resources via LLMs.
 
 Get started with the MCP server by following the official docs: https://render.com/docs/mcp-server
 
+## Logging
+
+Application logs are written as JSON to stderr. Set `LOG_LEVEL` to `DEBUG`, `INFO`, `WARN`, or
+`ERROR` to control verbosity; the default is `INFO`. Invalid levels fail startup.
+HTTP access logs, expected request failures, tool diagnostics, and HTTP SDK transport
+informational messages are emitted at `DEBUG`.
+Server and dependency failures are emitted at `ERROR`.
+
 ## Protocol Support
 
 The server supports Streamable HTTP and stdio with MCP protocol versions

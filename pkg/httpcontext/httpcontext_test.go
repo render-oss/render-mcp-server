@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/render-oss/render-mcp-server/pkg/logging"
 	"github.com/stretchr/testify/require"
 )
 
@@ -175,7 +176,7 @@ func TestGetClientIP_PortStripping(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := getClientIP(tt.remoteAddr)
+			result := getClientIP(logging.ContextWithDefaultLogger(t.Context()), tt.remoteAddr)
 			if result != tt.expected {
 				t.Errorf("expected %q, got %q", tt.expected, result)
 			}
@@ -224,7 +225,7 @@ func TestBuildXFF(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := buildXFF(tt.existingXFF, tt.remoteAddr)
+			result := buildXFF(logging.ContextWithDefaultLogger(t.Context()), tt.existingXFF, tt.remoteAddr)
 			if result != tt.expected {
 				t.Errorf("expected %q, got %q", tt.expected, result)
 			}

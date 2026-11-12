@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log"
-	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -49,17 +47,17 @@ func Serve(transport string) *server.MCPServer {
 	}
 
 	if transport == "http" {
-		log.Printf("HTTP request body limit: max-bytes=%d", maxHTTPRequestBodyBytes)
+		logging.Info("HTTP request body limit", logging.OneOffField("max_bytes", maxHTTPRequestBodyBytes))
 
 		var sessionStore session.Store
 		if redisURL, ok := os.LookupEnv("REDIS_URL"); ok {
-			log.Print("using Redis session store\n")
+			logging.Info("using Redis session store")
 			sessionStore, err = session.NewRedisStore(redisURL)
 			if err != nil {
-				log.Fatalf("failed to initialize Redis session store: %v", err)
+				logging.WithError(err).Fatal("failed to initialize Redis session store")
 			}
 		} else {
-			log.Print("using in-memory session store\n")
+			logging.Info("using in-memory session store")
 			sessionStore = session.NewInMemoryStore()
 		}
 		mcpServer, httpTransport := newStreamableHTTPServer(apiClient, sessionStore)
@@ -68,30 +66,34 @@ func Serve(transport string) *server.MCPServer {
 		// pkg/oauth owns the gate. Fail at boot on misconfiguration.
 		oauthCfg, err := oauth.FromEnv()
 		if err != nil {
-			log.Fatalf("OAuth configuration: %v", err)
+			logging.WithError(err).Fatal("OAuth configuration")
 		}
 		if oauthCfg.Enabled {
 			// The resource URI must match the audience api mints per env; a
 			// mismatch rejects every token, so log the resolved values.
-			log.Printf("OAuth enabled: resource=%s authorization-server=%s api-key-passthrough=%t",
-				oauthCfg.CanonicalResourceURI, oauthCfg.AuthorizationServerURL, oauthCfg.APIKeyPassthrough)
+			logging.Info("OAuth enabled",
+				logging.OneOffField("resource", oauthCfg.CanonicalResourceURI),
+				logging.OneOffField("authorization_server", oauthCfg.AuthorizationServerURL),
+				logging.OneOffField("api_key_passthrough", oauthCfg.APIKeyPassthrough),
+			)
 		} else {
-			log.Print("OAuth disabled")
+			logging.Info("OAuth disabled")
 		}
-		mux := newHTTPMux(httpTransport, oauthCfg, os.Getenv("OPENAI_VERIFICATION_TOKEN"), slog.Default())
+		mux := newHTTPMux(httpTransport, oauthCfg, os.Getenv("OPENAI_VERIFICATION_TOKEN"))
 
 		httpServer := &http.Server{
 			Addr: ":10000",
 			Handler: withMiddleware(
 				mux,
-				logging.HTTPMiddleware,
-				httpContextMiddleware,
+				logging.RequestLoggerMiddleware,
+				httpcontext.Middleware,
+				logging.HTTPAccessLogMiddleware,
 			),
 			ReadTimeout: 5 * time.Second,
 		}
 		err = httpServer.ListenAndServe()
 		if err != nil {
-			log.Fatalf("Starting Streamable server: %v\n:", err)
+			logging.WithError(err).Fatal("Starting Streamable server")
 		}
 		return mcpServer
 	}
@@ -99,9 +101,11 @@ func Serve(transport string) *server.MCPServer {
 	mcpServer, stdioTransport := newStdioServer(apiClient)
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
+	// Listen propagates this logger to the contexts passed to our SDK hooks and tool handlers.
+	ctx = logging.ContextWithDefaultLogger(ctx)
 	err = stdioTransport.Listen(ctx, os.Stdin, os.Stdout)
 	if err != nil && !errors.Is(err, context.Canceled) {
-		log.Fatalf("Starting STDIO server: %v\n", err)
+		logging.WithError(err).Fatal("Starting STDIO server")
 	}
 	return mcpServer
 }
@@ -124,7 +128,7 @@ func newMCPServer(apiClient *client.ClientWithResponses) *server.MCPServer {
 
 func newStreamableHTTPServer(apiClient *client.ClientWithResponses, sessionStore session.Store) (*server.MCPServer, *server.StreamableHTTPServer) {
 	mcpServer := newMCPServer(apiClient)
-	transportLogger := slog.Default()
+	transportLogger := logging.InfoAsDebugLogger()
 
 	httpTransport := server.NewStreamableHTTPServer(mcpServer,
 		server.WithStreamableHTTPLogger(transportLogger),
@@ -198,7 +202,6 @@ func newHTTPMux(
 	mcpHandler http.Handler,
 	oauthCfg oauth.Config,
 	openAIToken string,
-	logger *slog.Logger,
 ) *http.ServeMux {
 	oauthMiddleware := oauth.Middleware(oauthCfg, oauth.NewIntrospector(
 		oauthCfg.AuthorizationServerURL,
@@ -210,7 +213,7 @@ func newHTTPMux(
 	mux.Handle("/mcp", withMiddleware(
 		mcpHandler,
 		oauthMiddleware,
-		requestBodyLimitMiddleware(maxHTTPRequestBodyBytes, logger),
+		requestBodyLimitMiddleware(maxHTTPRequestBodyBytes),
 	))
 	metadata := oauth.HandleProtectedResourceMetadata(oauthCfg)
 	for _, path := range oauthCfg.MetadataPaths() {
@@ -225,13 +228,6 @@ func newHTTPMux(
 	return mux
 }
 
-func httpContextMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := httpcontext.ContextWithHTTPRequest(r.Context(), r)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
 // withMiddleware applies middleware in request execution order.
 // withMiddleware(handler, A, B, C): request -> A -> B -> C -> handler
 func withMiddleware(handler http.Handler, middleware ...func(http.Handler) http.Handler) http.Handler {
@@ -241,19 +237,18 @@ func withMiddleware(handler http.Handler, middleware ...func(http.Handler) http.
 	return handler
 }
 
-func requestBodyLimitMiddleware(limitBytes int64, logger *slog.Logger) func(http.Handler) http.Handler {
+func requestBodyLimitMiddleware(limitBytes int64) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			body := &limitedRequestBody{ReadCloser: http.MaxBytesReader(w, r.Body, limitBytes)}
 			r.Body = body
 			next.ServeHTTP(w, r)
 			if body.exceeded {
-				logger.WarnContext(r.Context(),
-					"HTTP request body limit exceeded",
-					"method", r.Method,
-					"path", r.URL.Path,
-					"limit_bytes", limitBytes,
-					"content_length", r.ContentLength,
+				logging.From(r.Context()).Warn("HTTP request body limit exceeded",
+					logging.OneOffField("method", r.Method),
+					logging.OneOffField("path", r.URL.Path),
+					logging.OneOffField("limit_bytes", limitBytes),
+					logging.OneOffField("content_length", r.ContentLength),
 				)
 			}
 		})

@@ -35,7 +35,7 @@ func (r *Repo) CreateBlueprint(ctx context.Context, input client.CreateBlueprint
 	if err != nil {
 		return nil, err
 	}
-	return client.BodyFromResponse(response.JSON201, response)
+	return client.BodyFromResponse(ctx, response.JSON201, response)
 }
 
 func (r *Repo) ApproveBlueprint(ctx context.Context, blueprintID string, input client.ApproveBlueprintJSONRequestBody) (*blueprintclient.ApprovedSync, error) {
@@ -43,7 +43,7 @@ func (r *Repo) ApproveBlueprint(ctx context.Context, blueprintID string, input c
 	if err != nil {
 		return nil, err
 	}
-	return client.BodyFromResponse(response.JSON200, response)
+	return client.BodyFromResponse(ctx, response.JSON200, response)
 }
 
 func (r *Repo) PlanBlueprint(ctx context.Context, blueprintID string) (*blueprintclient.CreateBlueprintSyncResponse, error) {
@@ -52,9 +52,9 @@ func (r *Repo) PlanBlueprint(ctx context.Context, blueprintID string) (*blueprin
 		return nil, err
 	}
 	if response.StatusCode() == http.StatusCreated {
-		return client.BodyFromResponse(response.JSON201, response)
+		return client.BodyFromResponse(ctx, response.JSON201, response)
 	}
-	return client.BodyFromResponse(response.JSON200, response)
+	return client.BodyFromResponse(ctx, response.JSON200, response)
 }
 
 func (r *Repo) UpdateBlueprint(ctx context.Context, blueprintID string, input client.UpdateBlueprintJSONRequestBody) (*blueprintclient.Blueprint, error) {
@@ -62,7 +62,7 @@ func (r *Repo) UpdateBlueprint(ctx context.Context, blueprintID string, input cl
 	if err != nil {
 		return nil, err
 	}
-	return client.BodyFromResponse(response.JSON200, response)
+	return client.BodyFromResponse(ctx, response.JSON200, response)
 }
 
 func (r *Repo) CheckBlueprintWorkspace(ctx context.Context, blueprintID string) error {
@@ -75,7 +75,7 @@ func (r *Repo) RetrieveBlueprintAndCheckWorkspace(ctx context.Context, blueprint
 	if err != nil {
 		return nil, err
 	}
-	blueprint, err := client.BodyFromResponse(response.JSON200, response)
+	blueprint, err := client.BodyFromResponse(ctx, response.JSON200, response)
 	if err != nil {
 		return nil, err
 	}

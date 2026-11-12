@@ -47,7 +47,7 @@ func (s *Repo) listPage(ctx context.Context, params *client.ListServicesParams) 
 		return nil, nil, err
 	}
 
-	if err := client.ErrorFromResponse(resp); err != nil {
+	if err := client.ErrorFromResponse(ctx, resp); err != nil {
 		return nil, nil, err
 	}
 	if resp.JSON200 == nil || len(*resp.JSON200) == 0 {
@@ -82,7 +82,7 @@ func (s *Repo) listEnvVarsPage(ctx context.Context, params *ListEnvParams) ([]*c
 		return nil, nil, err
 	}
 
-	if err := client.ErrorFromResponse(resp); err != nil {
+	if err := client.ErrorFromResponse(ctx, resp); err != nil {
 		return nil, nil, err
 	}
 	if resp.JSON200 == nil || len(*resp.JSON200) == 0 {
@@ -114,7 +114,7 @@ func (s *Repo) UpdateEnvVars(ctx context.Context, serviceId string, envVars []en
 		return nil, err
 	}
 
-	if err := client.ErrorFromResponse(resp); err != nil {
+	if err := client.ErrorFromResponse(ctx, resp); err != nil {
 		return nil, err
 	}
 
@@ -131,7 +131,7 @@ func (s *Repo) CreateService(ctx context.Context, data client.CreateServiceJSONR
 		return nil, err
 	}
 
-	return client.BodyFromResponse(resp.JSON201, resp)
+	return client.BodyFromResponse(ctx, resp.JSON201, resp)
 }
 
 func (s *Repo) GetService(ctx context.Context, id string) (*client.Service, error) {
@@ -140,5 +140,5 @@ func (s *Repo) GetService(ctx context.Context, id string) (*client.Service, erro
 		return nil, err
 	}
 
-	return client.BodyFromResponse(resp.JSON200, resp)
+	return client.BodyFromResponse(ctx, resp.JSON200, resp)
 }

@@ -24,7 +24,7 @@ func (e *Repo) GetEnvironment(ctx context.Context, id string) (*client.Environme
 		return nil, err
 	}
 
-	return client.BodyFromResponse(resp.JSON200, resp)
+	return client.BodyFromResponse(ctx, resp.JSON200, resp)
 }
 
 func (e *Repo) ListEnvironments(ctx context.Context, params *client.ListEnvironmentsParams) ([]*client.Environment, error) {
@@ -37,7 +37,7 @@ func (e *Repo) listPage(ctx context.Context, params *client.ListEnvironmentsPara
 		return nil, nil, err
 	}
 
-	if err := client.ErrorFromResponse(resp); err != nil {
+	if err := client.ErrorFromResponse(ctx, resp); err != nil {
 		return nil, nil, err
 	}
 	if resp.JSON200 == nil || len(*resp.JSON200) == 0 {

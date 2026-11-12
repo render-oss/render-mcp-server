@@ -20,7 +20,7 @@ func (l *LogRepo) ListLogs(ctx context.Context, params *client.ListLogsParams) (
 		return nil, err
 	}
 
-	if err := client.ErrorFromResponse(logs); err != nil {
+	if err := client.ErrorFromResponse(ctx, logs); err != nil {
 		return nil, err
 	}
 
@@ -33,7 +33,7 @@ func (l *LogRepo) ListLogLabelValues(ctx context.Context, params *client.ListLog
 		return nil, err
 	}
 
-	if err := client.ErrorFromResponse(resp); err != nil {
+	if err := client.ErrorFromResponse(ctx, resp); err != nil {
 		return nil, err
 	}
 

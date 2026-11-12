@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/render-oss/render-mcp-server/pkg/authn"
+	"github.com/render-oss/render-mcp-server/pkg/logging"
 	"github.com/stretchr/testify/require"
 )
 
@@ -56,6 +57,7 @@ func serveThrough(t *testing.T, cfg Config, introspectionBody string, mutate fun
 	next := &nextRecorder{}
 	handler := Middleware(cfg, NewIntrospector(srv.URL, "", time.Minute))(next.handler())
 	req := httptest.NewRequest(http.MethodPost, "/mcp", nil)
+	req = req.WithContext(logging.ContextWithDefaultLogger(req.Context()))
 	req.Header.Set("Authorization", "Bearer the-token")
 	if mutate != nil {
 		mutate(req)

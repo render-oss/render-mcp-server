@@ -42,7 +42,7 @@ func (r *Repo) ListEvents(ctx context.Context, serviceId string, params *client.
 		return nil, nil, err
 	}
 
-	body, err := client.BodyFromResponse(resp.JSON200, resp)
+	body, err := client.BodyFromResponse(ctx, resp.JSON200, resp)
 	if err != nil {
 		return nil, nil, err
 	}

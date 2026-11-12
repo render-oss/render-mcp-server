@@ -85,7 +85,7 @@ func (r *Resolver) Resolve(ctx context.Context, request mcp.CallToolRequest) (co
 	if err != nil {
 		return ctx, fmt.Errorf("failed to validate workspace %s: %w", workspaceID, err)
 	}
-	if _, err := client.BodyFromResponse(response.JSON200, response); err != nil {
+	if _, err := client.BodyFromResponse(ctx, response.JSON200, response); err != nil {
 		return ctx, fmt.Errorf("cannot access workspace %s: %w", workspaceID, err)
 	}
 
@@ -138,7 +138,7 @@ func (r *Resolver) validateServiceWorkspace(ctx context.Context, serviceID strin
 	if response.StatusCode() == 404 {
 		return false, nil
 	}
-	service, err := client.BodyFromResponse(response.JSON200, response)
+	service, err := client.BodyFromResponse(ctx, response.JSON200, response)
 	if err != nil {
 		return false, fmt.Errorf("service %s: %w", serviceID, err)
 	}
@@ -153,7 +153,7 @@ func (r *Resolver) validatePostgresWorkspace(ctx context.Context, postgresID str
 	if response.StatusCode() == 404 {
 		return false, nil
 	}
-	postgres, err := client.BodyFromResponse(response.JSON200, response)
+	postgres, err := client.BodyFromResponse(ctx, response.JSON200, response)
 	if err != nil {
 		return false, fmt.Errorf("postgres %s: %w", postgresID, err)
 	}
@@ -168,7 +168,7 @@ func (r *Resolver) validateKeyValueWorkspace(ctx context.Context, keyValueID str
 	if response.StatusCode() == 404 {
 		return false, nil
 	}
-	keyValue, err := client.BodyFromResponse(response.JSON200, response)
+	keyValue, err := client.BodyFromResponse(ctx, response.JSON200, response)
 	if err != nil {
 		return false, fmt.Errorf("key value store %s: %w", keyValueID, err)
 	}
@@ -183,7 +183,7 @@ func (r *Resolver) validateBlueprintWorkspace(ctx context.Context, blueprintID s
 	if response.StatusCode() == 404 {
 		return false, nil
 	}
-	blueprint, err := client.BodyFromResponse(response.JSON200, response)
+	blueprint, err := client.BodyFromResponse(ctx, response.JSON200, response)
 	if err != nil {
 		return false, fmt.Errorf("blueprint %s: %w", blueprintID, err)
 	}

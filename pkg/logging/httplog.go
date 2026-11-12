@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -25,16 +26,23 @@ func (w *statusResponseWriter) Unwrap() http.ResponseWriter {
 	return w.ResponseWriter
 }
 
-func HTTPMiddleware(next http.Handler) http.Handler {
-	if !enabled() {
-		return next
-	}
-
+func HTTPAccessLogMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger := From(r.Context())
+		if !logger.logger.Enabled(r.Context(), slog.LevelDebug) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		start := time.Now()
 		rw := &statusResponseWriter{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rw, r)
-		Info("http request method=%s path=%s status=%d duration=%s remote=%s",
-			r.Method, r.URL.Path, rw.status, time.Since(start).Round(time.Millisecond), r.RemoteAddr)
+		logger.Debug("http request",
+			OneOffField("method", r.Method),
+			OneOffField("path", r.URL.Path),
+			OneOffField("status", rw.status),
+			OneOffField("duration", time.Since(start).Round(time.Millisecond).String()),
+			OneOffField("remote", r.RemoteAddr),
+		)
 	})
 }

@@ -45,7 +45,7 @@ func (r *Repo) listPage(ctx context.Context, params *client.ListPostgresParams) 
 		return nil, nil, err
 	}
 
-	if err := client.ErrorFromResponse(resp); err != nil {
+	if err := client.ErrorFromResponse(ctx, resp); err != nil {
 		return nil, nil, err
 	}
 	if resp.JSON200 == nil || len(*resp.JSON200) == 0 {
@@ -67,7 +67,7 @@ func (r *Repo) GetPostgres(ctx context.Context, id string) (*client.PostgresDeta
 		return nil, err
 	}
 
-	return client.BodyFromResponse(resp.JSON200, resp)
+	return client.BodyFromResponse(ctx, resp.JSON200, resp)
 }
 
 func (r *Repo) GetPostgresConnectionInfo(ctx context.Context, id string) (*client.PostgresConnectionInfo, error) {
@@ -76,7 +76,7 @@ func (r *Repo) GetPostgresConnectionInfo(ctx context.Context, id string) (*clien
 		return nil, err
 	}
 
-	return client.BodyFromResponse(resp.JSON200, resp)
+	return client.BodyFromResponse(ctx, resp.JSON200, resp)
 }
 
 func (r *Repo) CreatePostgres(ctx context.Context, input client.PostgresPOSTInput) (*client.PostgresDetail, error) {
@@ -89,7 +89,7 @@ func (r *Repo) CreatePostgres(ctx context.Context, input client.PostgresPOSTInpu
 		return nil, err
 	}
 
-	return client.BodyFromResponse(resp.JSON201, resp)
+	return client.BodyFromResponse(ctx, resp.JSON201, resp)
 }
 
 func (r *Repo) RestartPostgresDatabase(ctx context.Context, id string) error {
@@ -98,5 +98,5 @@ func (r *Repo) RestartPostgresDatabase(ctx context.Context, id string) error {
 		return err
 	}
 
-	return client.ErrorFromResponse(resp)
+	return client.ErrorFromResponse(ctx, resp)
 }

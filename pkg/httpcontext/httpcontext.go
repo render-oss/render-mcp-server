@@ -2,10 +2,11 @@ package httpcontext
 
 import (
 	"context"
-	"log"
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/render-oss/render-mcp-server/pkg/logging"
 )
 
 // HTTPContext stores HTTP metadata extracted from incoming requests.
@@ -30,12 +31,20 @@ func ContextWithHTTPContext(ctx context.Context, hc HTTPContext) context.Context
 	return context.WithValue(ctx, ctxKey{}, hc)
 }
 
+// Middleware attaches HTTP metadata to the request context.
+func Middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := ContextWithHTTPRequest(r.Context(), r)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 // ContextWithHTTPRequest extracts HTTP metadata from a request and stores it in context.
 func ContextWithHTTPRequest(ctx context.Context, req *http.Request) context.Context {
 	hc := HTTPContext{
 		RequestID:    req.Header.Get("Rndr-Id"),
 		UserAgent:    req.Header.Get("User-Agent"),
-		ForwardedFor: buildXFF(req.Header.Get("X-Forwarded-For"), req.RemoteAddr),
+		ForwardedFor: buildXFF(ctx, req.Header.Get("X-Forwarded-For"), req.RemoteAddr),
 	}
 	return ContextWithHTTPContext(ctx, hc)
 }
@@ -43,8 +52,8 @@ func ContextWithHTTPRequest(ctx context.Context, req *http.Request) context.Cont
 // buildXFF constructs the X-Forwarded-For chain.
 // It appends the client IP from RemoteAddr to the existing XFF header,
 // avoiding consecutive duplicates at the end.
-func buildXFF(existingXFF, remoteAddr string) string {
-	clientIP := getClientIP(remoteAddr)
+func buildXFF(ctx context.Context, existingXFF, remoteAddr string) string {
+	clientIP := getClientIP(ctx, remoteAddr)
 	if clientIP == "" {
 		return existingXFF
 	}
@@ -63,7 +72,7 @@ func buildXFF(existingXFF, remoteAddr string) string {
 }
 
 // getClientIP extracts the IP address from RemoteAddr, stripping the port if present.
-func getClientIP(remoteAddr string) string {
+func getClientIP(ctx context.Context, remoteAddr string) string {
 	if remoteAddr == "" {
 		return ""
 	}
@@ -74,7 +83,9 @@ func getClientIP(remoteAddr string) string {
 		// RemoteAddr doesn't have standard host:port format.
 		// This can happen with non-TCP transports or unusual proxy configurations.
 		// Log for debugging but use the raw value.
-		log.Printf("httpcontext: could not parse RemoteAddr %q: %v", remoteAddr, err)
+		logging.From(ctx).WithError(err).Debug("httpcontext: could not parse RemoteAddr",
+			logging.OneOffField("remote", remoteAddr),
+		)
 		return remoteAddr
 	}
 	return host

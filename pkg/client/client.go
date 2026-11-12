@@ -47,30 +47,30 @@ func AddHeaders(ctx context.Context, header http.Header, token string) http.Head
 // with a success status whose body the client did not parse (for example a
 // 202 with an empty body where a 201 was expected). This keeps callers from
 // silently passing a nil body along.
-func BodyFromResponse[T any](body *T, resp interface{ StatusCode() int }) (*T, error) {
-	if err := ErrorFromResponse(resp); err != nil {
+func BodyFromResponse[T any](ctx context.Context, body *T, resp interface{ StatusCode() int }) (*T, error) {
+	if err := ErrorFromResponse(ctx, resp); err != nil {
 		return nil, err
 	}
 	if body == nil {
 		err := fmt.Errorf("received response code %d with an unexpected empty body", resp.StatusCode())
-		logging.Error("render api: %v", err)
+		logging.From(ctx).WithError(err).Error("render api: unexpected empty body")
 		return nil, err
 	}
 	return body, nil
 }
 
-func ErrorFromResponse(v any) error {
+func ErrorFromResponse(ctx context.Context, v any) error {
 	responseErr := firstNonNilErrorField(v)
 	if responseErr == nil {
 		return nil
 	}
 
 	if responseErr.Code == http.StatusUnauthorized {
-		logging.Error("render api: unauthorized (status 401)")
+		logging.From(ctx).Debug("render api: unauthorized", logging.OneOffField("status", http.StatusUnauthorized))
 		return ErrUnauthorized
 	}
 	if responseErr.Code == http.StatusForbidden {
-		logging.Error("render api: forbidden (status 403)")
+		logging.From(ctx).Debug("render api: forbidden", logging.OneOffField("status", http.StatusForbidden))
 		return ErrForbidden
 	}
 
@@ -80,7 +80,7 @@ func ErrorFromResponse(v any) error {
 	} else {
 		err = fmt.Errorf("received response code %d with empty message", responseErr.Code)
 	}
-	logging.Error("render api: %v", err)
+	logging.From(ctx).WithError(err).Error("render api: request failed")
 	return err
 }
 

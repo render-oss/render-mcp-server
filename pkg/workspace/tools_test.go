@@ -11,6 +11,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	blueprintclient "github.com/render-oss/render-mcp-server/pkg/client/blueprints"
+	"github.com/render-oss/render-mcp-server/pkg/logging"
 	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/render-oss/render-mcp-server/pkg/workspace"
 	"github.com/stretchr/testify/assert"
@@ -691,7 +692,7 @@ func TestScopeToolsRejectsMissingMetricsResources(t *testing.T) {
 func contextWithHTTPSession(t *testing.T, store session.Store, sessionID string) context.Context {
 	t.Helper()
 
-	ctx := (&server.MCPServer{}).WithContext(context.Background(), fakeMCPSession{sessionID: sessionID})
+	ctx := (&server.MCPServer{}).WithContext(logging.ContextWithDefaultLogger(context.Background()), fakeMCPSession{sessionID: sessionID})
 	return session.ContextWithHTTPSession(store)(ctx, nil)
 }
 

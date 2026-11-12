@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -12,11 +13,8 @@ import (
 )
 
 func TestHooksLogToolErrorResults(t *testing.T) {
-	t.Setenv("LOGGING", "1")
 	var output bytes.Buffer
-	previousWriter := logger.Writer()
-	logger.SetOutput(&output)
-	t.Cleanup(func() { logger.SetOutput(previousWriter) })
+	ctx := ContextWithLogger(t.Context(), New(&output, slog.LevelDebug))
 
 	hooks := new(server.Hooks)
 	AddHooks(hooks)
@@ -32,7 +30,24 @@ func TestHooksLogToolErrorResults(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	s.HandleMessage(t.Context(), body)
-	require.Contains(t, output.String(), "ERROR tool call failed name=test_tool error=tool failed")
+	s.HandleMessage(ctx, body)
+	records := readLogRecords(t, &output)
+	require.Len(t, records, 2)
+	require.Equal(t, "tool call failed", records[1]["msg"])
+	require.Equal(t, "DEBUG", records[1]["level"])
+	require.Equal(t, "test_tool", records[1]["name"])
+	require.Equal(t, "tool failed", records[1]["error"])
 	require.NotContains(t, output.String(), "tool call ok")
+}
+
+func readLogRecords(t *testing.T, output *bytes.Buffer) []map[string]any {
+	t.Helper()
+	var records []map[string]any
+	decoder := json.NewDecoder(bytes.NewReader(output.Bytes()))
+	for decoder.More() {
+		var record map[string]any
+		require.NoError(t, decoder.Decode(&record))
+		records = append(records, record)
+	}
+	return records
 }

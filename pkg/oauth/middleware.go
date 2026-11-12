@@ -3,12 +3,12 @@ package oauth
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"slices"
 	"time"
 
 	"github.com/render-oss/render-mcp-server/pkg/authn"
+	"github.com/render-oss/render-mcp-server/pkg/logging"
 )
 
 type ctxKey int
@@ -71,7 +71,7 @@ func Middleware(cfg Config, introspector *Introspector) func(http.Handler) http.
 				}
 				// Unconditional log: this is the only server-side signal that
 				// 503s are an introspection outage, not bad tokens.
-				log.Printf("oauth: introspection failed: %v", err)
+				logging.From(r.Context()).WithError(err).Error("oauth: introspection failed")
 				w.Header().Set("Retry-After", "5")
 				http.Error(w, "token validation is temporarily unavailable", http.StatusServiceUnavailable)
 				return
