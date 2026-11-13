@@ -225,6 +225,8 @@ session-based behavior is deprecated and is scheduled for removal.
   - `resource`: Filter logs by their resource (array of strings, required)
   - `level`: Filter logs by their severity level (array of strings, optional)
   - `type`: Filter logs by their type (array of strings, optional)
+  - `task`: Filter workflow logs by task or flow ID; requires the workflow ID in `resource` (array of strings, optional)
+  - `taskRun`: Filter workflow logs by task run or flow run ID; requires the workflow ID in `resource` (array of strings, optional)
   - `instance`: Filter logs by the instance they were emitted from (array of strings, optional)
   - `host`: Filter request logs by their host (array of strings, optional)
   - `statusCode`: Filter request logs by their status code (array of strings, optional)
@@ -425,3 +427,179 @@ All Blueprint tools require a workspace, supplied through `workspaceId` or the s
 Planning reads the remote repository, so push Blueprint file changes first. Review successfully planned
 changes before approval, including when auto-sync is enabled. Failed plans and plans with no changes must
 not be approved.
+
+### Workflows
+
+Workflows tools let you create and deploy workflows, start flows, and inspect runs, results, steps, and logs.
+
+- **list_workflows** - List workflows in the workspace
+
+  - `name`: Filter by workflow name (string, optional)
+  - `environmentId`: Filter by environment ID (string, optional)
+  - `limit`: Maximum workflows in this page (number, optional, 1 to 100; default `20`)
+  - `cursor`: Cursor from the preceding page (string, optional)
+  - `workspaceId`: Workspace to use (string, optional)
+
+- **get_workflow** - Get a workflow's configuration
+
+  - `workflowId`: Workflow ID (string, required)
+  - `workspaceId`: Workspace to use (string, optional)
+
+- **list_workflow_versions** - List versions and their build and registration status
+
+  - `workflowId`: Filter by workflow ID (string, optional)
+  - `limit`: Maximum versions in this page (number, optional, 1 to 100; default `20`)
+  - `cursor`: Cursor from the preceding page (string, optional)
+  - `workspaceId`: Workspace to use (string, optional)
+
+- **get_workflow_version** - Get a version's build and registration status
+
+  - `workflowVersionId`: Workflow version ID (string, required)
+  - `workspaceId`: Workspace to use (string, optional)
+
+- **list_workflow_tasks** - List tasks registered by workflow versions
+
+  - `workflowId`: Filter by workflow ID (string, optional)
+  - `workflowVersionId`: Filter by workflow version ID (string, optional)
+  - `taskSlug`: Filter by workflow-slug/task-name, optionally with `:version` (string, optional)
+  - `limit`: Maximum tasks in this page (number, optional, 1 to 100; default `20`)
+  - `cursor`: Cursor from the preceding page (string, optional)
+  - `workspaceId`: Workspace to use (string, optional)
+
+- **get_workflow_task** - Get a registered task
+
+  - `taskId`: Task ID (string, required)
+  - `workspaceId`: Workspace to use (string, optional)
+
+- **list_workflow_runs** - List task runs with status, attempts, and parent/root relationships
+
+  - `workflowId`: Filter by workflow ID (string, optional)
+  - `workflowVersionId`: Filter by workflow version ID (string, optional)
+  - `taskSlug`: Filter by workflow-slug/task-name, optionally with `:version` (string, optional)
+  - `rootTaskRunId`: Filter to a run tree by its root task run ID (string, optional)
+  - `limit`: Maximum runs in this page (number, optional, 1 to 100; default `20`)
+  - `cursor`: Cursor from the preceding page (string, optional)
+  - `workspaceId`: Workspace to use (string, optional)
+
+- **get_workflow_run** - Get a task run's status, errors, and attempts
+
+  - `taskRunId`: Task run ID (string, required)
+  - `workspaceId`: Workspace to use (string, optional)
+
+  Inputs and results are omitted. Use `get_workflow_run_results` to read results.
+
+- **get_workflow_run_results** - Read a terminal task run's or attempt's results as paged JSON text
+
+  - `taskRunId`: Task run ID (string, required)
+  - `attempt`: Zero-indexed attempt number; omit for the run's results (number, optional, integer at least 0)
+  - `offset`: UTF-8 byte offset from the preceding page's `nextOffset` (number, optional, integer at least 0; default `0`)
+  - `limit`: Maximum result bytes in this page (number, optional, 4 to 32768; default `32768`)
+  - `sha256`: Hash from the first page; required when `offset` is greater than zero (string, optional)
+  - `workspaceId`: Workspace to use (string, optional)
+
+  A nonterminal run or attempt returns `ready: false`. Concatenate `content` until `nextOffset` is null, and check the
+  returned status rather than treating `ready: true` as success.
+
+- **create_workflow** - Create a workflow from a Git repository
+
+  - `name`: Workflow name (string, required)
+  - `repo`: Git repository URL Render can clone, without credentials (string, required)
+  - `runtime`: Workflow runtime (string, required). Accepted values: `node`, `python`, `go`, `ruby`, `elixir`.
+  - `buildCommand`: Dependency installation and build command (string, required)
+  - `runCommand`: Command that registers the workflow's tasks (string, required)
+  - `branch`: Repository branch; omit for the default branch (string, optional)
+  - `rootDir`: Repository subdirectory; omit for the repository root (string, optional)
+  - `region`: Workflow region (string, optional; default `oregon`). Accepted values: `oregon`, `frankfurt`, `singapore`, `ohio`, `virginia`.
+  - `autoDeploy`: Deployment trigger (string, optional; default `commit`). Accepted values: `commit`, `checksPass`, `off`.
+  - `envVars`: Environment variables for builds and task execution (array of objects, optional). Each object requires string `key` and `value`; empty values are allowed.
+  - `workspaceId`: Workspace to use (string, optional)
+
+  The Render SDK currently supports defining tasks and flows in TypeScript (`node`) and Python (`python`).
+  Workflows also supports Docker, but `create_workflow` does not currently support creating Docker-based workflows.
+
+  Creation starts an initial build unless `autoDeploy` is `off`. It does not start a task run. If creation times
+  out, use `list_workflows` to check whether the workflow exists before retrying.
+
+- **create_workflow_version** - Request deployment of a new version of an existing workflow
+
+  - `workflowId`: Workflow ID (string, required)
+  - `commit`: Git commit to deploy; omit for the linked branch's current commit (string, optional)
+  - `workspaceId`: Workspace to use (string, optional)
+
+  Skip this after creation or a push when automatic deployment is expected. Acceptance does not mean readiness;
+  use `get_workflow_version` or `list_workflow_versions` to check progress.
+
+- **list_flows** - List flows registered by workflow versions
+
+  - `workflowVersionId`: Filter by workflow version ID (string, optional)
+  - `flowSlug`: Filter by workflow-slug/flow-name, optionally with `:version` (string, optional)
+  - `limit`: Maximum flows in this page (number, optional, 1 to 100; default `20`)
+  - `cursor`: Cursor from the preceding page (string, optional)
+  - `workspaceId`: Workspace to use (string, optional)
+
+  To run a specific version, filter by `workflowVersionId`, then pass the returned flow ID to `start_flow_run`.
+
+- **get_flow** - Get a registered flow and its workflow version
+
+  - `flowId`: Flow ID (string, required)
+  - `workspaceId`: Workspace to use (string, optional)
+
+- **list_flow_runs** - List flow runs with status and timestamps
+
+  - `workflowId`: Filter by workflow ID (string, optional)
+  - `workflowVersionId`: Filter by workflow version ID (string, optional)
+  - `flowId`: Filter by flow ID (string, optional)
+  - `flowSlug`: Filter by workflow-slug/flow-name, optionally with `:version` (string, optional)
+  - `status`: Filter by status (string, optional). Accepted values: `pending`, `running`, `succeeded`, `failed`, `canceled`.
+  - `limit`: Maximum runs in this page (number, optional, 1 to 100; default `20`)
+  - `cursor`: Cursor from the preceding page (string, optional)
+  - `workspaceId`: Workspace to use (string, optional)
+
+- **get_flow_run** - Get a flow run's status, errors, error details, and attempts
+
+  - `flowRunId`: Flow run ID (string, required)
+  - `workspaceId`: Workspace to use (string, optional)
+
+  Inputs and results are omitted. Use `get_flow_run_results` for results, `list_flow_run_steps` for steps, and
+  `list_logs` with the workflow ID as `resource` and this run ID as `taskRun` for logs.
+
+- **get_flow_run_results** - Read a terminal flow run's results as paged JSON text
+
+  - `flowRunId`: Flow run ID (string, required)
+  - `offset`: UTF-8 byte offset from the preceding page's `nextOffset` (number, optional, integer at least 0; default `0`)
+  - `limit`: Maximum result bytes in this page (number, optional, 4 to 32768; default `32768`)
+  - `sha256`: Hash from the first page; required when `offset` is greater than zero (string, optional)
+  - `workspaceId`: Workspace to use (string, optional)
+
+  A nonterminal run returns `ready: false`. Concatenate `content` until `nextOffset` is null, and check status.
+
+- **list_flow_run_steps** - List a flow run's steps in the order they started
+
+  - `flowRunId`: Flow run ID (string, required)
+  - `limit`: Maximum steps in this page (number, optional, 1 to 100; default `20`)
+  - `cursor`: Cursor from the preceding page (string, optional)
+  - `workspaceId`: Workspace to use (string, optional)
+
+- **get_flow_run_step** - Get a step's status, result, and error; its input is omitted
+
+  - `flowRunId`: Flow run ID (string, required)
+  - `seq`: Sequence number from `list_flow_run_steps` (number, required, integer at least 0)
+  - `stepKey`: Key from `list_flow_run_steps` when steps share a sequence number (string, optional)
+  - `workspaceId`: Workspace to use (string, optional)
+
+- **start_flow_run** - Start a run of a registered flow
+
+  - `flow`: Exact flow ID (`flw-...`), not a slug (string, required)
+  - `input`: Positional arguments as an array or named arguments as an object (array or object, optional)
+  - `idempotencyKey`: Fresh UUID for this run; reuse the same key after a timeout or disconnect (string, optional)
+  - `workspaceId`: Workspace to use (string, optional)
+
+  Wait for the selected workflow version to become ready before starting a run. Poll `get_flow_run`, then read
+  results, steps, and logs. A repeated idempotency key within 24 hours returns the first run.
+
+- **cancel_flow_run** - Request cancellation of a pending or running flow run
+
+  - `flowRunId`: Flow run ID (string, required)
+  - `workspaceId`: Workspace to use (string, optional)
+
+  Cancellation cannot be undone.
