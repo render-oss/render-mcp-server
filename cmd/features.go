@@ -1,11 +1,11 @@
 package cmd
 
 import (
-	"log"
 	"os"
 	"slices"
 	"strings"
 
+	"github.com/render-oss/render-mcp-server/pkg/logging"
 	"github.com/render-oss/render-mcp-server/pkg/workflow"
 )
 
@@ -26,7 +26,11 @@ func enabledFeatures() map[string]bool {
 			continue
 		}
 		if !slices.Contains(knownFeatures, name) {
-			log.Fatalf("%s: unknown feature %q; known features are %s", featuresEnabledEnv, name, strings.Join(knownFeatures, ", "))
+			logging.Fatal("unknown feature",
+				logging.OneOffField("env", featuresEnabledEnv),
+				logging.OneOffField("feature", name),
+				logging.OneOffField("known_features", knownFeatures),
+			)
 		}
 		enabled[name] = true
 	}
@@ -35,6 +39,6 @@ func enabledFeatures() map[string]bool {
 
 func workflowOptions() workflow.Options {
 	opts := workflow.Options{Durability21: enabledFeatures()[featureDurability21]}
-	log.Printf("Workflows Durability 2.1 enabled=%t", opts.Durability21)
+	logging.Info("Workflows Durability 2.1", logging.OneOffField("enabled", opts.Durability21))
 	return opts
 }

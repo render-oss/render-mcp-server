@@ -1,10 +1,13 @@
 package cmd
 
 import (
+	"encoding/json"
+	"log/slog"
 	"os"
 	"os/exec"
 	"testing"
 
+	"github.com/render-oss/render-mcp-server/pkg/logging"
 	"github.com/stretchr/testify/require"
 )
 
@@ -58,6 +61,7 @@ func TestFeaturesRejectUnknownNames(t *testing.T) {
 	// startup configuration must stop the process before it serves requests.
 	const childEnv = "FEATURES_INVALID_CONFIG_CHILD"
 	if os.Getenv(childEnv) == "1" {
+		logging.SetDefault(logging.New(os.Stderr, slog.LevelError))
 		newMCPServer(nil)
 		return
 	}
@@ -70,5 +74,12 @@ func TestFeaturesRejectUnknownNames(t *testing.T) {
 	var exitError *exec.ExitError
 	require.ErrorAs(t, err, &exitError)
 	require.Equal(t, 1, exitError.ExitCode())
-	require.Contains(t, string(output), `FEATURES_ENABLED: unknown feature "typo"`)
+	require.NotEmpty(t, output, "invalid feature configuration must be logged at ERROR level")
+	var record map[string]any
+	require.NoError(t, json.Unmarshal(output, &record))
+	require.Equal(t, "ERROR", record["level"])
+	require.Equal(t, "unknown feature", record["msg"])
+	require.Equal(t, featuresEnabledEnv, record["env"])
+	require.Equal(t, "typo", record["feature"])
+	require.Equal(t, []any{featureDurability21}, record["known_features"])
 }

@@ -80,7 +80,7 @@ func ErrorFromResponse(ctx context.Context, v any) error {
 	} else {
 		err = fmt.Errorf("received response code %d with empty message", responseErr.Code)
 	}
-	logging.From(ctx).WithError(err).Error("render api: request failed")
+	logging.From(ctx).WithError(err).Debug("render api: request failed")
 	return err
 }
 

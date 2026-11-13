@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"encoding/json"
-	"log/slog"
 	"maps"
 	"net/http"
 	"net/http/httptest"
@@ -221,7 +220,7 @@ func newOAuthMux(t *testing.T, authServerURL string, api *httptest.Server, passt
 	})
 	cfg, err := oauth.FromEnv()
 	require.NoError(t, err)
-	return newHTTPMux(transport, cfg, "", slog.New(slog.DiscardHandler))
+	return newHTTPMux(transport, cfg, "")
 }
 
 func withBearer(h http.Handler, token string) http.Handler {

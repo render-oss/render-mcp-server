@@ -2,6 +2,7 @@ package logging
 
 import (
 	"context"
+	"errors"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -28,8 +29,28 @@ func AddHooks(hooks *server.Hooks) {
 	})
 
 	hooks.AddOnError(func(ctx context.Context, _ any, method mcp.MCPMethod, _ any, err error) {
-		From(ctx).WithError(err).Error("mcp error", OneOffField("method", method))
+		logger := From(ctx, OneOffField("method", method)).WithError(err)
+		if isExpectedSDKError(err) {
+			logger.Debug("mcp error")
+			return
+		}
+		logger.Error("mcp error")
 	})
+}
+
+func isExpectedSDKError(err error) bool {
+	if errors.Is(err, context.Canceled) {
+		return true
+	}
+
+	var requestError interface{ ToJSONRPCError() mcp.JSONRPCError }
+	if errors.As(err, &requestError) {
+		switch requestError.ToJSONRPCError().Error.Code {
+		case mcp.PARSE_ERROR, mcp.INVALID_REQUEST, mcp.METHOD_NOT_FOUND, mcp.INVALID_PARAMS:
+			return true
+		}
+	}
+	return false
 }
 
 func toolResultText(result *mcp.CallToolResult) string {

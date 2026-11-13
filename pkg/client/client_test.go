@@ -1,7 +1,11 @@
 package client_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"testing"
 
@@ -104,6 +108,28 @@ func TestErrorFromResponse(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+}
+
+func TestErrorResponseLogging(t *testing.T) {
+	for _, status := range []int{http.StatusBadRequest, http.StatusTooManyRequests, http.StatusServiceUnavailable} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			var output bytes.Buffer
+			ctx := logging.ContextWithLogger(t.Context(), logging.New(&output, slog.LevelDebug))
+			response := &client.ListSnapshotsResponse{
+				Body:         []byte(`{"message":"request rejected"}`),
+				HTTPResponse: &http.Response{StatusCode: status},
+			}
+
+			err := client.ErrorFromResponse(ctx, response)
+
+			require.EqualError(t, err, fmt.Sprintf("received response code %d: request rejected", status))
+			var record map[string]any
+			require.NoError(t, json.Unmarshal(output.Bytes(), &record))
+			require.Equal(t, "DEBUG", record["level"])
+			require.Equal(t, "render api: request failed", record["msg"])
+			require.Equal(t, err.Error(), record["error"])
+		})
+	}
 }
 
 func TestBodyFromResponse(t *testing.T) {
