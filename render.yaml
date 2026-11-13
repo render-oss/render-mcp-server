@@ -3,6 +3,7 @@ services:
 - type: web
   name: mcp
   runtime: go
+  autoDeployTrigger: checksPass
   plan: 2c-4g
   scaling:
     minInstances: 3
