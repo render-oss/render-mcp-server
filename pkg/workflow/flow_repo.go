@@ -16,10 +16,11 @@ import (
 // errors, and no inputs. Results stay raw JSON for get_flow_run_results.
 type FlowRun struct {
 	workflowclient.FlowRun
-	Attempts       []FlowAttempt                       `json:"attempts"`
-	Error          *string                             `json:"error,omitempty"`
-	ErrorTruncated bool                                `json:"errorTruncated,omitempty"`
-	ErrorDetails   *workflowclient.FlowRunErrorDetails `json:"errorDetails,omitempty"`
+	Attempts              []FlowAttempt                       `json:"attempts"`
+	Error                 *string                             `json:"error,omitempty"`
+	ErrorTruncated        bool                                `json:"errorTruncated,omitempty"`
+	ErrorDetails          *workflowclient.FlowRunErrorDetails `json:"errorDetails,omitempty"`
+	ErrorDetailsTruncated bool                                `json:"errorDetailsTruncated,omitempty"`
 }
 type FlowAttempt struct {
 	workflowclient.FlowRunAttempt

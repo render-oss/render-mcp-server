@@ -148,7 +148,7 @@ func listFlowRuns(r *Repo, opts Options) server.ServerTool {
 func getFlowRun(r *Repo) server.ServerTool {
 	return readTool(toolSpec{
 		Name:        "get_flow_run",
-		Description: "Inspect a flow run's status, error, error details and attempts (zero-indexed). A flow run gets a new attempt when it resumes after its process is interrupted; it replays completed steps rather than rerunning them. Errors are capped at 4 KiB each with errorTruncated flags. Inputs and results are omitted: use get_flow_run_results for results, list_flow_run_steps for steps, and list_logs with the workflow ID as resource and this ID as taskRun for logs. Poll this tool to wait for a run started with start_flow_run. Flow failure is data, not a tool failure.",
+		Description: "Inspect a flow run's status, error, error details and attempts (zero-indexed). A flow run gets a new attempt when it resumes after its process is interrupted; it replays completed steps rather than rerunning them. Errors and error-details text fields are capped at 4 KiB each, with errorTruncated and errorDetailsTruncated flags. Inputs and results are omitted: use get_flow_run_results for results, list_flow_run_steps for steps, and list_logs with the workflow ID as resource and this ID as taskRun for logs. Poll this tool to wait for a run started with start_flow_run. Flow failure is data, not a tool failure.",
 		Handler: func(ctx context.Context, q mcp.CallToolRequest) (any, error) {
 			id, e := requiredID(q, "flowRunId")
 			if e != nil {

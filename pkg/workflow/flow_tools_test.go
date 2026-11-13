@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	"github.com/render-oss/render-mcp-server/pkg/fakes"
@@ -343,6 +344,46 @@ func TestFlowRunOmitsInputAndBoundsErrors(t *testing.T) {
 	require.Len(t, run.Attempts, 1)
 	require.True(t, run.Attempts[0].ErrorTruncated)
 	require.Len(t, *run.Attempts[0].Error, maxErrorBytes)
+}
+
+func TestFlowRunBoundsErrorDetails(t *testing.T) {
+	large := strings.Repeat("水", maxToolOutputBytes/4)
+	body, err := json.Marshal(map[string]any{
+		"id": "frn-a", "flowId": "flw-a", "status": "failed", "attempts": []any{},
+		"errorDetails": map[string]any{
+			"code": "flow_determinism_error", "kind": "type", "limit": 10,
+			"message": large, "actual": large, "expected": large, "subKey": large,
+		},
+	})
+	require.NoError(t, err)
+	f := newFlowFixture()
+	otherRoutes := f.handler(t)
+	c := fixtureClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/flow-runs/frn-a" {
+			_, _ = w.Write(body)
+			return
+		}
+		otherRoutes(w, r)
+	})
+
+	result := invoke(t, c, "get_flow_run", map[string]any{"flowRunId": "frn-a"})
+	require.False(t, result.IsError, resultText(t, result))
+	run := decodeResult[FlowRun](t, result)
+	require.NotNil(t, run.ErrorDetails)
+	require.True(t, run.ErrorDetailsTruncated)
+	require.Equal(t, "flow_determinism_error", string(run.ErrorDetails.Code))
+	require.NotNil(t, run.ErrorDetails.Kind)
+	require.Equal(t, "type", string(*run.ErrorDetails.Kind))
+	require.NotNil(t, run.ErrorDetails.Limit)
+	require.Equal(t, int64(10), *run.ErrorDetails.Limit)
+	require.NotNil(t, run.ErrorDetails.Actual)
+	require.NotNil(t, run.ErrorDetails.Expected)
+	require.NotNil(t, run.ErrorDetails.SubKey)
+	want := strings.Repeat("水", maxErrorBytes/len("水"))
+	for _, value := range []string{run.ErrorDetails.Message, *run.ErrorDetails.Actual, *run.ErrorDetails.Expected, *run.ErrorDetails.SubKey} {
+		require.Equal(t, want, value)
+		require.True(t, utf8.ValidString(value))
+	}
 }
 
 func TestFlowRunResultsPreserveJSON(t *testing.T) {

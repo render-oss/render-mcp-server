@@ -135,6 +135,32 @@ func boundError(value *string) (*string, bool) {
 	s := (*value)[:end]
 	return &s, true
 }
+
+func boundFlowErrorDetails(details *workflowclient.FlowRunErrorDetails) (*workflowclient.FlowRunErrorDetails, bool) {
+	if details == nil {
+		return nil, false
+	}
+	bounded := *details
+	truncated := false
+	bound := func(value *string) *string {
+		value, cut := boundError(value)
+		truncated = truncated || cut
+		return value
+	}
+	bounded.Actual = bound(details.Actual)
+	bounded.Expected = bound(details.Expected)
+	bounded.SubKey = bound(details.SubKey)
+	bounded.Message = *bound(&details.Message)
+	code := string(details.Code)
+	bounded.Code = workflowclient.FlowRunErrorDetailsCode(*bound(&code))
+	if details.Kind != nil {
+		kind := string(*details.Kind)
+		boundedKind := workflowclient.FlowRunErrorDetailsKind(*bound(&kind))
+		bounded.Kind = &boundedKind
+	}
+	return &bounded, truncated
+}
+
 func runMetadata(run *runDetails) Run {
 	out := run.Run
 	out.Error, out.ErrorTruncated = boundError(out.Error)
@@ -146,6 +172,7 @@ func runMetadata(run *runDetails) Run {
 func flowRunMetadata(run *flowRunDetails) FlowRun {
 	out := run.FlowRun
 	out.Error, out.ErrorTruncated = boundError(out.Error)
+	out.ErrorDetails, out.ErrorDetailsTruncated = boundFlowErrorDetails(out.ErrorDetails)
 	for i := range out.Attempts {
 		out.Attempts[i].Error, out.Attempts[i].ErrorTruncated = boundError(out.Attempts[i].Error)
 	}
