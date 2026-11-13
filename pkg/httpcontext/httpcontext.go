@@ -31,10 +31,13 @@ func ContextWithHTTPContext(ctx context.Context, hc HTTPContext) context.Context
 	return context.WithValue(ctx, ctxKey{}, hc)
 }
 
-// Middleware attaches HTTP metadata to the request context.
+// Middleware attaches HTTP metadata and enriches the request logger with the request ID.
 func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := ContextWithHTTPRequest(r.Context(), r)
+		if requestID := FromContext(ctx).RequestID; requestID != "" {
+			ctx = logging.ContextWithFields(ctx, logging.OneOffField("request_id", requestID))
+		}
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

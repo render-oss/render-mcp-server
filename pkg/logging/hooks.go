@@ -23,9 +23,7 @@ func AddHooks(hooks *server.Hooks) {
 				OneOffField("name", message.Params.Name),
 				OneOffField(errorField, toolResultText(result)),
 			)
-			return
 		}
-		From(ctx).Debug("tool call ok", OneOffField("name", message.Params.Name))
 	})
 
 	hooks.AddOnError(func(ctx context.Context, _ any, method mcp.MCPMethod, _ any, err error) {

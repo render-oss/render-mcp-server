@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -40,6 +41,10 @@ const (
 )
 
 func Serve(transport string) *server.MCPServer {
+	toolCallLevel := toolCallLogLevelFromEnv()
+	logging.SetToolCallLogLevel(toolCallLevel)
+	logging.Info("tool call logging configured", logging.OneOffField("tool_call_log_level", toolCallLevel.String()))
+
 	apiClient, err := client.NewDefaultClient()
 	if err != nil {
 		// TODO: We can't create a client unless we're logged in, so we should handle that error case.
@@ -110,11 +115,26 @@ func Serve(transport string) *server.MCPServer {
 	return mcpServer
 }
 
+func toolCallLogLevelFromEnv() slog.Level {
+	value := os.Getenv("TOOL_CALL_LOG_LEVEL")
+	if value == "" {
+		return slog.LevelDebug
+	}
+
+	var level slog.Level
+	if err := level.UnmarshalText([]byte(value)); err != nil {
+		logging.WithError(err).Warn("invalid TOOL_CALL_LOG_LEVEL; using DEBUG")
+		return slog.LevelDebug
+	}
+	return level
+}
+
 func newMCPServer(apiClient *client.ClientWithResponses) *server.MCPServer {
 	var mcpServerOpts []server.ServerOption
 	hooks := new(server.Hooks)
 	logging.AddHooks(hooks)
 	mcpServerOpts = append(mcpServerOpts, server.WithHooks(hooks))
+	mcpServerOpts = append(mcpServerOpts, server.WithToolHandlerMiddleware(logging.ToolCallMiddleware))
 
 	mcpServer := server.NewMCPServer(
 		"render-mcp-server",

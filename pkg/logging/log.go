@@ -54,17 +54,18 @@ func (l Logger) WithError(err error) Logger {
 	return l.WithFields(OneOffField(errorField, err))
 }
 
-func (l Logger) Debug(message string, fields ...Field) { l.log(slog.LevelDebug, message, fields...) }
-func (l Logger) Info(message string, fields ...Field)  { l.log(slog.LevelInfo, message, fields...) }
-func (l Logger) Warn(message string, fields ...Field)  { l.log(slog.LevelWarn, message, fields...) }
-func (l Logger) Error(message string, fields ...Field) { l.log(slog.LevelError, message, fields...) }
+func (l Logger) Debug(message string, fields ...Field) { l.Log(slog.LevelDebug, message, fields...) }
+func (l Logger) Info(message string, fields ...Field)  { l.Log(slog.LevelInfo, message, fields...) }
+func (l Logger) Warn(message string, fields ...Field)  { l.Log(slog.LevelWarn, message, fields...) }
+func (l Logger) Error(message string, fields ...Field) { l.Log(slog.LevelError, message, fields...) }
 
 func (l Logger) Fatal(message string, fields ...Field) {
 	l.Error(message, fields...)
 	os.Exit(1)
 }
 
-func (l Logger) log(level slog.Level, message string, fields ...Field) {
+// Log emits a record at level using the logger's context and fields.
+func (l Logger) Log(level slog.Level, message string, fields ...Field) {
 	l.logger.LogAttrs(l.ctx, level, message, fields...)
 }
 

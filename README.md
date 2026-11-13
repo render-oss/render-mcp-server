@@ -17,6 +17,11 @@ HTTP access logs, Render API error responses, expected SDK request failures, too
 and HTTP SDK transport informational messages are emitted at `DEBUG`.
 Unexpected server failures are emitted at `ERROR`.
 
+Set `TOOL_CALL_LOG_LEVEL` to choose the severity of tool-call completion events. It defaults
+to `DEBUG`; set it to `INFO` to collect completion events without enabling DEBUG diagnostics.
+`LOG_LEVEL` still filters these events. Empty or invalid values fall back to `DEBUG`, with
+a startup warning for invalid input. The setting is read once at startup.
+
 ## Protocol Support
 
 The server supports Streamable HTTP and stdio with MCP protocol versions

@@ -44,6 +44,26 @@ func recordingHandler() (http.Handler, *bool) {
 	return h, &called
 }
 
+func TestToolCallLogLevel(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+		want  slog.Level
+	}{
+		{name: "default", value: "", want: slog.LevelDebug},
+		{name: "configured", value: "INFO", want: slog.LevelInfo},
+		{name: "invalid", value: "invalid", want: slog.LevelDebug},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("TOOL_CALL_LOG_LEVEL", tt.value)
+
+			require.Equal(t, tt.want, toolCallLogLevelFromEnv())
+		})
+	}
+}
+
 func TestHTTPWorkspaceSelection(t *testing.T) {
 	t.Run("selections are isolated by session ID", func(t *testing.T) {
 		httpTransport, renderAPI := newWorkspaceHTTPTestServer(t)
