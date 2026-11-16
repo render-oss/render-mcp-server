@@ -3,17 +3,23 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"path/filepath"
 	"regexp"
 	"slices"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	envvar "github.com/render-oss/render-mcp-server/pkg/client/envvar"
+	eventsclient "github.com/render-oss/render-mcp-server/pkg/client/events"
+	eventstatuses "github.com/render-oss/render-mcp-server/pkg/client/eventstatuses"
+	eventtypes "github.com/render-oss/render-mcp-server/pkg/client/eventtypes"
 	"github.com/render-oss/render-mcp-server/pkg/deploy"
 	"github.com/render-oss/render-mcp-server/pkg/fakes"
 	"github.com/render-oss/render-mcp-server/pkg/pointers"
@@ -818,4 +824,368 @@ func TestServiceToolPlanEnumsAreAccepted(t *testing.T) {
 				"no spec-based plan name advertised, got %v", plans)
 		})
 	}
+}
+
+const (
+	testOwnerId   = "own-123456"
+	testCronJobId = "crn-123456"
+)
+
+func newCronJobTestClient(t *testing.T, service client.Service) (*fakes.FakeServiceRepoClient, *Repo) {
+	t.Helper()
+	fakeClient := &fakes.FakeServiceRepoClient{}
+	fakeClient.RetrieveServiceWithResponseReturns(&client.RetrieveServiceResponse{
+		JSON200:      &service,
+		HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+	}, nil)
+	fakeClient.RunCronJobWithResponseReturns(&client.RunCronJobResponse{
+		JSON200:      &client.CronJobRun{Id: "crnrun-new", Status: client.CronJobRunStatusPending},
+		HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+	}, nil)
+	fakeClient.CancelCronJobRunWithResponseReturns(&client.CancelCronJobRunResponse{
+		HTTPResponse: &http.Response{StatusCode: http.StatusNoContent},
+	}, nil)
+	// By default no run is in progress, and the triggered run shows up on the
+	// first poll.
+	stubRunEvents(fakeClient,
+		eventsReply{resp: cronRunEvents(t)},
+		eventsReply{resp: cronRunEvents(t, cronRunEvent{runId: "crnrun-new"})},
+	)
+
+	repo := NewRepo(fakeClient)
+	repo.runRecordedTimeout = 200 * time.Millisecond
+	repo.runRecordedPollInterval = time.Millisecond
+	return fakeClient, repo
+}
+
+type eventsReply struct {
+	resp *client.ListEventsResponse
+	err  error
+}
+
+// stubRunEvents answers the nth ListEvents call with replies[n], repeating
+// the last reply once they run out.
+func stubRunEvents(fakeClient *fakes.FakeServiceRepoClient, replies ...eventsReply) {
+	var mu sync.Mutex
+	call := 0
+	fakeClient.ListEventsWithResponseStub = func(context.Context, client.ServiceIdParam, *client.ListEventsParams, ...client.RequestEditorFn) (*client.ListEventsResponse, error) {
+		mu.Lock()
+		defer mu.Unlock()
+		reply := replies[min(call, len(replies)-1)]
+		call++
+		return reply.resp, reply.err
+	}
+}
+
+func cronJob() client.Service {
+	return client.Service{
+		Id:        testCronJobId,
+		OwnerId:   testOwnerId,
+		Type:      client.CronJob,
+		Suspended: client.ServiceSuspendedNotSuspended,
+	}
+}
+
+type cronRunEvent struct {
+	ended bool
+	runId string
+	at    time.Time
+}
+
+// cronRunEvents builds a list_events response from events given newest first,
+// matching the API's order.
+func cronRunEvents(t *testing.T, events ...cronRunEvent) *client.ListEventsResponse {
+	t.Helper()
+	body := make([]client.ServiceEventWithCursor, 0, len(events))
+	for i, e := range events {
+		var details eventsclient.ServiceEventDetails
+		eventType := eventtypes.ServiceEventTypeCronJobRunStarted
+		if e.ended {
+			eventType = eventtypes.ServiceEventTypeCronJobRunEnded
+			require.NoError(t, details.FromCronJobRunEndedEvent(eventsclient.CronJobRunEndedEvent{
+				CronJobRunId: e.runId,
+				Status:       eventstatuses.CronJobRunStatusSuccessful,
+			}))
+		} else {
+			require.NoError(t, details.FromCronJobRunStartedEvent(eventsclient.CronJobRunStartedEvent{
+				CronJobRunId: e.runId,
+			}))
+		}
+		body = append(body, client.ServiceEventWithCursor{
+			Cursor: client.Cursor(fmt.Sprintf("%d", i)),
+			Event: eventsclient.ServiceEvent{
+				Id:        fmt.Sprintf("evt-%d", i),
+				ServiceId: testCronJobId,
+				Timestamp: e.at,
+				Type:      eventType,
+				Details:   details,
+			},
+		})
+	}
+	return &client.ListEventsResponse{
+		JSON200:      &body,
+		HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+	}
+}
+
+func callCronJobTool(t *testing.T, tool server.ServerTool, workspace string, args map[string]any) (*mcp.CallToolResult, string) {
+	t.Helper()
+	request := mcp.CallToolRequest{}
+	request.Params.Arguments = args
+	result, err := tool.Handler(createTestContext(t, workspace), request)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Len(t, result.Content, 1)
+	text, ok := result.Content[0].(mcp.TextContent)
+	require.True(t, ok)
+	return result, text.Text
+}
+
+func TestRunCronJobTool(t *testing.T) {
+	startedAt := time.Date(2026, 11, 13, 17, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name            string
+		events          []cronRunEvent
+		eventsErr       error
+		cancelActiveRun bool
+		wantRun         bool
+		wantText        []string
+	}{
+		{
+			name:     "no recent runs",
+			wantRun:  true,
+			wantText: []string{`{"run":{"id":"crnrun-new","status":"pending"}}`},
+		},
+		{
+			name: "latest run has ended",
+			events: []cronRunEvent{
+				{ended: true, runId: "crnrun-1"},
+				{runId: "crnrun-1"},
+			},
+			wantRun:  true,
+			wantText: []string{`{"run":{"id":"crnrun-new","status":"pending"}}`},
+		},
+		{
+			name: "refuses while a run is in progress",
+			events: []cronRunEvent{
+				{runId: "crnrun-2", at: startedAt},
+				{ended: true, runId: "crnrun-1"},
+				{runId: "crnrun-1"},
+			},
+			wantRun:  false,
+			wantText: []string{"crnrun-2", "2026-11-13T17:00:00Z", "cancelActiveRun"},
+		},
+		{
+			name: "cancels an in-progress run when asked and reports it",
+			events: []cronRunEvent{
+				{runId: "crnrun-2", at: startedAt},
+			},
+			cancelActiveRun: true,
+			wantRun:         true,
+			wantText:        []string{`"canceledRun":{"id":"crnrun-2","startedAt":"2026-11-13T17:00:00Z"}`},
+		},
+		{
+			name:      "refuses when it cannot check for an in-progress run",
+			eventsErr: errors.New("connection reset"),
+			wantRun:   false,
+			wantText:  []string{"connection reset", "cancelActiveRun"},
+		},
+		{
+			name:            "runs anyway when the check fails but canceling was approved",
+			eventsErr:       errors.New("connection reset"),
+			cancelActiveRun: true,
+			wantRun:         true,
+			wantText:        []string{`{"run":{"id":"crnrun-new","status":"pending"}}`},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeClient, repo := newCronJobTestClient(t, cronJob())
+			// The first call is the in-progress check; later calls are the
+			// wait for the new run, which shows up right away.
+			recorded := append([]cronRunEvent{{runId: "crnrun-new"}}, tt.events...)
+			stubRunEvents(fakeClient,
+				eventsReply{resp: cronRunEvents(t, tt.events...), err: tt.eventsErr},
+				eventsReply{resp: cronRunEvents(t, recorded...)},
+			)
+
+			result, text := callCronJobTool(t, runCronJob(repo), testOwnerId, map[string]any{
+				"serviceId":       testCronJobId,
+				"cancelActiveRun": tt.cancelActiveRun,
+			})
+
+			assert.Equal(t, !tt.wantRun, result.IsError, text)
+			for _, want := range tt.wantText {
+				assert.Contains(t, text, want)
+			}
+			if !tt.wantRun {
+				assert.Equal(t, 0, fakeClient.RunCronJobWithResponseCallCount())
+				return
+			}
+			require.Equal(t, 1, fakeClient.RunCronJobWithResponseCallCount())
+			_, gotId, _ := fakeClient.RunCronJobWithResponseArgsForCall(0)
+			assert.Equal(t, testCronJobId, gotId)
+			assert.NotContains(t, text, "warning")
+		})
+	}
+}
+
+// The API returns from a trigger before the run's started event exists. Until
+// it does, the in-progress check cannot see the run, so run_cron_job waits for
+// it and warns the model if it never shows up.
+func TestRunCronJobToolWaitsForRunToBeRecorded(t *testing.T) {
+	noRuns := eventsReply{resp: cronRunEvents(t)}
+
+	tests := []struct {
+		name        string
+		polls       []eventsReply
+		wantWarning bool
+	}{
+		{
+			name: "started event appears after a few polls",
+			polls: []eventsReply{
+				noRuns,
+				noRuns,
+				{resp: cronRunEvents(t, cronRunEvent{runId: "crnrun-new"})},
+			},
+		},
+		{
+			name: "only an ended event appears because the run finished fast",
+			polls: []eventsReply{
+				{resp: cronRunEvents(t, cronRunEvent{ended: true, runId: "crnrun-new"})},
+			},
+		},
+		{
+			name: "a failed poll is retried",
+			polls: []eventsReply{
+				{err: errors.New("connection reset")},
+				{resp: cronRunEvents(t, cronRunEvent{runId: "crnrun-new"})},
+			},
+		},
+		{
+			name: "another run's event does not count",
+			polls: []eventsReply{
+				{resp: cronRunEvents(t, cronRunEvent{runId: "crnrun-other"})},
+			},
+			wantWarning: true,
+		},
+		{
+			name:        "never appears",
+			polls:       []eventsReply{noRuns},
+			wantWarning: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeClient, repo := newCronJobTestClient(t, cronJob())
+			stubRunEvents(fakeClient, append([]eventsReply{noRuns}, tt.polls...)...)
+
+			result, text := callCronJobTool(t, runCronJob(repo), testOwnerId, map[string]any{"serviceId": testCronJobId})
+
+			// The run was triggered either way, so this is never an error.
+			require.False(t, result.IsError, text)
+			assert.Contains(t, text, `"run":{"id":"crnrun-new","status":"pending"}`)
+			if !tt.wantWarning {
+				assert.NotContains(t, text, "warning")
+				// One in-progress check, then one poll per reply until found.
+				assert.Equal(t, 1+len(tt.polls), fakeClient.ListEventsWithResponseCallCount())
+				return
+			}
+			assert.Contains(t, text, `"warning":"Run crnrun-new was triggered but has not been recorded`)
+			assert.Contains(t, text, "would cancel it")
+		})
+	}
+}
+
+// The in-progress check relies on the API accepting several event types
+// joined by commas in its one `type` param, and on a lookback long enough to
+// cover the 12-hour run limit. Pin both so a change shows up here instead of
+// as a silently missed active run.
+func TestRunCronJobToolEventQuery(t *testing.T) {
+	fakeClient, repo := newCronJobTestClient(t, cronJob())
+
+	before := time.Now().UTC()
+	result, text := callCronJobTool(t, runCronJob(repo), testOwnerId, map[string]any{"serviceId": testCronJobId})
+	require.False(t, result.IsError, text)
+
+	// Call 0 is the in-progress check and call 1 the wait for the new run;
+	// both use the same query.
+	require.Equal(t, 2, fakeClient.ListEventsWithResponseCallCount())
+	_, gotId, params, _ := fakeClient.ListEventsWithResponseArgsForCall(0)
+	assert.Equal(t, testCronJobId, gotId)
+
+	req, err := client.NewListEventsRequest("https://api.render.com/v1", gotId, params)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"cron_job_run_started,cron_job_run_ended"}, req.URL.Query()["type"])
+
+	require.NotNil(t, params.StartTime)
+	assert.True(t, params.StartTime.Before(before.Add(-12*time.Hour)),
+		"lookback %s must exceed the 12-hour run limit", before.Sub(*params.StartTime))
+}
+
+// Every guard must reject before anything is triggered or canceled.
+func TestCronJobToolsRejectBeforeCallingAPI(t *testing.T) {
+	webService := cronJob()
+	webService.Type = client.WebService
+	suspended := cronJob()
+	suspended.Suspended = client.ServiceSuspendedSuspended
+
+	tests := []struct {
+		name      string
+		service   client.Service
+		workspace string
+		wantText  string
+	}{
+		{name: "not a cron job", service: webService, workspace: testOwnerId, wantText: "not a cron job"},
+		{name: "suspended", service: suspended, workspace: testOwnerId, wantText: "suspended"},
+		{name: "another workspace", service: cronJob(), workspace: "own-other"},
+	}
+
+	for _, tt := range tests {
+		for _, tool := range []func(*Repo) server.ServerTool{runCronJob, cancelCronJobRun} {
+			fakeClient, repo := newCronJobTestClient(t, tt.service)
+			st := tool(repo)
+			t.Run(st.Tool.Name+"/"+tt.name, func(t *testing.T) {
+				result, text := callCronJobTool(t, st, tt.workspace, map[string]any{
+					"serviceId":       testCronJobId,
+					"cancelActiveRun": true,
+				})
+
+				assert.True(t, result.IsError)
+				assert.Contains(t, text, tt.wantText)
+				assert.Equal(t, 0, fakeClient.RunCronJobWithResponseCallCount())
+				assert.Equal(t, 0, fakeClient.CancelCronJobRunWithResponseCallCount())
+			})
+		}
+	}
+}
+
+func TestCancelCronJobRunTool(t *testing.T) {
+	t.Run("cancels the run", func(t *testing.T) {
+		fakeClient, repo := newCronJobTestClient(t, cronJob())
+
+		result, text := callCronJobTool(t, cancelCronJobRun(repo), testOwnerId, map[string]any{"serviceId": testCronJobId})
+
+		require.False(t, result.IsError, text)
+		assert.JSONEq(t, `{"serviceId":"crn-123456","canceled":true}`, text)
+		require.Equal(t, 1, fakeClient.CancelCronJobRunWithResponseCallCount())
+		_, gotId, _ := fakeClient.CancelCronJobRunWithResponseArgsForCall(0)
+		assert.Equal(t, testCronJobId, gotId)
+	})
+
+	t.Run("surfaces an API error", func(t *testing.T) {
+		fakeClient, repo := newCronJobTestClient(t, cronJob())
+		fakeClient.CancelCronJobRunWithResponseReturns(&client.CancelCronJobRunResponse{
+			Body:         []byte(`{"message":"boom"}`),
+			HTTPResponse: &http.Response{StatusCode: http.StatusInternalServerError},
+		}, nil)
+
+		result, text := callCronJobTool(t, cancelCronJobRun(repo), testOwnerId, map[string]any{"serviceId": testCronJobId})
+
+		assert.True(t, result.IsError)
+		assert.Contains(t, text, "boom")
+	})
 }

@@ -168,6 +168,13 @@ session-based behavior is deprecated and is scheduled for removal.
 
   Deploying prebuilt images from a container registry is not supported.
 
+- **run_cron_job** - Start a run of a cron job now, outside its schedule. The run uses the currently deployed build; it does not deploy new code. A cron job runs one run at a time and starting a new run cancels the one in progress, so this tool refuses while a run is in progress unless `cancelActiveRun` is `true`. Returns the new run (usually `pending`) and any run it canceled. Waits up to about 20 seconds for the run to be recorded as started, and adds a `warning` to the result if it is not.
+  - `serviceId`: The ID of the cron job to run (string, required)
+  - `cancelActiveRun`: Whether to cancel an in-progress run so the new run can start (boolean, optional). Defaults to `false`.
+
+- **cancel_cron_job_run** - Cancel the in-progress run of a cron job. The schedule is unaffected.
+  - `serviceId`: The ID of the cron job (string, required)
+
 - **update_environment_variables** - Update all environment variables for a service
   - `serviceId`: The ID of the service to update (string, required)
   - `envVars`: Complete list of environment variables (array, required)

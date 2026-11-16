@@ -10,6 +10,17 @@ import (
 )
 
 type FakeServiceRepoClient struct {
+	CancelCronJobRunWithResponseStub        func(context.Context, client.CronJobIdParam, ...client.RequestEditorFn) (*client.CancelCronJobRunResponse, error)
+	cancelCronJobRunWithResponseMutex       sync.RWMutex
+	cancelCronJobRunWithResponseArgsForCall []FakeServiceRepoClientCancelCronJobRunWithResponseArgs
+	cancelCronJobRunWithResponseReturns     struct {
+		result1 *client.CancelCronJobRunResponse
+		result2 error
+	}
+	cancelCronJobRunWithResponseReturnsOnCall map[int]struct {
+		result1 *client.CancelCronJobRunResponse
+		result2 error
+	}
 	CreateServiceWithResponseStub        func(context.Context, client.CreateServiceJSONRequestBody, ...client.RequestEditorFn) (*client.CreateServiceResponse, error)
 	createServiceWithResponseMutex       sync.RWMutex
 	createServiceWithResponseArgsForCall []FakeServiceRepoClientCreateServiceWithResponseArgs
@@ -30,6 +41,17 @@ type FakeServiceRepoClient struct {
 	}
 	getEnvVarsForServiceWithResponseReturnsOnCall map[int]struct {
 		result1 *client.GetEnvVarsForServiceResponse
+		result2 error
+	}
+	ListEventsWithResponseStub        func(context.Context, client.ServiceIdParam, *client.ListEventsParams, ...client.RequestEditorFn) (*client.ListEventsResponse, error)
+	listEventsWithResponseMutex       sync.RWMutex
+	listEventsWithResponseArgsForCall []FakeServiceRepoClientListEventsWithResponseArgs
+	listEventsWithResponseReturns     struct {
+		result1 *client.ListEventsResponse
+		result2 error
+	}
+	listEventsWithResponseReturnsOnCall map[int]struct {
+		result1 *client.ListEventsResponse
 		result2 error
 	}
 	ListServicesWithResponseStub        func(context.Context, *client.ListServicesParams, ...client.RequestEditorFn) (*client.ListServicesResponse, error)
@@ -54,6 +76,17 @@ type FakeServiceRepoClient struct {
 		result1 *client.RetrieveServiceResponse
 		result2 error
 	}
+	RunCronJobWithResponseStub        func(context.Context, client.CronJobIdParam, ...client.RequestEditorFn) (*client.RunCronJobResponse, error)
+	runCronJobWithResponseMutex       sync.RWMutex
+	runCronJobWithResponseArgsForCall []FakeServiceRepoClientRunCronJobWithResponseArgs
+	runCronJobWithResponseReturns     struct {
+		result1 *client.RunCronJobResponse
+		result2 error
+	}
+	runCronJobWithResponseReturnsOnCall map[int]struct {
+		result1 *client.RunCronJobResponse
+		result2 error
+	}
 	UpdateEnvVarsForServiceWithResponseStub        func(context.Context, string, []clienta.EnvVarInput, ...client.RequestEditorFn) (*client.UpdateEnvVarsForServiceResponse, error)
 	updateEnvVarsForServiceWithResponseMutex       sync.RWMutex
 	updateEnvVarsForServiceWithResponseArgsForCall []FakeServiceRepoClientUpdateEnvVarsForServiceWithResponseArgs
@@ -68,6 +101,13 @@ type FakeServiceRepoClient struct {
 	invocations      map[string][][]interface{}
 	callOrder        []string
 	invocationsMutex sync.RWMutex
+}
+
+// FakeServiceRepoClientCancelCronJobRunWithResponseArgs holds the arguments of one call to CancelCronJobRunWithResponse.
+type FakeServiceRepoClientCancelCronJobRunWithResponseArgs struct {
+	Arg1 context.Context
+	Arg2 client.CronJobIdParam
+	Arg3 []client.RequestEditorFn
 }
 
 // FakeServiceRepoClientCreateServiceWithResponseArgs holds the arguments of one call to CreateServiceWithResponse.
@@ -85,6 +125,14 @@ type FakeServiceRepoClientGetEnvVarsForServiceWithResponseArgs struct {
 	Arg4 []client.RequestEditorFn
 }
 
+// FakeServiceRepoClientListEventsWithResponseArgs holds the arguments of one call to ListEventsWithResponse.
+type FakeServiceRepoClientListEventsWithResponseArgs struct {
+	Arg1 context.Context
+	Arg2 client.ServiceIdParam
+	Arg3 *client.ListEventsParams
+	Arg4 []client.RequestEditorFn
+}
+
 // FakeServiceRepoClientListServicesWithResponseArgs holds the arguments of one call to ListServicesWithResponse.
 type FakeServiceRepoClientListServicesWithResponseArgs struct {
 	Arg1 context.Context
@@ -99,12 +147,94 @@ type FakeServiceRepoClientRetrieveServiceWithResponseArgs struct {
 	Arg3 []client.RequestEditorFn
 }
 
+// FakeServiceRepoClientRunCronJobWithResponseArgs holds the arguments of one call to RunCronJobWithResponse.
+type FakeServiceRepoClientRunCronJobWithResponseArgs struct {
+	Arg1 context.Context
+	Arg2 client.CronJobIdParam
+	Arg3 []client.RequestEditorFn
+}
+
 // FakeServiceRepoClientUpdateEnvVarsForServiceWithResponseArgs holds the arguments of one call to UpdateEnvVarsForServiceWithResponse.
 type FakeServiceRepoClientUpdateEnvVarsForServiceWithResponseArgs struct {
 	Arg1 context.Context
 	Arg2 string
 	Arg3 []clienta.EnvVarInput
 	Arg4 []client.RequestEditorFn
+}
+
+func (fake *FakeServiceRepoClient) CancelCronJobRunWithResponse(arg1 context.Context, arg2 client.CronJobIdParam, arg3 ...client.RequestEditorFn) (*client.CancelCronJobRunResponse, error) {
+	var arg3Copy []client.RequestEditorFn
+	if arg3 != nil {
+		arg3Copy = make([]client.RequestEditorFn, len(arg3))
+		copy(arg3Copy, arg3)
+	}
+	fake.cancelCronJobRunWithResponseMutex.Lock()
+	ret, specificReturn := fake.cancelCronJobRunWithResponseReturnsOnCall[len(fake.cancelCronJobRunWithResponseArgsForCall)]
+	fake.cancelCronJobRunWithResponseArgsForCall = append(fake.cancelCronJobRunWithResponseArgsForCall, FakeServiceRepoClientCancelCronJobRunWithResponseArgs{arg1, arg2, arg3Copy})
+	stub := fake.CancelCronJobRunWithResponseStub
+	fakeReturns := fake.cancelCronJobRunWithResponseReturns
+	fake.recordInvocation("CancelCronJobRunWithResponse", []interface{}{arg1, arg2, arg3Copy})
+	fake.cancelCronJobRunWithResponseMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3...)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeServiceRepoClient) CancelCronJobRunWithResponseCallCount() int {
+	fake.cancelCronJobRunWithResponseMutex.RLock()
+	defer fake.cancelCronJobRunWithResponseMutex.RUnlock()
+	return len(fake.cancelCronJobRunWithResponseArgsForCall)
+}
+
+func (fake *FakeServiceRepoClient) CancelCronJobRunWithResponseCalls(stub func(context.Context, client.CronJobIdParam, ...client.RequestEditorFn) (*client.CancelCronJobRunResponse, error)) {
+	fake.cancelCronJobRunWithResponseMutex.Lock()
+	defer fake.cancelCronJobRunWithResponseMutex.Unlock()
+	fake.CancelCronJobRunWithResponseStub = stub
+}
+
+func (fake *FakeServiceRepoClient) CancelCronJobRunWithResponseArgsForCall(i int) (context.Context, client.CronJobIdParam, []client.RequestEditorFn) {
+	fake.cancelCronJobRunWithResponseMutex.RLock()
+	defer fake.cancelCronJobRunWithResponseMutex.RUnlock()
+	argsForCall := fake.cancelCronJobRunWithResponseArgsForCall[i]
+	return argsForCall.Arg1, argsForCall.Arg2, argsForCall.Arg3
+}
+
+func (fake *FakeServiceRepoClient) CancelCronJobRunWithResponseArgs() []FakeServiceRepoClientCancelCronJobRunWithResponseArgs {
+	fake.cancelCronJobRunWithResponseMutex.RLock()
+	defer fake.cancelCronJobRunWithResponseMutex.RUnlock()
+	args := make([]FakeServiceRepoClientCancelCronJobRunWithResponseArgs, len(fake.cancelCronJobRunWithResponseArgsForCall))
+	copy(args, fake.cancelCronJobRunWithResponseArgsForCall)
+	return args
+}
+
+func (fake *FakeServiceRepoClient) CancelCronJobRunWithResponseReturns(result1 *client.CancelCronJobRunResponse, result2 error) {
+	fake.cancelCronJobRunWithResponseMutex.Lock()
+	defer fake.cancelCronJobRunWithResponseMutex.Unlock()
+	fake.CancelCronJobRunWithResponseStub = nil
+	fake.cancelCronJobRunWithResponseReturns = struct {
+		result1 *client.CancelCronJobRunResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeServiceRepoClient) CancelCronJobRunWithResponseReturnsOnCall(i int, result1 *client.CancelCronJobRunResponse, result2 error) {
+	fake.cancelCronJobRunWithResponseMutex.Lock()
+	defer fake.cancelCronJobRunWithResponseMutex.Unlock()
+	fake.CancelCronJobRunWithResponseStub = nil
+	if fake.cancelCronJobRunWithResponseReturnsOnCall == nil {
+		fake.cancelCronJobRunWithResponseReturnsOnCall = make(map[int]struct {
+			result1 *client.CancelCronJobRunResponse
+			result2 error
+		})
+	}
+	fake.cancelCronJobRunWithResponseReturnsOnCall[i] = struct {
+		result1 *client.CancelCronJobRunResponse
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeServiceRepoClient) CreateServiceWithResponse(arg1 context.Context, arg2 client.CreateServiceJSONRequestBody, arg3 ...client.RequestEditorFn) (*client.CreateServiceResponse, error) {
@@ -257,6 +387,81 @@ func (fake *FakeServiceRepoClient) GetEnvVarsForServiceWithResponseReturnsOnCall
 	}{result1, result2}
 }
 
+func (fake *FakeServiceRepoClient) ListEventsWithResponse(arg1 context.Context, arg2 client.ServiceIdParam, arg3 *client.ListEventsParams, arg4 ...client.RequestEditorFn) (*client.ListEventsResponse, error) {
+	var arg4Copy []client.RequestEditorFn
+	if arg4 != nil {
+		arg4Copy = make([]client.RequestEditorFn, len(arg4))
+		copy(arg4Copy, arg4)
+	}
+	fake.listEventsWithResponseMutex.Lock()
+	ret, specificReturn := fake.listEventsWithResponseReturnsOnCall[len(fake.listEventsWithResponseArgsForCall)]
+	fake.listEventsWithResponseArgsForCall = append(fake.listEventsWithResponseArgsForCall, FakeServiceRepoClientListEventsWithResponseArgs{arg1, arg2, arg3, arg4Copy})
+	stub := fake.ListEventsWithResponseStub
+	fakeReturns := fake.listEventsWithResponseReturns
+	fake.recordInvocation("ListEventsWithResponse", []interface{}{arg1, arg2, arg3, arg4Copy})
+	fake.listEventsWithResponseMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4...)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeServiceRepoClient) ListEventsWithResponseCallCount() int {
+	fake.listEventsWithResponseMutex.RLock()
+	defer fake.listEventsWithResponseMutex.RUnlock()
+	return len(fake.listEventsWithResponseArgsForCall)
+}
+
+func (fake *FakeServiceRepoClient) ListEventsWithResponseCalls(stub func(context.Context, client.ServiceIdParam, *client.ListEventsParams, ...client.RequestEditorFn) (*client.ListEventsResponse, error)) {
+	fake.listEventsWithResponseMutex.Lock()
+	defer fake.listEventsWithResponseMutex.Unlock()
+	fake.ListEventsWithResponseStub = stub
+}
+
+func (fake *FakeServiceRepoClient) ListEventsWithResponseArgsForCall(i int) (context.Context, client.ServiceIdParam, *client.ListEventsParams, []client.RequestEditorFn) {
+	fake.listEventsWithResponseMutex.RLock()
+	defer fake.listEventsWithResponseMutex.RUnlock()
+	argsForCall := fake.listEventsWithResponseArgsForCall[i]
+	return argsForCall.Arg1, argsForCall.Arg2, argsForCall.Arg3, argsForCall.Arg4
+}
+
+func (fake *FakeServiceRepoClient) ListEventsWithResponseArgs() []FakeServiceRepoClientListEventsWithResponseArgs {
+	fake.listEventsWithResponseMutex.RLock()
+	defer fake.listEventsWithResponseMutex.RUnlock()
+	args := make([]FakeServiceRepoClientListEventsWithResponseArgs, len(fake.listEventsWithResponseArgsForCall))
+	copy(args, fake.listEventsWithResponseArgsForCall)
+	return args
+}
+
+func (fake *FakeServiceRepoClient) ListEventsWithResponseReturns(result1 *client.ListEventsResponse, result2 error) {
+	fake.listEventsWithResponseMutex.Lock()
+	defer fake.listEventsWithResponseMutex.Unlock()
+	fake.ListEventsWithResponseStub = nil
+	fake.listEventsWithResponseReturns = struct {
+		result1 *client.ListEventsResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeServiceRepoClient) ListEventsWithResponseReturnsOnCall(i int, result1 *client.ListEventsResponse, result2 error) {
+	fake.listEventsWithResponseMutex.Lock()
+	defer fake.listEventsWithResponseMutex.Unlock()
+	fake.ListEventsWithResponseStub = nil
+	if fake.listEventsWithResponseReturnsOnCall == nil {
+		fake.listEventsWithResponseReturnsOnCall = make(map[int]struct {
+			result1 *client.ListEventsResponse
+			result2 error
+		})
+	}
+	fake.listEventsWithResponseReturnsOnCall[i] = struct {
+		result1 *client.ListEventsResponse
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeServiceRepoClient) ListServicesWithResponse(arg1 context.Context, arg2 *client.ListServicesParams, arg3 ...client.RequestEditorFn) (*client.ListServicesResponse, error) {
 	var arg3Copy []client.RequestEditorFn
 	if arg3 != nil {
@@ -403,6 +608,81 @@ func (fake *FakeServiceRepoClient) RetrieveServiceWithResponseReturnsOnCall(i in
 	}
 	fake.retrieveServiceWithResponseReturnsOnCall[i] = struct {
 		result1 *client.RetrieveServiceResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeServiceRepoClient) RunCronJobWithResponse(arg1 context.Context, arg2 client.CronJobIdParam, arg3 ...client.RequestEditorFn) (*client.RunCronJobResponse, error) {
+	var arg3Copy []client.RequestEditorFn
+	if arg3 != nil {
+		arg3Copy = make([]client.RequestEditorFn, len(arg3))
+		copy(arg3Copy, arg3)
+	}
+	fake.runCronJobWithResponseMutex.Lock()
+	ret, specificReturn := fake.runCronJobWithResponseReturnsOnCall[len(fake.runCronJobWithResponseArgsForCall)]
+	fake.runCronJobWithResponseArgsForCall = append(fake.runCronJobWithResponseArgsForCall, FakeServiceRepoClientRunCronJobWithResponseArgs{arg1, arg2, arg3Copy})
+	stub := fake.RunCronJobWithResponseStub
+	fakeReturns := fake.runCronJobWithResponseReturns
+	fake.recordInvocation("RunCronJobWithResponse", []interface{}{arg1, arg2, arg3Copy})
+	fake.runCronJobWithResponseMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3...)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeServiceRepoClient) RunCronJobWithResponseCallCount() int {
+	fake.runCronJobWithResponseMutex.RLock()
+	defer fake.runCronJobWithResponseMutex.RUnlock()
+	return len(fake.runCronJobWithResponseArgsForCall)
+}
+
+func (fake *FakeServiceRepoClient) RunCronJobWithResponseCalls(stub func(context.Context, client.CronJobIdParam, ...client.RequestEditorFn) (*client.RunCronJobResponse, error)) {
+	fake.runCronJobWithResponseMutex.Lock()
+	defer fake.runCronJobWithResponseMutex.Unlock()
+	fake.RunCronJobWithResponseStub = stub
+}
+
+func (fake *FakeServiceRepoClient) RunCronJobWithResponseArgsForCall(i int) (context.Context, client.CronJobIdParam, []client.RequestEditorFn) {
+	fake.runCronJobWithResponseMutex.RLock()
+	defer fake.runCronJobWithResponseMutex.RUnlock()
+	argsForCall := fake.runCronJobWithResponseArgsForCall[i]
+	return argsForCall.Arg1, argsForCall.Arg2, argsForCall.Arg3
+}
+
+func (fake *FakeServiceRepoClient) RunCronJobWithResponseArgs() []FakeServiceRepoClientRunCronJobWithResponseArgs {
+	fake.runCronJobWithResponseMutex.RLock()
+	defer fake.runCronJobWithResponseMutex.RUnlock()
+	args := make([]FakeServiceRepoClientRunCronJobWithResponseArgs, len(fake.runCronJobWithResponseArgsForCall))
+	copy(args, fake.runCronJobWithResponseArgsForCall)
+	return args
+}
+
+func (fake *FakeServiceRepoClient) RunCronJobWithResponseReturns(result1 *client.RunCronJobResponse, result2 error) {
+	fake.runCronJobWithResponseMutex.Lock()
+	defer fake.runCronJobWithResponseMutex.Unlock()
+	fake.RunCronJobWithResponseStub = nil
+	fake.runCronJobWithResponseReturns = struct {
+		result1 *client.RunCronJobResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeServiceRepoClient) RunCronJobWithResponseReturnsOnCall(i int, result1 *client.RunCronJobResponse, result2 error) {
+	fake.runCronJobWithResponseMutex.Lock()
+	defer fake.runCronJobWithResponseMutex.Unlock()
+	fake.RunCronJobWithResponseStub = nil
+	if fake.runCronJobWithResponseReturnsOnCall == nil {
+		fake.runCronJobWithResponseReturnsOnCall = make(map[int]struct {
+			result1 *client.RunCronJobResponse
+			result2 error
+		})
+	}
+	fake.runCronJobWithResponseReturnsOnCall[i] = struct {
+		result1 *client.RunCronJobResponse
 		result2 error
 	}{result1, result2}
 }

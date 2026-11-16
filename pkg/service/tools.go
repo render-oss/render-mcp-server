@@ -26,6 +26,8 @@ func Tools(c *client.ClientWithResponses) []server.ServerTool {
 		createWebService(serviceRepo),
 		createStaticSite(serviceRepo),
 		createCronJob(serviceRepo),
+		runCronJob(serviceRepo),
+		cancelCronJobRun(serviceRepo),
 		updateEnvVars(serviceRepo, deployRepo),
 	}
 }
@@ -773,6 +775,110 @@ func updateCronJob() server.ServerTool {
 			return mcp.NewToolResultText(
 				"Updating a cron job directly is not supported. Please make changes using the dashboard or the API.\n\n" +
 					"Dashboard URL: " + config.DashboardURL() + "/cron/" + serviceId + "/settings"), nil
+		},
+	}
+}
+
+func runCronJob(serviceRepo *Repo) server.ServerTool {
+	return server.ServerTool{
+		Tool: mcp.NewTool("run_cron_job",
+			mcp.WithDescription("Start a run of a cron job now, outside its schedule. "+
+				"The run uses the cron job's currently deployed build, command, and environment "+
+				"variables. It does not build or deploy new code: if the cron job needs a code or "+
+				"config change first, use trigger_deploy and wait for the deploy to go live. "+
+				"Do not use this to make a scheduled run happen; the schedule already does that.\n\n"+
+				"A cron job runs at most one run at a time, and starting a new run cancels the one "+
+				"in progress. This tool checks for an in-progress run and refuses if it finds one, "+
+				"unless cancelActiveRun is true.\n\n"+
+				"Returns the new run (usually with status \"pending\") and, if one was canceled, "+
+				"the canceled run. Before returning, the tool waits up to about 20 seconds for the "+
+				"run to be recorded as started, so that a later run_cron_job call can see it. If "+
+				"the result has a warning, the run was not recorded in time: do not call "+
+				"run_cron_job for this cron job again until the warning says it is safe. "+
+				"The run continues after this tool returns. To see its output, "+
+				"call list_logs with the cron job's ID in resource. To see how it ended, call "+
+				"list_events with eventTypes cron_job_run_ended."),
+			mcp.WithToolAnnotation(mcp.ToolAnnotation{
+				Title:           "Run cron job",
+				ReadOnlyHint:    pointers.From(false),
+				DestructiveHint: pointers.From(true),
+				IdempotentHint:  pointers.From(false),
+				OpenWorldHint:   pointers.From(true),
+			}),
+			mcp.WithString("serviceId",
+				mcp.Required(),
+				mcp.Description("The ID of the cron job to run (starts with crn-). Use list_services "+
+					"to find it."),
+			),
+			mcp.WithBoolean("cancelActiveRun",
+				mcp.Description("Whether to cancel a run that is already in progress so the new run "+
+					"can start. Defaults to false, which makes the tool refuse and report the "+
+					"in-progress run instead. Set it to true only after the user agrees to cancel "+
+					"that run; canceling can leave the job's work half done."),
+				mcp.DefaultBool(false),
+			),
+		),
+		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			serviceId, err := validate.RequiredToolParam[string](request, "serviceId")
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			cancelActiveRun, _, err := validate.OptionalToolParam[bool](request, "cancelActiveRun")
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			result, err := serviceRepo.RunCronJob(ctx, serviceId, cancelActiveRun)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			respJSON, err := json.Marshal(result)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			return mcp.NewToolResultText(string(respJSON)), nil
+		},
+	}
+}
+
+func cancelCronJobRun(serviceRepo *Repo) server.ServerTool {
+	return server.ServerTool{
+		Tool: mcp.NewTool("cancel_cron_job_run",
+			mcp.WithDescription("Cancel the in-progress run of a cron job. Canceling stops the run "+
+				"partway, which can leave its work half done, so confirm with the user first. "+
+				"It does not pause the schedule: the next scheduled run still starts on time. "+
+				"Afterward, list_events with eventTypes cron_job_run_ended shows the run as canceled."),
+			mcp.WithToolAnnotation(mcp.ToolAnnotation{
+				Title:           "Cancel cron job run",
+				ReadOnlyHint:    pointers.From(false),
+				DestructiveHint: pointers.From(true),
+				IdempotentHint:  pointers.From(true),
+				OpenWorldHint:   pointers.From(true),
+			}),
+			mcp.WithString("serviceId",
+				mcp.Required(),
+				mcp.Description("The ID of the cron job whose run to cancel (starts with crn-)."),
+			),
+		),
+		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			serviceId, err := validate.RequiredToolParam[string](request, "serviceId")
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			if err := serviceRepo.CancelCronJobRun(ctx, serviceId); err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			respJSON, err := json.Marshal(map[string]any{"serviceId": serviceId, "canceled": true})
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+
+			return mcp.NewToolResultText(string(respJSON)), nil
 		},
 	}
 }
