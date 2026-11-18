@@ -29,6 +29,63 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestListServicesTool(t *testing.T) {
+	t.Run("no services is an empty array", func(t *testing.T) {
+		fakeClient := &fakes.FakeServiceRepoClient{}
+		fakeClient.ListServicesWithResponseReturns(&client.ListServicesResponse{
+			HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+			JSON200:      &client.ServiceList{},
+		}, nil)
+
+		result, text := callListServices(t, fakeClient)
+
+		assert.False(t, result.IsError)
+		assert.Equal(t, "[]", text)
+	})
+
+	t.Run("a success response without a parsed body is an error, not an empty list", func(t *testing.T) {
+		fakeClient := &fakes.FakeServiceRepoClient{}
+		fakeClient.ListServicesWithResponseReturns(&client.ListServicesResponse{
+			HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+		}, nil)
+
+		result, text := callListServices(t, fakeClient)
+
+		assert.True(t, result.IsError)
+		assert.Contains(t, text, "empty body")
+	})
+}
+
+func callListServices(t *testing.T, fakeClient *fakes.FakeServiceRepoClient) (*mcp.CallToolResult, string) {
+	t.Helper()
+	result, err := listServices(NewRepo(fakeClient)).Handler(createTestContext(t, "tea-test"), mcp.CallToolRequest{})
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Len(t, result.Content, 1)
+	text, ok := result.Content[0].(mcp.TextContent)
+	require.True(t, ok)
+	return result, text.Text
+}
+
+// ListAll requests the next page with this cursor, so it has to come from the
+// last service on the page.
+func TestListServicesPageReturnsCursorOfLastService(t *testing.T) {
+	fakeClient := &fakes.FakeServiceRepoClient{}
+	fakeClient.ListServicesWithResponseReturns(&client.ListServicesResponse{
+		JSON200: &client.ServiceList{
+			{Cursor: "cursor-first", Service: client.Service{Id: "srv-1"}},
+			{Cursor: "cursor-last", Service: client.Service{Id: "srv-2"}},
+		},
+		HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+	}, nil)
+
+	_, cursor, err := NewRepo(fakeClient).listPage(t.Context(), &client.ListServicesParams{})
+
+	require.NoError(t, err)
+	require.NotNil(t, cursor)
+	assert.Equal(t, "cursor-last", *cursor)
+}
+
 func TestUpdateEnvVarsTool(t *testing.T) {
 	ownerId := "own-123456"
 	serviceId := "srv-123456"

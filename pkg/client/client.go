@@ -143,7 +143,7 @@ func ListAll[T any, P paginationParams](ctx context.Context, params P, listPage 
 	limit := 100
 	params.SetLimit(limit)
 
-	var res []T
+	res := make([]T, 0)
 	for {
 		page, cursor, err := listPage(ctx, params)
 		if err != nil {

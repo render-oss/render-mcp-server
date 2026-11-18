@@ -87,6 +87,15 @@ func TestListWorkspacesReturnsValidJSONWhenItAutoSelectsOneWorkspace(t *testing.
 	assert.Equal(t, "tea-only", selectedWorkspace)
 }
 
+func TestListWorkspacesReturnsEmptyArrayWhenThereAreNoWorkspaces(t *testing.T) {
+	tool := listWorkspaces(NewRepo(&fakeOwnerRepoClient{}))
+	result, err := tool.Handler(ownerTestContext(t), mcp.CallToolRequest{})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+	assert.Equal(t, "[]", resultText(t, result))
+}
+
 func TestGetSelectedWorkspaceReturnsSessionFallback(t *testing.T) {
 	ctx := ownerTestContext(t)
 	require.NoError(t, session.FromContext(ctx).SetWorkspace(ctx, "tea-selected"))

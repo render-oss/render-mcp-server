@@ -132,6 +132,19 @@ func TestErrorResponseLogging(t *testing.T) {
 	}
 }
 
+func TestListAllWithNoResultsMarshalsAsEmptyArray(t *testing.T) {
+	emptyPage := func(context.Context, *client.ListServicesParams) ([]*client.Service, *client.Cursor, error) {
+		return nil, nil, nil
+	}
+
+	res, err := client.ListAll(t.Context(), &client.ListServicesParams{}, emptyPage)
+	require.NoError(t, err)
+
+	encoded, err := json.Marshal(res)
+	require.NoError(t, err)
+	require.Equal(t, "[]", string(encoded))
+}
+
 func TestBodyFromResponse(t *testing.T) {
 	ctx := logging.ContextWithDefaultLogger(t.Context())
 

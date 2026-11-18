@@ -60,20 +60,23 @@ func (s *Repo) listPage(ctx context.Context, params *client.ListServicesParams) 
 		return nil, nil, err
 	}
 
-	if err := client.ErrorFromResponse(ctx, resp); err != nil {
+	body, err := client.BodyFromResponse(ctx, resp.JSON200, resp)
+	if err != nil {
 		return nil, nil, err
 	}
-	if resp.JSON200 == nil || len(*resp.JSON200) == 0 {
-		return nil, nil, nil
-	}
 
-	res := *resp.JSON200
+	res := *body
 	services := make([]*client.Service, 0, len(res))
 	for _, serviceWithCursor := range res {
 		services = append(services, &serviceWithCursor.Service)
 	}
 
-	return services, &res[len(res)-1].Cursor, nil
+	var cursor *client.Cursor
+	if len(res) > 0 {
+		cursor = &res[len(res)-1].Cursor
+	}
+
+	return services, cursor, nil
 }
 
 type ListEnvParams struct {

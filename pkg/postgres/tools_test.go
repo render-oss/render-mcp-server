@@ -191,6 +191,60 @@ func droppingPostgresURL(t *testing.T) string {
 	return fmt.Sprintf("postgresql://user:pass@%s/db?sslmode=disable", listener.Addr())
 }
 
+func TestListPostgresInstancesToolNoInstances(t *testing.T) {
+	fakeClient := &fakes.FakePostgresRepoClient{}
+	fakeClient.ListPostgresWithResponseReturns(&client.ListPostgresResponse{
+		JSON200:      &[]client.PostgresWithCursor{},
+		HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+	}, nil)
+
+	tool := listPostgresInstances(NewRepo(fakeClient))
+	result, err := tool.Handler(createTestContext(t, "own-123456"), mcp.CallToolRequest{})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+	require.Len(t, result.Content, 1)
+	content, ok := result.Content[0].(mcp.TextContent)
+	require.True(t, ok)
+	assert.Contains(t, content.Text, "No Postgres instances")
+}
+
+func TestListPostgresInstancesToolMissingBodyIsAnError(t *testing.T) {
+	fakeClient := &fakes.FakePostgresRepoClient{}
+	fakeClient.ListPostgresWithResponseReturns(&client.ListPostgresResponse{
+		HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+	}, nil)
+
+	tool := listPostgresInstances(NewRepo(fakeClient))
+	result, err := tool.Handler(createTestContext(t, "own-123456"), mcp.CallToolRequest{})
+
+	require.NoError(t, err)
+	require.True(t, result.IsError)
+	require.Len(t, result.Content, 1)
+	content, ok := result.Content[0].(mcp.TextContent)
+	require.True(t, ok)
+	assert.Contains(t, content.Text, "empty body")
+}
+
+// ListAll requests the next page with this cursor, so it has to come from the
+// last instance on the page.
+func TestListPostgresPageReturnsCursorOfLastInstance(t *testing.T) {
+	fakeClient := &fakes.FakePostgresRepoClient{}
+	fakeClient.ListPostgresWithResponseReturns(&client.ListPostgresResponse{
+		JSON200: &[]client.PostgresWithCursor{
+			{Cursor: "cursor-first", Postgres: client.Postgres{Id: "dpg-1"}},
+			{Cursor: "cursor-last", Postgres: client.Postgres{Id: "dpg-2"}},
+		},
+		HTTPResponse: &http.Response{StatusCode: http.StatusOK},
+	}, nil)
+
+	_, cursor, err := NewRepo(fakeClient).listPage(t.Context(), &client.ListPostgresParams{})
+
+	require.NoError(t, err)
+	require.NotNil(t, cursor)
+	assert.Equal(t, "cursor-last", *cursor)
+}
+
 func createTestContext(t *testing.T, workspaceID string) context.Context {
 	t.Helper()
 	t.Setenv("RENDER_CONFIG_PATH", filepath.Join(t.TempDir(), "mcp-server.yaml"))

@@ -4,11 +4,13 @@ import (
 	"context"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/render-oss/render-mcp-server/pkg/client"
 	"github.com/render-oss/render-mcp-server/pkg/fakes"
+	"github.com/render-oss/render-mcp-server/pkg/pointers"
 	"github.com/render-oss/render-mcp-server/pkg/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -179,6 +181,63 @@ func TestTriggerDeployToolMissingServiceId(t *testing.T) {
 	require.NotNil(t, result)
 	assert.True(t, result.IsError)
 	assert.Equal(t, 0, fakeClient.CreateDeployWithResponseCallCount())
+}
+
+func TestListDeploysToolNoDeploys(t *testing.T) {
+	fakeClient := &fakes.FakeDeployRepoClient{}
+	fakeClient.ListDeploysWithResponseReturns(&client.ListDeploysResponse{
+		JSON200:      &client.DeployList{},
+		HTTPResponse: &http.Response{StatusCode: 200},
+	}, nil)
+
+	request := mcp.CallToolRequest{}
+	request.Params.Arguments = map[string]any{"serviceId": "srv-123456"}
+
+	result, err := listDeploys(NewRepo(fakeClient)).Handler(createTestContext(t, "own-123456"), request)
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+	text := textContent(t, result)
+	assert.True(t, strings.HasPrefix(text, "[]"), text)
+	assert.Contains(t, text, `cursor: ""`)
+}
+
+func TestListDeploysToolMissingBodyIsAnError(t *testing.T) {
+	fakeClient := &fakes.FakeDeployRepoClient{}
+	fakeClient.ListDeploysWithResponseReturns(&client.ListDeploysResponse{
+		HTTPResponse: &http.Response{StatusCode: 200},
+	}, nil)
+
+	request := mcp.CallToolRequest{}
+	request.Params.Arguments = map[string]any{"serviceId": "srv-123456"}
+
+	result, err := listDeploys(NewRepo(fakeClient)).Handler(createTestContext(t, "own-123456"), request)
+
+	require.NoError(t, err)
+	require.True(t, result.IsError)
+	assert.Contains(t, textContent(t, result), "empty body")
+}
+
+// The model requests the next page with this cursor, so it has to come from
+// the last deploy on the page.
+func TestListDeploysToolReturnsCursorOfLastDeploy(t *testing.T) {
+	fakeClient := &fakes.FakeDeployRepoClient{}
+	fakeClient.ListDeploysWithResponseReturns(&client.ListDeploysResponse{
+		JSON200: &client.DeployList{
+			{Cursor: pointers.From("cursor-first"), Deploy: &client.Deploy{Id: "dep-1"}},
+			{Cursor: pointers.From("cursor-last"), Deploy: &client.Deploy{Id: "dep-2"}},
+		},
+		HTTPResponse: &http.Response{StatusCode: 200},
+	}, nil)
+
+	request := mcp.CallToolRequest{}
+	request.Params.Arguments = map[string]any{"serviceId": "srv-123456"}
+
+	result, err := listDeploys(NewRepo(fakeClient)).Handler(createTestContext(t, "own-123456"), request)
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+	assert.Contains(t, textContent(t, result), "cursor: cursor-last")
 }
 
 func textContent(t *testing.T, result *mcp.CallToolResult) string {

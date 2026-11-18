@@ -48,7 +48,7 @@ func (r *Repo) ListOwners(ctx context.Context, input ListInput) ([]*client.Owner
 		return nil, err
 	}
 
-	var owners []*client.Owner
+	owners := make([]*client.Owner, 0, len(*res))
 	for _, ownerWithCursor := range *res {
 		owners = append(owners, ownerWithCursor.Owner)
 	}

@@ -37,18 +37,21 @@ func (e *Repo) listPage(ctx context.Context, params *client.ListEnvironmentsPara
 		return nil, nil, err
 	}
 
-	if err := client.ErrorFromResponse(ctx, resp); err != nil {
+	body, err := client.BodyFromResponse(ctx, resp.JSON200, resp)
+	if err != nil {
 		return nil, nil, err
 	}
-	if resp.JSON200 == nil || len(*resp.JSON200) == 0 {
-		return nil, nil, nil
-	}
 
-	res := *resp.JSON200
-	envs := make([]*client.Environment, 0, len(*resp.JSON200))
-	for _, projectWithCursor := range *resp.JSON200 {
+	res := *body
+	envs := make([]*client.Environment, 0, len(res))
+	for _, projectWithCursor := range res {
 		envs = append(envs, &projectWithCursor.Environment)
 	}
 
-	return envs, &res[len(res)-1].Cursor, nil
+	var cursor *client.Cursor
+	if len(res) > 0 {
+		cursor = &res[len(res)-1].Cursor
+	}
+
+	return envs, cursor, nil
 }

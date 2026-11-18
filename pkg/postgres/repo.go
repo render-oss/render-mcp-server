@@ -45,20 +45,23 @@ func (r *Repo) listPage(ctx context.Context, params *client.ListPostgresParams) 
 		return nil, nil, err
 	}
 
-	if err := client.ErrorFromResponse(ctx, resp); err != nil {
+	body, err := client.BodyFromResponse(ctx, resp.JSON200, resp)
+	if err != nil {
 		return nil, nil, err
 	}
-	if resp.JSON200 == nil || len(*resp.JSON200) == 0 {
-		return nil, nil, nil
-	}
 
-	res := *resp.JSON200
+	res := *body
 	pgs := make([]*client.Postgres, 0, len(res))
 	for _, pg := range res {
 		pgs = append(pgs, &pg.Postgres)
 	}
 
-	return pgs, &res[len(res)-1].Cursor, nil
+	var cursor *client.Cursor
+	if len(res) > 0 {
+		cursor = &res[len(res)-1].Cursor
+	}
+
+	return pgs, cursor, nil
 }
 
 func (r *Repo) GetPostgres(ctx context.Context, id string) (*client.PostgresDetail, error) {
